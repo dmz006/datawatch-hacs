@@ -57,6 +57,7 @@ stateDiagram-v2
     Listening --> Asked: silence
     Asked --> Listening: any words
     Asked --> Usual: silence again
+    Listening --> Usual: three phrases in a row not understood
     Listening --> Usual: "close datawatch"
     Listening --> Usual: certificate changed or access refused
 ```

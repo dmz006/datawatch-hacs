@@ -111,7 +111,8 @@ hold, or failed and blocked automata by project, so you hear those **across all 
 and the reply says so.
 
 **You don't have to say "close".** If it hears nothing it asks "Still there?" once, and
-after a second silence it closes. Saying "close datawatch" ends it straight away.
+after a second silence it closes. It also closes after three phrases in a row that it does
+not understand. Saying "close datawatch" ends it straight away.
 
 ## Privacy and safety
 
@@ -129,8 +130,8 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## Good to know
 
-- **Background talk can keep datawatch mode open.** Any words it hears restart the silence
-  count, even words it does not understand. Say "close datawatch" to leave.
+- **Background talk does not keep it open for long.** After three phrases in a row that it
+  does not understand, it closes, even if there were silences between them.
 - **Fixed phrases.** It does not interpret free speech yet.
 - **Your AI assistant knows nothing about datawatch** unless you tell it. See
   [Telling your assistant about datawatch](docs/assistant-context.md).

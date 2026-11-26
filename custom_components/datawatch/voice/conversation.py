@@ -14,9 +14,12 @@ from .names import match_names
 from .phrases import Command, Kind, parse
 
 PAGE_SIZE = 3
+# So that a television or other talk cannot hold the mode open.
+MISSES_BEFORE_CLOSING = 3
 _NO_LIST = "There is no list yet. Say list projects."
 _NOT_UNDERSTOOD = "Sorry, I didn't get that. Say help."
 _CLOSING = "Closing datawatch."
+_GAVE_UP = f"I didn't understand three times. {_CLOSING}"
 _UNREACHABLE = "I can't reach datawatch. Try again, or say stop."
 _NEEDS_DATA = frozenset({Kind.STATUS, Kind.DETAIL, Kind.LIST_PROJECTS, Kind.SET_NAME})
 _HELP = (
@@ -54,6 +57,8 @@ class Conversation:
 
     def _reset(self) -> None:
         self._silences = 0
+        # Phrases not understood in a row. Silence does not restart this count.
+        self._misses = 0
         self._listed: list[str] | None = None
         self._heard = 0
         self._choosing = False
@@ -82,6 +87,16 @@ class Conversation:
         """
         self._silences = 0
         command = parse(words)
+        reply = self._reply_to(command, snapshot)
+        if reply.text.endswith(_NOT_UNDERSTOOD) and command.kind is not Kind.REPEAT:
+            self._misses += 1
+            if self._misses >= MISSES_BEFORE_CLOSING:
+                return Reply(_GAVE_UP, ends=True)
+        else:
+            self._misses = 0
+        return reply
+
+    def _reply_to(self, command: Command, snapshot: Snapshot | None) -> Reply:
         if command.kind is Kind.EXIT:
             return Reply(_CLOSING, ends=True)
         if command.kind is Kind.REPEAT:

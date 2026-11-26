@@ -42,10 +42,16 @@ The token is missing or no longer valid. Update it with **Reconfigure**.
 Commands are fixed phrases. Say "help" to hear them, and see the list in the
 [README](../README.md#what-you-can-say).
 
+## It closes while I am still using it
+
+It closes after two silences in a row, or after three phrases in a row that it does not
+understand ("I didn't understand three times."). A command it understands starts that count
+again. Say "help" to hear the commands.
+
 ## It stays open
 
-Speech from a television or other people counts as something heard, which restarts the
-silence count. Say "close datawatch".
+Speech from a television or other people that happens to match a command counts as a
+command. Say "close datawatch".
 
 ## It stops partway or never starts talking
 

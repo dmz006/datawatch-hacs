@@ -2,11 +2,9 @@
 
 ## Reporting a problem
 
-Please do not describe a security problem in a public issue. If this repository's
-**Security** tab offers **Report a vulnerability**, use that: it is private. If it does not,
-open an issue that only asks for a private way to get in touch, with no details.
-
-In any report, leave out real addresses, tokens and project names.
+Please report security problems privately through
+[GitHub's private vulnerability reporting](https://github.com/dmz006/datawatch-hacs/security/advisories/new),
+not in a public issue. Leave out real addresses, tokens and project names.
 
 ## Supported versions
 

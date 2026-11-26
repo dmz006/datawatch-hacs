@@ -32,7 +32,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - The integration registers the entry phrase itself, so there is no automation to maintain.
 - One focus shared by all voice devices. Accounts with different access may come later.
 - Silence: ask once, then close. A "stay until I leave" setting may be wanted later; the
-  conversation class already supports it.
+  conversation class already supports it for silence.
+- Close after three phrases in a row that are not understood. Silence does not restart that
+  count; any understood command does.
 - Home Assistant 2026.11 and later only.
 - Read only for now. Anything that changes datawatch needs its own design.
 - One datawatch server for now.
@@ -42,7 +44,6 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - datawatch does not filter questions, held items or triage records by project, so those are
   reported across all projects. When it does, use its `project=` filter, and check it with a
   made-up project name: an ignored filter returns everything.
-- Any heard words restart the silence count.
 - There is no check of who is speaking.
 - The tests do not cover speech recognition, speech synthesis or real device timing.
 

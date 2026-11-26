@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 (unreleased)
+
+- Datawatch mode closes after three phrases in a row that it does not understand, so a
+  television or other talk cannot hold it open.
+
 ## 0.1.0 (2026-11-26)
 
 The first release: ask datawatch how your work is going, by voice. It only reads.
