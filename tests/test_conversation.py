@@ -295,3 +295,45 @@ def test_when_datawatch_cannot_be_read_it_says_so_and_repeat_repeats_it() -> Non
     assert conversation.hear("repeat", None) == reply
     assert conversation.focus == "oak"
     assert conversation.hear("stop", None).ends
+
+
+def test_three_phrases_not_understood_in_a_row_close_the_mode() -> None:
+    conversation = start()
+    assert say(conversation, "banana") == Reply("Sorry, I didn't get that. Say help.")
+    assert say(conversation, "the match starts at nine") == Reply(
+        "Sorry, I didn't get that. Say help."
+    )
+    assert say(conversation, "and now the weather") == Reply(
+        "I didn't understand three times. Closing datawatch.", ends=True
+    )
+
+
+def test_a_command_that_is_understood_starts_the_count_again() -> None:
+    conversation = start()
+    for words in ("banana", "banana", "help", "banana", "banana", "where am i", "banana"):
+        assert not say(conversation, words).ends, words
+
+
+def test_silence_between_them_does_not_start_the_count_again() -> None:
+    """Otherwise a television, with pauses, could hold the mode open for ever."""
+    conversation = start()
+    say(conversation, "banana")
+    assert not conversation.silence().ends
+    say(conversation, "banana")
+    assert not conversation.silence().ends
+    assert say(conversation, "banana").ends
+
+
+def test_a_number_said_when_none_is_asked_for_counts_as_not_understood() -> None:
+    conversation = start()
+    say(conversation, "two")
+    say(conversation, "two")
+    assert say(conversation, "two").ends
+
+
+def test_each_visit_starts_a_new_count() -> None:
+    conversation = start()
+    say(conversation, "banana")
+    say(conversation, "banana")
+    conversation.enter()
+    assert not say(conversation, "banana").ends

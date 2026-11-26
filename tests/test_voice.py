@@ -478,3 +478,15 @@ def test_with_an_ai_assistant_the_entry_phrase_never_reaches_the_ai(
         assert speech.get("plain", {}).get("speech", "") == ""
 
     voice_test(certificate, tmp_path, body)
+
+
+def test_background_talk_cannot_hold_the_mode_open(
+    certificate: Certificate, tmp_path: Path
+) -> None:
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        await visit(hass, satellite, "banana", None, "more rain later", None, "goal")
+        assert len(satellite.asked) == 5
+        assert satellite.announced == ["I didn't understand three times. " + CLOSING]
+        assert fake.seen == []
+
+    voice_test(certificate, tmp_path, body)
