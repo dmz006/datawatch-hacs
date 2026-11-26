@@ -4,6 +4,9 @@ on:
     branches: [main]
     tags: ["v*.*.*"]
   pull_request:
+  schedule:
+    # Weekly, so a new Home Assistant release is tested even when nothing here changes.
+    - cron: "23 9 * * 1"
 
 permissions:
   contents: read
@@ -16,6 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.14" }
       - run: pip install -e ".[lint]"
+      - run: pip install $(python tests/requirements_from_ha.py)
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
@@ -27,6 +31,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.14" }
       - run: pip install -e ".[test]"
+      - run: pip install $(python tests/requirements_from_ha.py)
       - run: pytest --cov
 
   leaks:

@@ -17,6 +17,8 @@ PAGE_SIZE = 3
 _NO_LIST = "There is no list yet. Say list projects."
 _NOT_UNDERSTOOD = "Sorry, I didn't get that. Say help."
 _CLOSING = "Closing datawatch."
+_UNREACHABLE = "I can't reach datawatch. Try again, or say stop."
+_NEEDS_DATA = frozenset({Kind.STATUS, Kind.DETAIL, Kind.LIST_PROJECTS, Kind.SET_NAME})
 _HELP = (
     "You can say: status, more detail, list projects, more, set and a number or name, "
     "where am I, unset, repeat, or stop."
@@ -29,6 +31,11 @@ class Reply:
 
     text: str
     ends: bool = False
+
+
+def needs_data(words: str) -> bool:
+    """Whether answering words means reading datawatch first."""
+    return parse(words).kind in _NEEDS_DATA
 
 
 def alphabetical(names: tuple[str, ...]) -> list[str]:
@@ -67,8 +74,12 @@ class Conversation:
             return Reply(_CLOSING, ends=True)
         return Reply("Still there?")
 
-    def hear(self, words: str, snapshot: Snapshot) -> Reply:
-        """Answer one thing the user said."""
+    def hear(self, words: str, snapshot: Snapshot | None) -> Reply:
+        """Answer one thing the user said.
+
+        snapshot is None when datawatch was not read, either because the command does not
+        need it or because it could not be.
+        """
         self._silences = 0
         command = parse(words)
         if command.kind is Kind.EXIT:
@@ -76,11 +87,15 @@ class Conversation:
         if command.kind is Kind.REPEAT:
             return Reply(self._last)
 
+        if snapshot is None and command.kind in _NEEDS_DATA:
+            self._last = _UNREACHABLE
+            return Reply(self._last)
+
         notice = ""
-        if self.focus and self.focus not in snapshot.projects:
+        if snapshot is not None and self.focus and self.focus not in snapshot.projects:
             notice = f"Project {self.focus} no longer exists, so the focus is cleared. "
             self.focus = None
-        self._last = notice + self._answer(command, snapshot)
+        self._last = notice + self._answer(command, snapshot or Snapshot())
         return Reply(self._last)
 
     def _answer(self, command: Command, snapshot: Snapshot) -> str:

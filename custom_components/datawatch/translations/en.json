@@ -4,7 +4,10 @@
       "user": {
         "title": "Connect to datawatch",
         "description": "Enter the address of your datawatch server. The next screen shows its certificate for you to check. Nothing, including a token, is sent before you approve it.",
-        "data": { "url": "Server address", "token": "Token" },
+        "data": {
+          "url": "Server address",
+          "token": "Token"
+        },
         "data_description": {
           "url": "Starts with https://, with the port if it needs one.",
           "token": "Leave empty if your datawatch does not use a token."
@@ -13,7 +16,10 @@
       "reconfigure": {
         "title": "Change the datawatch connection",
         "description": "Change the address or token. You will check the certificate again.",
-        "data": { "url": "Server address", "token": "Token" },
+        "data": {
+          "url": "Server address",
+          "token": "Token"
+        },
         "data_description": {
           "url": "Starts with https://, with the port if it needs one.",
           "token": "Leave empty to keep the saved token for the same address. A saved token is never carried to a different address."
@@ -33,6 +39,12 @@
     "abort": {
       "single_instance_allowed": "datawatch is already set up. Only one server is supported for now.",
       "reconfigure_successful": "The datawatch connection was updated."
+    }
+  },
+  "issues": {
+    "voice_phrase_unavailable": {
+      "title": "The datawatch voice phrase is not working",
+      "description": "datawatch could not register \"open datawatch\" with Home Assistant, so saying it will not start datawatch mode. A Home Assistant upgrade may have changed how this works. Check for a datawatch update. The Home Assistant log has the details."
     }
   }
 }

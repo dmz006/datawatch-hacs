@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from homeassistant import bootstrap, config_entries, loader
+from homeassistant.auth import auth_manager_from_config
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
@@ -18,6 +19,8 @@ async def running_hass(config_dir: Path) -> AsyncIterator[HomeAssistant]:
     hass.config.skip_pip = True
     hass.config_entries = config_entries.ConfigEntries(hass, {})
     await bootstrap.async_load_base_functionality(hass)
+    # The voice components need these, as in a running Home Assistant.
+    hass.auth = await auth_manager_from_config(hass, [], [])
     # A running Home Assistant always has this; its shared web session depends on it.
     assert await async_setup_component(hass, "network", {})
     try:

@@ -3,8 +3,8 @@
 A Home Assistant integration for [datawatch](https://github.com/dmz006/datawatch), installable
 through HACS.
 
-> **In development. Not ready to use.** There is no release. The setup screens connect to
-> datawatch, but voice is not connected yet.
+> **In development.** There is no release yet, and it has not been tried with a real voice
+> device.
 
 Requires Home Assistant 2026.11 or later. Older versions are not supported.
 
@@ -28,11 +28,14 @@ Hands-free, eyes-free use of datawatch by voice:
 This first step only reads from datawatch. The datawatch server will be entered in the
 integration's setup screens; no server is built in.
 
-## Voice commands (in development)
+## Voice
 
-The conversation logic and a read-only datawatch client exist, but voice is not connected to
-Home Assistant yet, and the wording may change. The client talks only to the server you
-configure, over HTTPS, and only if it presents the certificate you approved.
+Needs a voice device that can hold a conversation (for example Home Assistant Voice PE) and
+an assistant with speech-to-text and text-to-speech.
+
+Say your wake word, then **"open datawatch"**, **"use datawatch"** or just **"datawatch"**.
+It answers "Datawatch." and keeps listening: say commands without the wake word until you
+leave. All your voice devices share one focus. The wording may still change.
 
 | Say | What happens |
 |---|---|
@@ -49,11 +52,20 @@ own project filter. datawatch cannot filter questions, held items or failed and 
 project yet, so those are given for all projects, and said that way. If nothing is heard you are asked once, "Still there?";
 a second silence leaves the mode. Everything here only reads from datawatch.
 
+## If the phrase stops working
+
+Home Assistant offers integrations no public way to add a spoken phrase, so this one uses
+the same internal function as Home Assistant's own sentence automations (kept in
+`entry_phrase.py`). An upgrade could change it. If registering the phrase fails, Home
+Assistant shows a repair warning; not every possible change would be caught that way.
+Tests run against the newest Home Assistant on each change and weekly.
+
 ## Development
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[test,lint]"
+.venv/bin/pip install $(.venv/bin/python tests/requirements_from_ha.py)
 .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
 .venv/bin/pytest --cov
 ```

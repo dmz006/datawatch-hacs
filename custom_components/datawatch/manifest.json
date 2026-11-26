@@ -5,7 +5,10 @@
     "@dmz006"
   ],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": [
+    "assist_satellite",
+    "conversation"
+  ],
   "documentation": "https://github.com/dmz006/datawatch-hacs",
   "integration_type": "service",
   "iot_class": "local_polling",
