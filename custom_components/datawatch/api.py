@@ -62,7 +62,9 @@ async def fetch_fingerprint(url: str, timeout: float = DEFAULT_TIMEOUT) -> str:
     Nothing is trusted or sent here: only the TLS handshake takes place.
     """
     parts = urlsplit(parse_server_url(url))
-    context = ssl.create_default_context()
+    # No certificate files are loaded: Home Assistant flags that inside its event loop,
+    # and nothing is verified here anyway.
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     try:

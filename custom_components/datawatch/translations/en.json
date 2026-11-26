@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to datawatch",
+        "description": "Enter the address of your datawatch server. The next screen shows its certificate for you to check. Nothing, including a token, is sent before you approve it.",
+        "data": { "url": "Server address", "token": "Token" },
+        "data_description": {
+          "url": "Starts with https://, with the port if it needs one.",
+          "token": "Leave empty if your datawatch does not use a token."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the datawatch connection",
+        "description": "Change the address or token. You will check the certificate again.",
+        "data": { "url": "Server address", "token": "Token" },
+        "data_description": {
+          "url": "Starts with https://, with the port if it needs one.",
+          "token": "Leave empty to keep the saved token for the same address. A saved token is never carried to a different address."
+        }
+      },
+      "certificate": {
+        "title": "Check the certificate",
+        "description": "The server at {url} presented a certificate with this SHA-256 fingerprint:\n\n`{fingerprint}`\n\nCompare it with the certificate on your datawatch server itself. There, run `openssl x509 -in CERTIFICATE_FILE -noout -fingerprint -sha256`, using your certificate file.\n\nSelect Submit only if they match. From then on, only this certificate is accepted."
+      }
+    },
+    "error": {
+      "invalid_url": "Enter only an https:// address, with an optional port and no path.",
+      "cannot_connect": "Could not read datawatch at that address.",
+      "invalid_auth": "datawatch refused access. Check the token.",
+      "certificate_changed": "The certificate changed before you approved it. Check the address and try again."
+    },
+    "abort": {
+      "single_instance_allowed": "datawatch is already set up. Only one server is supported for now.",
+      "reconfigure_successful": "The datawatch connection was updated."
+    }
+  }
+}

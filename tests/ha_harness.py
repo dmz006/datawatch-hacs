@@ -8,6 +8,7 @@ from pathlib import Path
 
 from homeassistant import bootstrap, config_entries, loader
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 
 
 @contextlib.asynccontextmanager
@@ -17,6 +18,8 @@ async def running_hass(config_dir: Path) -> AsyncIterator[HomeAssistant]:
     hass.config.skip_pip = True
     hass.config_entries = config_entries.ConfigEntries(hass, {})
     await bootstrap.async_load_base_functionality(hass)
+    # A running Home Assistant always has this; its shared web session depends on it.
+    assert await async_setup_component(hass, "network", {})
     try:
         yield hass
     finally:

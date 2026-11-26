@@ -3,15 +3,16 @@ name = "datawatch-hacs"
 version = "0.1.0"
 description = "Home Assistant integration for datawatch."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14.2"
 license = { file = "LICENSE" }
 authors = [{ name = "dmz006" }]
 # aiohttp ships with Home Assistant, so manifest.json lists no requirement.
 dependencies = ["aiohttp>=3.10"]
 
 [project.optional-dependencies]
-test = ["pytest>=9.0", "pytest-cov>=7.0"]
-lint = ["ruff>=0.17", "mypy>=2.4"]
+# Home Assistant 2026.11 and later only. Unpinned on purpose, so CI tests the newest.
+test = ["homeassistant>=2026.11.0", "pytest>=9.0", "pytest-cov>=7.0"]
+lint = ["homeassistant>=2026.11.0", "ruff>=0.17", "mypy>=2.4"]
 
 [tool.setuptools]
 packages = []
@@ -32,12 +33,12 @@ show_missing = true
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 files = ["custom_components/datawatch", "scripts"]
 strict = true

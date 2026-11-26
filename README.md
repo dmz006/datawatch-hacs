@@ -3,8 +3,20 @@
 A Home Assistant integration for [datawatch](https://github.com/dmz006/datawatch), installable
 through HACS.
 
-> **In development. Nothing is usable yet.** There is no release, and installing it now does
-> nothing.
+> **In development. Not ready to use.** There is no release. The setup screens connect to
+> datawatch, but voice is not connected yet.
+
+Requires Home Assistant 2026.11 or later. Older versions are not supported.
+
+## Setup screens
+
+1. Enter your datawatch server's `https://` address, and a token if it uses one.
+2. Check the certificate fingerprint against the certificate on your datawatch server, and
+   approve it. Only that certificate is accepted afterwards, and nothing (including the
+   token) is sent before you approve it.
+
+To change the address or token, or approve a replaced certificate, use **Reconfigure** on
+the integration. One datawatch server is supported for now.
 
 ## First goal
 
@@ -18,7 +30,7 @@ integration's setup screens; no server is built in.
 
 ## Voice commands (in development)
 
-The conversation logic and a read-only datawatch client exist, but are not connected to
+The conversation logic and a read-only datawatch client exist, but voice is not connected to
 Home Assistant yet, and the wording may change. The client talks only to the server you
 configure, over HTTPS, and only if it presents the certificate you approved.
 
