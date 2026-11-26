@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Focus on anything:** a plan, automation, automaton, task or session, not only a project.
+  "set two", "set it" or "set plan *name*". "status", "more detail", "why", "tasks",
+  "progress", "history" and "automata" then need no number.
+- **Questions for an item:** with an item focused, "questions" reads only the ones datawatch
+  links to it. "its questions" asks about the one you chose, and "all questions" reads all.
+- **"Go back"** undoes your last step: the previous question or list, or out of what you
+  went into.
+- Plans and automations can now be chosen by number. Automation lines are numbered.
+- Fixed: with a focus on a project, "set four" for a line not yet heard could say there was
+  no list.
 - Fixed: if datawatch left the title out of one record, a whole reply could fail with
   "I can't reach datawatch". Such a record is now called "untitled".
 

@@ -85,6 +85,12 @@ Commands are fixed phrases. Say "help" to hear them, and see the list in the
 You may have a **focus** set. Say "where am I", and "unset" to clear it. The focus is shared
 by your voice devices and your AI assistant, and stays until you clear it.
 
+## Some questions are missing
+
+With a plan, automation, automaton, task or session focused, "questions" reads only the
+ones datawatch links to it. A question that names no automaton does not show under a plan,
+an automation or an automaton. Say "all questions", or "unset".
+
 ## "I couldn't find ... among the automata"
 
 Finding by name searches only automata that need attention, are running, are on hold or

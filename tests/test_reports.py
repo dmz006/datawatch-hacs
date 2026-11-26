@@ -112,9 +112,9 @@ def test_automations_are_counted_and_unfinished_ones_listed_in_datawatch_s_order
         "All projects: 5 automations, 1 blocked, 2 draft, 1 completed and 1 cancelled."
     )
     assert report.items == (
-        "c: blocked, 1 member.",
-        "a: draft, 2 members.",
-        "b: draft, 0 members.",
+        "1, c: blocked, 1 member.",
+        "2, a: draft, 2 members.",
+        "3, b: draft, 0 members.",
     )
     assert reports.automations([], "oak").summary == "Project oak: no automations."
 

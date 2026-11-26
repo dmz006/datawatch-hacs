@@ -35,7 +35,10 @@ def made_up_automaton(
     tasks: list[tuple[str, str, str]],
     reason: str = "",
 ) -> dict[str, Any]:
-    rows = [{"title": t, "status": s, "wait_reason": why} for t, s, why in tasks]
+    rows = [
+        {"id": f"{ident}-t{n}", "title": t, "status": s, "wait_reason": why}
+        for n, (t, s, why) in enumerate(tasks, start=1)
+    ]
     return {
         "id": ident,
         "title": title,
@@ -47,7 +50,15 @@ def made_up_automaton(
 
 
 def made_up_plan(title: str, state: str, done: int = 0, total: int = 0) -> dict[str, Any]:
-    return {"title": title, "state": state, "progress": {"done": done, "total": total}}
+    return {
+        "uid": f"plan-{title.lower()}",
+        "title": title,
+        "state": state,
+        "goal": f"Made-up goal for {title}.",
+        "automaton_ids": ["a2"],
+        "next": {"automaton_id": "a2"},
+        "progress": {"done": done, "total": total},
+    }
 
 
 def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, Any]:
@@ -174,6 +185,30 @@ class Fake:
             "f2": made_up_automaton("f2", "Sweep the made-up path", "completed", tasks=[]),
             "f3": made_up_automaton("f3", "Count the made-up stars", "completed", tasks=[]),
         }
+        # Automations by id, read one at a time.
+        self.automation_records: dict[str, dict[str, Any]] = {
+            "m1": {
+                "id": "m1",
+                "name": "Gamma",
+                "status": "blocked",
+                "description": "Made-up chores.",
+                "members": [{"prd_id": "a2"}, {"prd_id": "f1"}],
+                "decisions": [
+                    {"kind": "created", "actor": "operator"},
+                    {"kind": "member_blocked", "note": "The made-up paint ran out"},
+                ],
+            }
+        }
+        self.plan_automata = [{"id": "a2", "title": "Paint the made-up fence.", "state": "blocked"}]
+        self.plan_tasks = [
+            {
+                "id": "a2-t2",
+                "title": "Paint it",
+                "status": "blocked",
+                "automaton_id": "a2",
+                "automaton_title": "Paint the made-up fence.",
+            }
+        ]
         # Per project: current plans in order, and what is next.
         self.plans: dict[str, list[dict[str, Any]]] = {
             "oak": [made_up_plan("Roots", "in_progress", 2, 5), made_up_plan("Leaves", "planned")],
@@ -226,6 +261,13 @@ class Fake:
         if request.path == "/api/automations":
             wanted = query.get("project")
             return web.json_response(self.automations if wanted in (None, "oak") else [])
+        if request.path.startswith("/api/automations/"):
+            found = self.automation_records.get(request.path.rsplit("/", 1)[1])
+            return web.json_response(found) if found else web.Response(status=404)
+        if request.path.startswith("/api/plans/"):
+            _, what = request.path.removeprefix("/api/plans/").split("/")
+            rows = self.plan_automata if what == "automata" else self.plan_tasks
+            return web.json_response({what: rows, "page": {"total": len(rows)}})
         if request.path.startswith("/api/projects/"):
             name, what = request.path.removeprefix("/api/projects/").split("/")
             plans = self.plans[name]
@@ -268,9 +310,17 @@ class Fake:
         if request.path == "/api/autonomous/triage":
             states = ["blocked", "failed", "merge_pending", "merge_blocked"]
             return web.json_response({"records": [{"status": x} for x in states]})
+        if request.path == "/api/sessions" and "q" in query:
+            rows = [
+                row | {"state": state}
+                for state, found in self.sessions.items()
+                for row in found
+                if query["q"] in row["full_id"]
+            ]
+            return web.json_response({"sessions": rows, "total": len(rows)})
         if request.path == "/api/sessions":
             everything, inside = self.totals[query["status"]]
-            total = inside if "project" in query else everything
+            total = inside if {"project", "automaton", "automation"} & set(query) else everything
             rows = self.sessions[query["status"]] if query.get("limit") != "1" else []
             return web.json_response({"sessions": rows, "total": total})
         return web.Response(status=404)

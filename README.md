@@ -115,6 +115,7 @@ To start: your wake word, then **"open datawatch"**, **"use datawatch"** or just
 |---|---|
 | "questions" or "what's the first question" | Reads the first open question in full, with its options and the asker's recommendation |
 | "next question" (or "next") | Reads the next one |
+| "go back" | The previous question |
 | "more detail" | What each option costs or gives, and why one is recommended |
 | "option two" (or "answer two", "two") | Chooses an option and reads it back. **Not sent yet** |
 | "my answer is …" | Answers in your own words, and reads them back. **Not sent yet** |
@@ -160,8 +161,8 @@ Plans need datawatch's plan records to be turned on.
 | "tasks" or "tasks for two" | Its tasks and their statuses, three at a time |
 | "progress" | How many tasks are done and what the rest are doing |
 
-Numbers work for the lists from "attention", "what's running" and "held items", and only for
-lines you have heard. A reason is what datawatch recorded, so it can be long and technical.
+Numbers work for lines you have heard in the lists of automata, plans, automations, tasks
+and sessions. A reason is what datawatch recorded, so it can be long and technical.
 It is never guessed; if there is none, you hear that. Finding by name searches only automata
 that need attention, are running or are on hold, then recently updated completed ones: datawatch has no title search, and listing
 every automaton is too slow for voice.
@@ -191,16 +192,50 @@ seconds on a large datawatch.
 | "list projects", then "more" | Your projects three at a time, in alphabetical order, numbered |
 | "set two" or "set project *name*" | Focus on a project. Part of a name works; if several match, you are asked which number |
 | "where am I" | The current focus |
-| "unset" | Clear the focus |
+| "unset" | Clear the whole focus |
 | "repeat" | The last reply again |
 | "help" | The list of commands |
 | "close datawatch", "stop", "exit" or "done" | Leave datawatch mode |
 
-**Focus** saves you from naming a project every time. All your voice devices share it, and it
-stays until you say "unset", even after you leave. With a focus, session counts are given
-for that project and for everything else. datawatch cannot yet filter questions, items on
-hold, or failed and blocked automata by project, so you hear those **across all projects**,
-and the reply says so.
+### Focus: stop repeating yourself
+
+You can **focus** on a project, and then on a **plan, automation, automaton, task or
+session** inside it. After that you do not have to name it again.
+
+| In datawatch mode, say | What happens |
+|---|---|
+| "set two" | Focus on line 2 of the list you are hearing |
+| "set it" | Focus on the one you just chose |
+| "set plan *name*" (or automation, automaton, task, session) | Focus by part of a name. If several fit, you are asked which number |
+| "status", "more detail" | About the focused item |
+| "why", "progress", "results" | About the focused item (results are for automata) |
+| "history" | What datawatch recorded: for an automaton or an automation |
+| "automata" | What is inside a focused or chosen plan or automation |
+| "tasks" | The tasks of a plan or an automaton |
+| "questions" | With an item focused, only the open questions datawatch links to it |
+| "its questions" or "questions for two" | The questions for the item you chose, without focusing on it |
+| "all questions" | Every open question, whatever the focus |
+| "go back" | Undo your last step: the previous question or list, or back out of what you just went into. With no earlier step, the focus moves up one level |
+| "where am I" | The whole focus, for example "project oak, plan Roots, task Paint it" |
+| "unset" | Clear the whole focus |
+
+All your voice devices share the focus, and it stays until you change it, even after you
+leave. "Go back" remembers the steps of the visit you are in. It never undoes an answer you
+sent, and it drops one that is still waiting for "confirm answer".
+
+What a focus can and cannot narrow:
+
+- **Questions** are narrowed only when datawatch records a link to the item. A question that
+  names no automaton does not show under a plan, an automation or an automaton, and few
+  questions name a task or a session. You hear how many are open in all.
+- A **project** focus does not narrow questions, items on hold, or failed and blocked
+  automata, because datawatch cannot filter those by project yet. The reply says "across all
+  projects". With a project focus, session counts are given for that project and for
+  everything else.
+- **Sessions** are narrowed to a focused automation or automaton.
+- Inside a large plan, you can hear its first 50 automata or tasks.
+- datawatch gives **no history** for a plan or a single task, and history for a session is
+  not read.
 
 **You don't have to say "close".** If it hears nothing it asks "Still there?" once, and
 after a second silence it closes. It also closes after three phrases in a row that it does
@@ -265,7 +300,7 @@ Configure** and choose an **AI assistant**. Leave it empty to turn it off again.
 assistant's own instructions, personality and settings are not edited. datawatch only adds a
 short introduction and these tools while it is on:
 
-- status, projects and open questions
+- status, projects, what you are focused on, and open questions
 - what needs attention, what is running or on hold, plans and plan counts, what is next,
   and automations. When it answers for your focused project only, it is told to say so
 - one automaton: progress, why it is stuck, its tasks and what it delivered
@@ -314,7 +349,9 @@ matters in datawatch.
 - **Sensors** read counts once a minute, and their history is stored by Home Assistant.
   Anyone who can see your Home Assistant can see them.
 - The address, certificate fingerprint and any token are kept in Home Assistant's
-  integration settings. The focus (a project name) is kept in Home Assistant's storage.
+  integration settings. The focus (the names and ids of what you focused on, which for a
+  session includes your datawatch host name if datawatch puts it in the id) is kept in Home
+  Assistant's storage.
 
 To report a security problem, see [SECURITY.md](SECURITY.md).
 

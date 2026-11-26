@@ -6,6 +6,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from .items import Decision, Item
 from .reports import Report, words
 from .speech import count, join
 from .work import Delivery, delivery
@@ -22,6 +23,7 @@ class Task:
     title: str
     status: str = ""
     reason: str = ""
+    id: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,8 @@ class Automaton:
     hold: str = ""
     tasks: tuple[Task, ...] = ()
     delivered: Delivery | None = None
+    goal: str = ""
+    decisions: tuple[Decision, ...] = ()
 
 
 def task_status(status: str) -> str:
@@ -115,7 +119,23 @@ def tasks(automaton: Automaton) -> Report:
         f"Task {number}, {_clean(task.title)}: {task_status(task.status)}."
         for number, task in enumerate(automaton.tasks, start=1)
     )
-    return Report(progress(automaton), lines)
+    under = Item("automaton", automaton.id, automaton.title)
+    refs = tuple(
+        Item("task", task.id, task.title, automaton.id) for task in automaton.tasks if task.id
+    )
+    if len(refs) != len(lines):
+        return Report(progress(automaton), lines, under=under)
+    details = tuple(task_detail(task, automaton.title) for task in automaton.tasks)
+    return Report(progress(automaton), lines, refs, details, under)
+
+
+def task_detail(task: Task, automaton_title: str) -> str:
+    """One task: its status, which automaton it is in, and any recorded reason."""
+    text = (
+        f"Task {_clean(task.title)}: {task_status(task.status)}. In the automaton "
+        f"{_clean(automaton_title)}."
+    )
+    return f"{text} datawatch says: {_reason(task.reason)}" if task.reason else text
 
 
 def choices(spoken: str, found: Sequence[tuple[str, str]]) -> Report:
@@ -123,5 +143,5 @@ def choices(spoken: str, found: Sequence[tuple[str, str]]) -> Report:
     return Report(
         f"I found {len(found)} matching {spoken}. Say a number.",
         tuple(f"{n}, {_clean(title)}." for n, (_, title) in enumerate(found, start=1)),
-        tuple(ident for ident, _ in found),
+        tuple(Item("automaton", ident, title) for ident, title in found),
     )

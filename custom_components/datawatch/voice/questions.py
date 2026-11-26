@@ -29,6 +29,11 @@ class Question:
     blocking: bool = False
     recommended: str | None = None
     rationale: str = ""
+    # What it is about, as datawatch records it.
+    automaton_id: str = ""
+    task_id: str = ""
+    asked_by: str = ""
+    tags: tuple[str, ...] = ()
 
     def number_of(self, option_id: str | None) -> int | None:
         """The spoken number of an option."""

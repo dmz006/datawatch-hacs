@@ -21,7 +21,7 @@ from .api import DatawatchClient, DatawatchError
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS
 from .mode import custom_reports
 from .reporting import build, find, run
-from .voice import automata, custom
+from .voice import automata, custom, items
 from .voice.conversation import Topic
 from .voice.questions import Question, ordered
 
@@ -123,16 +123,23 @@ class ProjectsTool(_DatawatchTool):
 
     name = "datawatch__projects"
     title = "datawatch projects"
-    description = "The names of the user's datawatch projects, and the one they are focused on."
-    feature = "Projects: their names and the user's focus."
+    description = (
+        "The names of the user's datawatch projects, and what the user is focused on: a "
+        "project, and possibly a plan, automation, automaton, task or session inside it."
+    )
+    feature = "Projects: their names, and what the user is focused on."
 
     @override
     async def _read(self, hass: HomeAssistant, args: dict[str, Any]) -> dict[str, Any]:
         names = await self._client.project_names()
-        return {
+        focus = hass.data[FOCUS]
+        result: dict[str, Any] = {
             "projects": sorted(names, key=str.casefold),
-            "focus": hass.data[FOCUS].project,
+            "focus": focus.project,
         }
+        if focus.path:
+            result["focused_on"] = items.describe(focus.project, focus.path)
+        return result
 
 
 class QuestionsTool(_DatawatchTool):

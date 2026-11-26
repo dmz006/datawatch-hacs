@@ -7,6 +7,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from .items import Decision, Item
 from .speech import count, join
 
 
@@ -14,14 +15,16 @@ from .speech import count, join
 class Report:
     """A summary, and the lines that can be read after it.
 
-    refs: for lines that can be chosen by number, the id behind each line. details: what to
-    say when a line is chosen, for lines that are not automata.
+    refs: for lines that can be chosen by number, the item behind each line. details: what
+    to say when a line is chosen, for lines that are not automata. under: the focused item
+    these lines belong to, so that choosing one goes a step further in.
     """
 
     summary: str
     items: tuple[str, ...] = ()
-    refs: tuple[str, ...] = ()
+    refs: tuple[Item, ...] = ()
     details: tuple[str, ...] = ()
+    under: Item | None = None
 
 
 @dataclass(frozen=True)
@@ -64,6 +67,10 @@ class Plan:
     state: str
     done: int = 0
     total: int = 0
+    id: str = ""
+    goal: str = ""
+    automata: frozenset[str] = frozenset()
+    next_automaton: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +94,10 @@ class Automation:
     name: str
     status: str
     members: int = 0
+    id: str = ""
+    description: str = ""
+    member_ids: tuple[str, ...] = ()
+    decisions: tuple[Decision, ...] = ()
 
 
 # The order datawatch's attention statuses are read in.
@@ -130,7 +141,8 @@ def attention(rows: Sequence[Attention]) -> Report:
         if row.held_tasks:
             line += f", {count(row.held_tasks, 'task', 'tasks')} held for review"
         items.append(f"{line}.")
-    return Report(summary, tuple(items), tuple(row.id for row in ordered))
+    refs = tuple(Item("automaton", row.id, row.title) for row in ordered)
+    return Report(summary, tuple(items), refs)
 
 
 def running(rows: Sequence[Listed], total: int, project: str | None) -> Report:
@@ -147,7 +159,8 @@ def running(rows: Sequence[Listed], total: int, project: str | None) -> Report:
         if row.tasks:
             line += f", {row.done} of {row.tasks} tasks completed"
         items.append(f"{line}.")
-    return Report(summary, tuple(items), tuple(row.id for row in rows))
+    refs = tuple(Item("automaton", row.id, row.title) for row in rows)
+    return Report(summary, tuple(items), refs)
 
 
 def _brief(reason: str) -> str:
@@ -173,7 +186,8 @@ def held(rows: Sequence[Held], total: int) -> Report:
             line += f", project {row.project}"
         line += f". Reason: {_brief(row.reason)}" if row.reason else ". No reason given"
         items.append(f"{line}.")
-    return Report(summary, tuple(items), tuple(row.id for row in rows))
+    refs = tuple(Item("automaton", row.id, row.title) for row in rows)
+    return Report(summary, tuple(items), refs)
 
 
 def _states(overview: Overview) -> str:
@@ -208,12 +222,15 @@ def plans_of(project: str, plans: Sequence[Plan], total: int, archived: int) -> 
         return Report(f"Project {project} has no current plans.{old}")
     summary = f"Project {project} has {count(total, 'current plan', 'current plans')}.{old}"
     items = []
+    details = []
     for number, plan in enumerate(plans, start=1):
-        line = f"Plan {number}, {_title(plan.title)}: {words(plan.state)}"
+        line = f"{_title(plan.title)}: {words(plan.state)}"
         if plan.total:
             line += f", {plan.done} of {plan.total} automata done"
-        items.append(f"{line}.")
-    return Report(summary, tuple(items))
+        items.append(f"Plan {number}, {line}.")
+        details.append(f"Plan {line}.{f' Its goal: {_title(plan.goal)}.' if plan.goal else ''}")
+    refs = tuple(Item("plan", plan.id, plan.title, project) for plan in plans)
+    return Report(summary, tuple(items), refs, tuple(details))
 
 
 def _next(overview: Overview) -> str:
@@ -263,8 +280,50 @@ def automations(rows: Sequence[Automation], project: str | None) -> Report:
         (row for row in rows if row.status not in _FINISHED),
         key=lambda row: (_rank(_AUTOMATION_ORDER, row.status), row.name.casefold()),
     )
-    items = tuple(
+    lines = [
         f"{_title(row.name)}: {words(row.status)}, {count(row.members, 'member', 'members')}."
         for row in unfinished
+    ]
+    return Report(
+        summary,
+        tuple(f"{number}, {line}" for number, line in enumerate(lines, start=1)),
+        tuple(Item("automation", row.id, row.name) for row in unfinished),
+        tuple(f"Automation {line}" for line in lines),
     )
-    return Report(summary, items)
+
+
+@dataclass(frozen=True)
+class Child:
+    """Something inside a plan or an automation."""
+
+    id: str
+    title: str
+    status: str = ""
+    # For a task, the automaton it is in.
+    parent: str = ""
+    within: str = ""
+
+
+def children(under: Item, kind: str, rows: Sequence[Child], total: int) -> Report:
+    """The automata or tasks inside an item. total may be more than the rows read."""
+    one, many = ("automaton", "automata") if kind == "automaton" else ("task", "tasks")
+    name = f"The {under.kind} {_title(under.title)}"
+    if not rows:
+        return Report(f"{name} has no {many}.", under=under)
+    summary = f"{name} has {count(total, one, many)}."
+    if total > len(rows):
+        summary += f" I can read the first {len(rows)}."
+    lines = []
+    details = []
+    for number, row in enumerate(rows, start=1):
+        state = words(row.status) if row.status else "not started"
+        lines.append(f"{number}, {_title(row.title)}: {state}.")
+        where = f" In the automaton {_title(row.within)}." if row.within else ""
+        details.append(f"{one.capitalize()} {_title(row.title)}: {state}.{where}")
+    return Report(
+        summary,
+        tuple(lines),
+        tuple(Item(kind, row.id, row.title, row.parent) for row in rows),
+        tuple(details),
+        under,
+    )

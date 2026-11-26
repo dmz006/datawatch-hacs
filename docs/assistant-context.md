@@ -30,6 +30,9 @@ paragraph: it says the assistant cannot read datawatch.
 | "Give me my daily report." | report |
 | "What does 'held' mean in datawatch?" | documentation search and reading |
 
+The `datawatch__projects` tool also says what you are focused on, down to a task or
+session. The other tools follow only the project part of the focus.
+
 If you have a project focus, a work report covers that project unless you ask for all
 projects.
 

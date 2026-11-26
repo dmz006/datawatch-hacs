@@ -24,6 +24,8 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | `custom_components/datawatch/coordinator.py`, `sensor.py`, `binary_sensor.py` | Dashboard sensors, read once a minute |
 | `custom_components/datawatch/llm.py` | Read-only tools and introduction for AI assistants |
 | `custom_components/datawatch/mode.py` | Datawatch mode: ask, listen, answer; shared focus |
+| `custom_components/datawatch/cards.py` | Reads one focused item, what is inside it, and searches by name |
+| `custom_components/datawatch/voice/items.py` | What can have the focus, and which questions belong to it |
 | `custom_components/datawatch/entry_phrase.py` | **The only use of non-public Home Assistant code** |
 | `custom_components/datawatch/config_flow.py` | Setup screens |
 | `tests/ha_harness.py` | A throwaway Home Assistant running the real code |
@@ -39,6 +41,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - Do not over-engineer: get datawatch's functions working.
 - The integration registers the entry phrase itself, so there is no automation to maintain.
 - One focus shared by all voice devices. Accounts with different access may come later.
+- "Go back" undoes the last step: the previous question or list, or back out of what was
+  just entered.
+- Plain "questions" is narrowed only by the focus, never by merely choosing an item.
 - Silence: ask once, then close. A "stay until I leave" setting may be wanted later; the
   conversation class already supports it for silence.
 - Close after three phrases in a row that are not understood. Silence does not restart that

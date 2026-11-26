@@ -58,7 +58,8 @@ def test_phrases(heard: str, kind: Kind) -> None:
     ],
 )
 def test_set_by_number(heard: str, number: int) -> None:
-    assert parse(heard) == Command(Kind.SET_NUMBER, number=number)
+    said = "project" if "project" in heard.lower() else None
+    assert parse(heard) == Command(Kind.SET_NUMBER, number=number, item=said)
 
 
 @pytest.mark.parametrize(("heard", "number"), [("two", 2), ("number 5", 5), ("Three.", 3)])
@@ -76,7 +77,8 @@ def test_bare_number_is_reported_as_a_number(heard: str, number: int) -> None:
     ],
 )
 def test_set_by_name(heard: str, name: str) -> None:
-    assert parse(heard) == Command(Kind.SET_NAME, name=name)
+    said = "project" if "project" in heard.lower() else None
+    assert parse(heard) == Command(Kind.SET_NAME, name=name, item=said)
 
 
 @pytest.mark.parametrize("heard", ["", "  ", "turn on the lights", "set", "stop the music now"])

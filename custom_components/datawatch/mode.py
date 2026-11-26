@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from dataclasses import replace
 from typing import Any
 
 from homeassistant.components.assist_satellite import AssistSatelliteEntityFeature
@@ -25,14 +26,17 @@ from .api import (
     DatawatchClient,
     DatawatchClosedError,
     DatawatchError,
+    DatawatchMissingError,
     DatawatchRefusedError,
     DatawatchSecretError,
 )
+from .cards import read_card, read_children, search_items
 from .const import CONF_ASSISTANT, CONF_ITEMS, DISCUSSING, DOMAIN, SUBENTRY_REPORT
 from .reporting import build, find, read_automaton, run
 from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.custom import CustomReport
-from .voice.phrases import parse
+from .voice.items import GONE, Card, Item, restored, stored
+from .voice.phrases import Kind, parse
 from .voice.questions import Draft
 from .voice.reports import Report
 
@@ -62,6 +66,7 @@ _NOT_CHECKED = "I can't reach datawatch, so nothing was sent. Say my answer or o
 _UNSURE = "I don't know whether the answer was sent. Say questions to check."
 _NO_ASSISTANT = "Your assistant didn't answer. Try again, or say stop."
 _SILENT_ASSISTANT = "Your assistant had nothing to say."
+_SETTING = (Kind.SET_THIS, Kind.SET_NUMBER, Kind.SET_NAME)
 
 
 def custom_reports(entry: ConfigEntry) -> tuple[CustomReport, ...]:
@@ -81,16 +86,20 @@ class SharedFocus:
     """The focus, shared by every voice device and kept until the user clears it."""
 
     def __init__(self, hass: HomeAssistant) -> None:
-        self._store: Store[dict[str, str | None]] = Store(hass, 1, f"{DOMAIN}.focus")
+        self._store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.focus")
         self.project: str | None = None
+        # The plan, automaton or other items focused inside the project.
+        self.path: tuple[Item, ...] = ()
 
     async def async_load(self) -> None:
-        self.project = (await self._store.async_load() or {}).get("project")
+        saved = await self._store.async_load() or {}
+        self.project = saved.get("project")
+        self.path = restored(saved.get("path"))
 
-    async def async_set(self, project: str | None) -> None:
-        if project != self.project:
-            self.project = project
-            await self._store.async_save({"project": project})
+    async def async_set(self, project: str | None, path: tuple[Item, ...] = ()) -> None:
+        if (project, path) != (self.project, self.path):
+            self.project, self.path = project, path
+            await self._store.async_save({"project": project, "path": stored(path)})
 
     async def async_remove(self) -> None:
         await self._store.async_remove()
@@ -163,7 +172,10 @@ class DatawatchMode:
     async def _converse(self, satellite_id: str) -> None:
         assistant = self._entry.options.get(CONF_ASSISTANT)
         conversation = Conversation(
-            self._focus.project, assistant=bool(assistant), reports=custom_reports(self._entry)
+            self._focus.project,
+            assistant=bool(assistant),
+            reports=custom_reports(self._entry),
+            path=self._focus.path,
         )
         chat: str | None = None
         reply = conversation.enter()
@@ -204,12 +216,13 @@ class DatawatchMode:
         return str((response or {}).get("sentence") or "").strip() or None
 
     async def _answer(self, conversation: Conversation, heard: str) -> Reply:
-        conversation.focus = self._focus.project
+        conversation.focus, conversation.path = self._focus.project, self._focus.path
         snapshot = None
         questions = None
         report = None
         automaton = None
         composed = None
+        card = None
         needs = conversation.needs(heard)
         client = self._entry.runtime_data
         try:
@@ -217,6 +230,27 @@ class DatawatchMode:
                 snapshot = await client.snapshot(conversation.focus)
             elif needs is Needs.QUESTIONS:
                 questions = list(await client.questions())
+                scope = conversation.wanted_card(heard)
+                if scope is not None:
+                    card = await read_card(client, scope)
+            elif needs is Needs.CARD:
+                item = conversation.wanted_card(heard)
+                assert item is not None, "an item was asked for"
+                card = await self._read_item(item, parse(heard).kind in _SETTING)
+            elif needs is Needs.CHILDREN:
+                children = conversation.wanted_children(heard)
+                assert children is not None, "a list inside an item was asked for"
+                try:
+                    report = await read_children(client, *children)
+                except DatawatchMissingError:
+                    report = Report(f"datawatch no longer has the {children[0].spoken()}.")
+            elif needs is Needs.FIND_ITEM:
+                search = conversation.wanted_item_search(heard)
+                assert search is not None, "an item was named"
+                report = await search_items(client, *search, conversation.focus, conversation.path)
+                matches = conversation.matching(report.refs, *search)
+                if len(matches) == 1:
+                    card = await self._read_item(matches[0], True)
             elif needs is Needs.AUTOMATON:
                 wanted = conversation.wanted_automaton(heard)
                 assert wanted is not None, "an automaton was asked for"
@@ -234,7 +268,7 @@ class DatawatchMode:
                     names = await client.project_names()
                     if conversation.focus not in names:
                         gone = conversation.focus
-                        conversation.focus = None
+                        conversation.focus, conversation.path = None, ()
                         await self._focus.async_set(None)
                         report = await build(client, topic, None)
                         report = Report(
@@ -243,16 +277,28 @@ class DatawatchMode:
                             report.items,
                         )
                 if report is None:
-                    report = await build(client, topic, conversation.focus)
+                    report = await build(
+                        client, topic, conversation.focus, conversation.session_scope
+                    )
         except DatawatchCertificateError:
             return Reply(_CERTIFICATE, ends=True)
         except DatawatchAuthError:
             return Reply(_REFUSED, ends=True)
         except DatawatchError:
             _LOGGER.warning("datawatch could not be read", exc_info=True)
-        reply = conversation.hear(heard, snapshot, questions, report, automaton, composed)
-        await self._focus.async_set(conversation.focus)
+        reply = conversation.hear(heard, snapshot, questions, report, automaton, composed, card)
+        await self._focus.async_set(conversation.focus, conversation.path)
         return reply
+
+    async def _read_item(self, item: Item, to_focus: bool) -> Card:
+        """One item. Before focusing it, a project datawatch does not register is dropped."""
+        client = self._entry.runtime_data
+        card = await read_card(client, item)
+        if not (to_focus and card is not GONE and card.project):
+            return card
+        if card.project in await client.project_names():
+            return card
+        return replace(card, project="")
 
     async def _send(self, conversation: Conversation, draft: Draft) -> Reply:
         """Send an answer the user has just confirmed, and say what happened."""

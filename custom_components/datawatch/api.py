@@ -18,9 +18,10 @@ from urllib.parse import quote, urlsplit
 import aiohttp
 
 from .voice.automata import Automaton, Task
+from .voice.items import Decision
 from .voice.model import Snapshot, Tally
 from .voice.questions import Option, Question
-from .voice.reports import Attention, Automation, Held, Listed, Overview, Plan
+from .voice.reports import Attention, Automation, Child, Held, Listed, Overview, Plan
 from .voice.work import Delivery, Finished, Session
 
 QUESTION_LIMIT = 1000
@@ -72,6 +73,52 @@ def _question_path(question_id: str) -> str:
     if not _IDENTIFIER.fullmatch(question_id):
         raise DatawatchError("unexpected question id")
     return f"questions/{question_id}"
+
+
+def _checked(ident: str) -> str:
+    if not _IDENTIFIER.fullmatch(ident):
+        raise DatawatchError("unexpected id")
+    return ident
+
+
+def _text(row: Mapping[str, Any], key: str) -> str:
+    value = row.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _texts(value: Any) -> tuple[str, ...]:
+    return tuple(v for v in value if isinstance(v, str)) if isinstance(value, list) else ()
+
+
+def _decisions(value: Any) -> tuple[Decision, ...]:
+    return tuple(
+        Decision(row["kind"], _text(row, "actor"), _text(row, "note"), _text(row, "at"))
+        for row in _rows(value or [], "kind")
+    )
+
+
+def _automation(row: Mapping[str, Any]) -> Automation:
+    members = row.get("members") or []
+    return Automation(
+        row["name"],
+        row["status"],
+        len(members),
+        _text(row, "id"),
+        _text(row, "description"),
+        tuple(m["prd_id"] for m in members if isinstance(m, dict) and _text(m, "prd_id")),
+        _decisions(row.get("decisions")),
+    )
+
+
+def _session(row: Mapping[str, Any], state: str) -> Session:
+    return Session(
+        row["full_id"],
+        str(row.get("name") or ""),
+        state,
+        str(row.get("project") or ""),
+        str(row.get("llm_ref") or row.get("backend") or ""),
+        str(row.get("last_activity") or row.get("updated_at") or ""),
+    )
 
 
 def _project_path(project: str, what: str) -> str:
@@ -135,6 +182,10 @@ def _question(row: Any) -> Question:
         blocking=row.get("blocking") is True,
         recommended=recommendation.get("option_id"),
         rationale=str(recommendation.get("rationale") or ""),
+        automaton_id=_text(row, "prd_id"),
+        task_id=_text(row, "task_id"),
+        asked_by=_text(row, "asked_by"),
+        tags=_texts(row.get("system_tags")),
     )
 
 
@@ -365,7 +416,14 @@ class DatawatchClient:
                 # A finished task's old waiting note no longer explains anything.
                 if task.get("status") == "completed":
                     reason = ""
-                tasks.append(Task(_title(task), str(task.get("status") or ""), str(reason)))
+                tasks.append(
+                    Task(
+                        _title(task),
+                        str(task.get("status") or ""),
+                        str(reason),
+                        _text(task, "id"),
+                    )
+                )
         return Automaton(
             id=reply["id"],
             title=_title(reply),
@@ -374,7 +432,62 @@ class DatawatchClient:
             reason=str(reply.get("blocked_reason") or ""),
             hold=hold,
             tasks=tuple(tasks),
+            goal=_text(reply, "spec"),
+            decisions=_decisions(reply.get("decisions")),
         )
+
+    async def automaton_brief(self, automaton_id: str) -> Child:
+        """An automaton's title and status, without its tasks."""
+        path = f"autonomous/prds/{_checked(automaton_id)}"
+        reply = _table(await self._get(path, {"detail": "summary"}))
+        if not all(isinstance(reply.get(key), str) for key in ("id", "status")):
+            raise DatawatchError("unexpected automaton")
+        return Child(reply["id"], _text(reply, "title"), reply["status"])
+
+    async def plan_automata(self, plan_id: str, limit: int) -> tuple[list[Child], int]:
+        """A plan's automata in run order, and how many there are."""
+        reply = _table(
+            await self._get(f"plans/{_checked(plan_id)}/automata", {"limit": str(limit)})
+        )
+        rows = [
+            Child(row["id"], _text(row, "title"), _text(row, "state"))
+            for row in _rows(reply.get("automata"), "id")
+        ]
+        return rows, _number(_table(reply.get("page")).get("total"))
+
+    async def plan_tasks(self, plan_id: str, limit: int) -> tuple[list[Child], int]:
+        """A plan's tasks, and how many there are."""
+        reply = _table(await self._get(f"plans/{_checked(plan_id)}/tasks", {"limit": str(limit)}))
+        rows = [
+            Child(
+                row["id"],
+                _text(row, "title"),
+                _text(row, "status"),
+                row["automaton_id"],
+                _text(row, "automaton_title"),
+            )
+            for row in _rows(reply.get("tasks"), "id", "automaton_id")
+        ]
+        return rows, _number(_table(reply.get("page")).get("total"))
+
+    async def automation(self, automation_id: str) -> Automation:
+        """One automation with its members and history."""
+        reply = _table(await self._get(f"automations/{_checked(automation_id)}"))
+        if not all(isinstance(reply.get(key), str) for key in ("name", "status")):
+            raise DatawatchError("unexpected automation")
+        return _automation(reply)
+
+    async def session(self, session_id: str) -> Session | None:
+        """One session, or None if datawatch no longer lists it. Never its output."""
+        reply = _table(
+            await self._get(
+                "sessions", {"view": "summary", "limit": "50", "q": _checked(session_id)}
+            )
+        )
+        for row in _rows(reply.get("sessions"), "full_id", "state"):
+            if row["full_id"] == session_id:
+                return _session(row, row["state"])
+        return None
 
     async def overview(self, project: str) -> Overview:
         """A project's plans at a glance."""
@@ -405,12 +518,18 @@ class DatawatchClient:
             progress = row.get("progress")
             progress = progress if isinstance(progress, dict) else {}
             done, total = progress.get("done"), progress.get("total")
+            following = row.get("next")
+            following = following if isinstance(following, dict) else {}
             result.append(
                 Plan(
                     _title(row),
                     row["state"],
                     done if isinstance(done, int) else 0,
                     total if isinstance(total, int) else 0,
+                    _text(row, "uid") or _text(row, "id"),
+                    _text(row, "goal"),
+                    frozenset(_texts(row.get("automaton_ids"))),
+                    _text(following, "automaton_id"),
                 )
             )
         return result
@@ -419,7 +538,7 @@ class DatawatchClient:
         """Automations, filtered by datawatch when a project is given."""
         params = {"project": project} if project is not None else None
         return [
-            Automation(row["name"], row["status"], len(row.get("members") or []))
+            _automation(row)
             for row in _rows(await self._get("automations", params), "name", "status")
         ]
 
@@ -468,23 +587,23 @@ class DatawatchClient:
             raise DatawatchError("unexpected triage list")
         return Tally(sum(row["status"] in ("failed", "blocked") for row in records))
 
-    async def sessions(self, state: str, project: str | None = None) -> tuple[list[Session], int]:
-        """Sessions in a state, and how many there are. Never their terminal output."""
+    async def sessions(
+        self,
+        state: str,
+        project: str | None = None,
+        within: tuple[str, str] | None = None,
+    ) -> tuple[list[Session], int]:
+        """Sessions in a state, and how many there are. Never their terminal output.
+
+        within: ('automaton' or 'automation', its id), using datawatch's own filter.
+        """
         params = {"view": "summary", "status": state, "limit": str(RECENT_LIMIT)}
         if project is not None:
             params["project"] = project
+        if within is not None:
+            params[within[0]] = _checked(within[1])
         reply = _table(await self._get("sessions", params))
-        rows = [
-            Session(
-                row["full_id"],
-                str(row.get("name") or ""),
-                state,
-                str(row.get("project") or ""),
-                str(row.get("llm_ref") or row.get("backend") or ""),
-                str(row.get("last_activity") or row.get("updated_at") or ""),
-            )
-            for row in _rows(reply.get("sessions"), "full_id")
-        ]
+        rows = [_session(row, state) for row in _rows(reply.get("sessions"), "full_id")]
         return rows, _number(reply.get("total"))
 
     async def finished(self, project: str | None = None) -> tuple[list[Finished], int]:

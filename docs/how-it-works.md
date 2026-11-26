@@ -96,6 +96,33 @@ a new feature appears in it when its tool is added. In datawatch mode, other tal
 to the chosen assistant with Home Assistant's "process a conversation" action, as one
 conversation for the visit.
 
+## Focus and "go back"
+
+The focus is a project and then a path, for example a plan, one of its tasks. Commands
+about "it" apply to the item you last chose, or else to the end of that path. Plain
+"questions" is narrowed only by the focus, so that merely hearing about an item never hides
+your other questions.
+
+```mermaid
+flowchart TD
+    all[No focus] -->|set| project[Project]
+    all -->|set a line| item
+    project -->|set a line| item[Plan, automation, automaton or session]
+    item -->|list what is inside, set a line| inner[Automaton or task inside it]
+    inner -->|go back| item
+    item -->|go back| project
+    project -->|go back| all
+```
+
+"Go back" keeps the last 50 steps of a visit. A step is a new list, another question,
+choosing a different item or changing the focus. Hearing more of a list, or asking again
+about the same item, is not a step. With no step left it removes the last part of the
+focus. A waiting answer is never part of a step: going back drops it.
+
+A question belongs to an item only through what datawatch records on the question: its
+automaton (for an automaton, or for a plan or automation that holds it), its task, or the
+session that asked it.
+
 ## What ends a visit
 
 ```mermaid
@@ -126,12 +153,14 @@ and you stay in datawatch mode.
 
 ## What is read and sent, and when
 
-Entering, leaving, "help", "repeat", "where am I", "unset", "more" and choosing a number
-read nothing. "questions" reads the open questions. "status", "more detail" (after status),
+Entering, leaving, "help", "repeat", "go back", "where am I", "unset" and "more" read
+nothing. "go back" repeats what you heard before, so say "status" for a fresh reading. "questions" reads the open questions. "status", "more detail" (after status),
 "list projects" and setting a project by name read counts or names. The work reports
 ("attention", "plans", "overview", "what's next", "automations", "running", "held",
-the session lists and "what finished") read their own lists. Choosing one automaton, "why", "tasks" and "progress" read it again each
-time, so what you hear is current.
+the session lists and "what finished") read their own lists. Choosing an automaton, setting
+a focus, and asking about an item read it again each time, so what you hear is current.
+Choosing a line that is not an automaton, such as a task or a session, gives what was read
+with the list.
 Voice replies and AI tools read fresh each time; nothing is cached for them.
 
 The **dashboard sensors** are the one thing read in the background: once a minute the
@@ -152,7 +181,12 @@ only what its parts need.
 | `GET /api/autonomous/triage` | Failed and blocked automata |
 | `GET /api/autonomous/attention` | What needs you. Chosen as datawatch's web app chooses: an attention status, or a task held for review |
 | `GET /api/projects/{name}/overview-summary` | Plan counts, progress and what is next. Without a focus, read once per project |
-| `GET /api/projects/{name}/plans` | A focused project's plans, up to 500 |
+| `GET /api/projects/{name}/plans` | A focused project's plans, up to 500. Also to read one focused plan |
+| `GET /api/plans/{id}/automata`, `…/tasks` | What is inside a plan, 50 at most |
+| `GET /api/automations/{id}` | One automation: its members and history |
+| `GET /api/autonomous/prds/{id}?detail=summary` | An automaton's title and status, for an automation's members (50 at most) and a plan's next one |
+| `GET /api/sessions?view=summary&q={id}` | One focused session |
+| `GET /api/sessions?view=summary&automaton=…` or `automation=…` | Sessions inside a focused automaton or automation |
 | `GET /api/automations` | Automations; with a focus, datawatch's `project=` filter |
 | `GET /api/autonomous/prds?status=running` | Running automata; with a focus, datawatch's `project=` filter |
 | `GET /api/autonomous/held` | Also: what is on hold and why |
@@ -161,7 +195,8 @@ only what its parts need.
 | `GET /api/autonomous/prds?status=completed` | Completed automata, 50 at most, in datawatch's order (last update). Allowed 30 seconds |
 | `GET /api/docs/search`, `GET /api/docs/read` | Documentation, for the AI assistant only |
 
-For the commands, only the focused project's name and your confirmed answer are sent. An AI
+For the commands, only the focused project's name, the ids of items you ask about and your
+confirmed answer are sent. A search by name is matched inside Home Assistant. An AI
 assistant's documentation search sends its search words to datawatch.
 
 Session lists use the session summaries only. The integration **never requests** a

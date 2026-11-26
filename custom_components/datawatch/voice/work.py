@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
+from .items import Item
 from .reports import Report
 from .speech import count, join
 
@@ -66,7 +67,7 @@ def _name(text: str) -> str:
     return " ".join(text.split()).rstrip(".") or "unnamed"
 
 
-def _session_detail(session: Session, now: datetime) -> str:
+def session_detail(session: Session, now: datetime) -> str:
     state = _STATE_WORDS.get(session.state, session.state)
     parts = [f"Session named {_name(session.name)}: {state}."]
     if session.project:
@@ -85,9 +86,15 @@ def sessions(
     rows: Sequence[Session],
     project: str | None,
     now: datetime,
+    inside: Item | None = None,
 ) -> Report:
-    """Counts by state, then the sessions, which can be chosen by number."""
+    """Counts by state, then the sessions, which can be chosen by number.
+
+    inside: the focused automaton or automation the sessions were filtered to.
+    """
     where = f"Project {project}" if project else "All projects"
+    if inside is not None:
+        where = f"The {inside.spoken()}"
     counts = [f"{number} {_STATE_WORDS.get(state, state)}" for state, number in totals]
     summary = f"{where}: sessions, {join(counts)}."
     items = []
@@ -104,8 +111,9 @@ def sessions(
     return Report(
         summary,
         tuple(items),
-        tuple(row.id for row in rows),
-        tuple(_session_detail(row, now) for row in rows),
+        tuple(Item("session", row.id, row.name or "unnamed") for row in rows),
+        tuple(session_detail(row, now) for row in rows),
+        inside,
     )
 
 
@@ -131,7 +139,8 @@ def finished(rows: Sequence[Finished], total: int, project: str | None) -> Repor
         shipped = _shipped(row)
         line = f"{number}, {_name(row.title)}"
         items.append(f"{line}, {shipped}." if shipped else f"{line}.")
-    return Report(summary, tuple(items), tuple(row.id for row in rows))
+    refs = tuple(Item("automaton", row.id, row.title) for row in rows)
+    return Report(summary, tuple(items), refs)
 
 
 def delivery(title: str, status: str, done: int, total: int, record: Delivery | None) -> str:

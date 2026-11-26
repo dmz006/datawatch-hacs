@@ -17,6 +17,7 @@ from custom_components.datawatch.api import DatawatchClient, DatawatchError
 from custom_components.datawatch.voice import automata, reports
 from custom_components.datawatch.voice.automata import Automaton, Task
 from custom_components.datawatch.voice.conversation import Conversation, Needs
+from custom_components.datawatch.voice.items import Item
 from custom_components.datawatch.voice.phrases import Command, Kind, parse
 from custom_components.datawatch.voice.reports import Held, Listed, Report
 
@@ -85,7 +86,7 @@ def test_running_and_held_lines() -> None:
     assert run == Report(
         "1 automaton is running across all projects.",
         ("1, Errand, project oak, 1 of 4 tasks completed.",),
-        ("r",),
+        (Item("automaton", "r", "Errand"),),
     )
     assert reports.running([], 0, "oak").summary == "No automata are running in project oak."
     held = reports.held([Held("h", "Tree", "spring.", project="elm"), Held("g", "Gate")], 9)
@@ -105,7 +106,8 @@ def test_running_and_held_lines() -> None:
 def listed() -> Conversation:
     conversation = Conversation()
     conversation.enter()
-    report = Report("5.", ("1.", "2.", "3.", "4.", "5."), ("a", "b", "c", "d", "e"))
+    refs = tuple(Item("automaton", ident, f"Made-up {ident}") for ident in "abcde")
+    report = Report("5.", ("1.", "2.", "3.", "4.", "5."), refs)
     conversation.hear("attention", None, report=report)
     return conversation
 

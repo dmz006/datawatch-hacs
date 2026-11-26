@@ -47,17 +47,27 @@ class Kind(Enum):
     FINISHED = auto()
     RESULTS = auto()
     REPORTS = auto()
+    SET_THIS = auto()
+    GO_BACK = auto()
+    ALL_QUESTIONS = auto()
+    ITS_QUESTIONS = auto()
+    HISTORY = auto()
+    AUTOMATA = auto()
     UNKNOWN = auto()
 
 
 @dataclass(frozen=True)
 class Command:
-    """A recognised command. UNKNOWN keeps what was heard."""
+    """A recognised command. UNKNOWN keeps what was heard.
+
+    item: the kind of thing named in 'set plan two', if one was said.
+    """
 
     kind: Kind
     number: int | None = None
     name: str | None = None
     text: str | None = None
+    item: str | None = None
 
 
 _PHRASES: dict[Kind, tuple[str, ...]] = {
@@ -149,6 +159,24 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
         "what did it do",
     ),
     Kind.REPORTS: ("reports", "list reports", "my reports", "list my reports"),
+    Kind.SET_THIS: (
+        "set it",
+        "set that",
+        "set this",
+        "set that one",
+        "focus on it",
+        "focus on that",
+    ),
+    Kind.GO_BACK: ("go back", "back", "go up"),
+    Kind.ALL_QUESTIONS: ("all questions", "all the questions", "all open questions"),
+    Kind.ITS_QUESTIONS: (
+        "its questions",
+        "questions for it",
+        "questions for that",
+        "questions about it",
+    ),
+    Kind.HISTORY: ("history", "what happened", "show history", "decisions"),
+    Kind.AUTOMATA: ("automata", "list automata", "its automata", "show automata"),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 
@@ -198,15 +226,32 @@ def _as_number(text: str) -> int | None:
     return None
 
 
+# "set plan two", "set the automaton roof repair".
+_SET_ITEM = re.compile(
+    r"(?:the )?(?:focus )?(?:to )?(?:the )?(plan|automation|automaton|task|session) (.+)"
+)
+
+
 def _parse_set(rest: str) -> Command:
     number = _as_number(rest)
     if number is not None:
         return Command(Kind.SET_NUMBER, number=number)
-    rest = re.sub(r"^(?:the )?(?:focus )?(?:to )?(?:project |number )?", "", rest)
+    item = _SET_ITEM.fullmatch(rest)
+    if item is not None:
+        kind, chosen = item.group(1), item.group(2).removeprefix("number ")
+        number = _as_number(chosen)
+        if number is not None:
+            return Command(Kind.SET_NUMBER, number=number, item=kind)
+        return Command(Kind.SET_NAME, name=chosen, item=kind)
+    rest = re.sub(r"^(?:the )?(?:focus )?(?:to )?", "", rest)
+    kind = None
+    if rest.startswith("project "):
+        kind, rest = "project", rest.removeprefix("project ")
+    rest = rest.removeprefix("number ")
     number = _as_number(rest)
     if number is not None:
-        return Command(Kind.SET_NUMBER, number=number)
-    return Command(Kind.SET_NAME, name=rest)
+        return Command(Kind.SET_NUMBER, number=number, item=kind)
+    return Command(Kind.SET_NAME, name=rest, item=kind)
 
 
 # "option two", "answer two", "choose option two".
@@ -219,6 +264,8 @@ _ABOUT_ONE: tuple[tuple[Kind, re.Pattern[str]], ...] = (
     (Kind.TASKS, re.compile(r"(?:show )?tasks (?:for|of) (?:number )?(.+)")),
     (Kind.PROGRESS, re.compile(r"progress (?:of|on|for) (?:number )?(.+)")),
     (Kind.RESULTS, re.compile(r"results (?:of|for) (?:number )?(.+)")),
+    (Kind.ITS_QUESTIONS, re.compile(r"(?:the )?questions (?:for|about|on|of) (?:number )?(.+)")),
+    (Kind.HISTORY, re.compile(r"history (?:of|for) (?:number )?(.+)")),
 )
 _ABOUT = re.compile(r"(?:tell me )?about (?:number )?(.+)")
 _OWN_WORDS = re.compile(r"^\W*(?:please\W+)?my\W+answer\W+is\b[\s,:.\-]*", re.IGNORECASE)

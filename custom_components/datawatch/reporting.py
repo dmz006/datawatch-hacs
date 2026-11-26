@@ -12,6 +12,7 @@ from .voice import automata, custom, reports, speech, work
 from .voice.automata import Automaton
 from .voice.conversation import Topic
 from .voice.custom import CustomReport
+from .voice.items import Item
 from .voice.names import match_names
 from .voice.reports import Overview, Report
 
@@ -30,16 +31,26 @@ _ONE_STATE = {
 }
 
 
-async def _sessions(client: DatawatchClient, topic: Topic, project: str | None) -> Report:
+async def _sessions(
+    client: DatawatchClient, topic: Topic, project: str | None, inside: Item | None
+) -> Report:
     """One state's sessions, or counts of all states and then the waiting ones."""
     states = (_ONE_STATE[topic],) if topic in _ONE_STATE else _STATES
-    found = await asyncio.gather(*(client.sessions(state, project) for state in states))
+    within = (inside.kind, inside.id) if inside is not None else None
+    found = await asyncio.gather(
+        *(client.sessions(state, None if inside else project, within) for state in states)
+    )
     totals = [(state, total) for state, (_, total) in zip(states, found, strict=True)]
-    return work.sessions(totals, found[0][0], project, dt_util.now())
+    return work.sessions(totals, found[0][0], project, dt_util.now(), inside)
 
 
-async def build(client: DatawatchClient, topic: Topic, project: str | None) -> Report:
-    """A report on topic, for one project or for all. project must be a registered one."""
+async def build(
+    client: DatawatchClient, topic: Topic, project: str | None, inside: Item | None = None
+) -> Report:
+    """A report on topic, for one project or for all. project must be a registered one.
+
+    inside: a focused automaton or automation, which only sessions can be filtered to.
+    """
     match topic:
         case Topic.ATTENTION:
             return reports.attention(await client.attention())
@@ -47,7 +58,7 @@ async def build(client: DatawatchClient, topic: Topic, project: str | None) -> R
             rows, total = await client.running(project)
             return reports.running(rows, total, project)
         case Topic.SESSIONS | Topic.WAITING | Topic.RUNNING_SESSIONS | Topic.FAILED_SESSIONS:
-            return await _sessions(client, topic, project)
+            return await _sessions(client, topic, project, inside)
         case Topic.FINISHED:
             done, how_many = await client.finished(project)
             return work.finished(done, how_many, project)
