@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from custom_components.datawatch.voice.conversation import Conversation, Reply
+import pytest
+
+from custom_components.datawatch.voice.conversation import Conversation, Reply, needs_data
 from custom_components.datawatch.voice.model import Snapshot, Tally
 
 PROJECTS = ("walnut", "maple-syrup", "Birch", "maple-leaf", "oak", "cedar", "elm")
@@ -265,3 +267,31 @@ def test_a_focus_on_a_project_that_no_longer_exists_is_said_and_cleared() -> Non
 def test_paused_with_a_focus_still_says_the_focus_first() -> None:
     text = say(start("oak"), "status", paused=True).text
     assert text.startswith("In project oak: all new work is paused. 1 session waiting")
+
+
+@pytest.mark.parametrize("words", ["status", "more detail", "list projects", "set project oak"])
+def test_commands_that_must_read_datawatch(words: str) -> None:
+    assert needs_data(words)
+
+
+@pytest.mark.parametrize(
+    "words", ["stop", "repeat", "help", "where am i", "unset", "more", "set two", "two", "banana"]
+)
+def test_commands_that_work_without_reading_datawatch(words: str) -> None:
+    assert not needs_data(words)
+
+
+def test_without_datawatch_the_focus_is_never_dropped() -> None:
+    conversation = start("oak")
+    assert conversation.hear("where am i", None).text == "Focus: project oak."
+    assert conversation.hear("help", None).text.startswith("You can say")
+    assert conversation.focus == "oak"
+
+
+def test_when_datawatch_cannot_be_read_it_says_so_and_repeat_repeats_it() -> None:
+    conversation = start("oak")
+    reply = conversation.hear("status", None)
+    assert reply == Reply("I can't reach datawatch. Try again, or say stop.")
+    assert conversation.hear("repeat", None) == reply
+    assert conversation.focus == "oak"
+    assert conversation.hear("stop", None).ends

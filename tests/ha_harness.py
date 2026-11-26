@@ -24,3 +24,12 @@ async def running_hass(config_dir: Path) -> AsyncIterator[HomeAssistant]:
         yield hass
     finally:
         await hass.async_stop(force=True)
+
+
+async def add_datawatch(hass: HomeAssistant, url: str) -> None:
+    """Go through the setup screens, approving the certificate."""
+    flow = hass.config_entries.flow
+    result = await flow.async_init("datawatch", context={"source": "user"})
+    result = await flow.async_configure(result["flow_id"], {"url": url})
+    await flow.async_configure(result["flow_id"], {})
+    await hass.async_block_till_done()
