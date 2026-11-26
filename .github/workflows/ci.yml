@@ -34,6 +34,13 @@ jobs:
       - run: pip install $(python tests/requirements_from_ha.py)
       - run: pytest --cov
 
+  hassfest:
+    # Home Assistant's own check of the manifest and translations.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
   leaks:
     # Second line of defence. The real gate is the local pre-push hook, which also uses a
     # private deny list that is never published.

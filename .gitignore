@@ -30,10 +30,10 @@ secrets.yaml
 *.key
 *denylist*
 
-# Agent, session and local tool files: local paths and per-user config, never published
+# Agent, session and local tool files: local paths and per-user config, never published.
+# AGENT.md and CONTEXT.md are the project's shared rules and are published.
 CLAUDE.md
 CLAUDE.local.md
-AGENT.md
 AGENTS.md
 .claude/
 .datawatch/

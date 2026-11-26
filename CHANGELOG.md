@@ -1,12 +1,19 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-11-26)
 
-- Project foundation: integration metadata, tests, CI and a pre-publish leak check.
-- Voice conversation core (not yet connected to Home Assistant or datawatch): fixed
-  phrases, status, project list, focus by number or name, and silence handling.
-- Read-only datawatch client with certificate pinning.
-- Setup screens: server address, optional token, certificate approval and reconfigure.
+The first release: ask datawatch how your work is going, by voice. It only reads.
+
+- Say "open datawatch", "use datawatch" or "datawatch" to a voice device, then give short
+  commands without the wake word.
+- Commands for status, more detail, listing projects, setting and clearing a focus, where
+  you are, repeat, help and closing.
+- One focus shared by all voice devices, kept until you clear it.
+- Asks "Still there?" once, then closes, if it hears nothing. Faults are said out loud.
+- Setup screens for the server address, an optional token, and approving the server's
+  certificate. Reconfigure to change them.
+- A repair warning if the entry phrase cannot be registered.
 - Requires Home Assistant 2026.11 or later.
-- Datawatch mode on voice devices: entry phrases, conversation without the wake word,
-  shared focus, spoken errors, and a repair warning if the phrase cannot be registered.
+
+Not yet tried with a real microphone and speaker. Questions, items on hold, and failed or
+blocked automata are reported across all projects even with a focus.
