@@ -102,6 +102,12 @@ def _rows(value: Any, *text: str) -> list[dict[str, Any]]:
     return value
 
 
+def _title(row: Mapping[str, Any]) -> str:
+    """A record's title. datawatch can leave one out, which must not fail the whole read."""
+    title = row.get("title")
+    return title if isinstance(title, str) and title.strip() else "untitled"
+
+
 def _question(row: Any) -> Question:
     """One question as datawatch describes it."""
     if not isinstance(row, dict) or not all(
@@ -298,13 +304,13 @@ class DatawatchClient:
             raise DatawatchError("unexpected attention reply")
         wanted = {str(status).lower() for status in statuses}
         found: dict[str, Attention] = {}
-        for row in _rows(reply.get("items"), "id", "title", "status"):
+        for row in _rows(reply.get("items"), "id", "status"):
             held = row.get("review_needed")
             held_tasks = len(held) if isinstance(held, list) else int(bool(held))
             if row.get("is_template") or not (row["status"] in wanted or held_tasks):
                 continue
             found.setdefault(
-                row["id"], Attention(row["title"], row["status"], held_tasks, row["id"])
+                row["id"], Attention(_title(row), row["status"], held_tasks, row["id"])
             )
         return list(found.values())
 
@@ -315,14 +321,14 @@ class DatawatchClient:
             params["project"] = project
         reply = _table(await self._get("autonomous/prds", params))
         rows = []
-        for row in _rows(reply.get("prds"), "id", "title"):
+        for row in _rows(reply.get("prds"), "id"):
             counts = row.get("task_status_counts")
             counts = counts if isinstance(counts, dict) else {}
             done = counts.get("completed")
             rows.append(
                 Listed(
                     row["id"],
-                    row["title"],
+                    _title(row),
                     str(row.get("project") or ""),
                     done if isinstance(done, int) else 0,
                     _number(row.get("task_count") or 0),
@@ -336,12 +342,12 @@ class DatawatchClient:
         rows = [
             Held(
                 row["id"],
-                row["title"],
+                _title(row),
                 str(row.get("reason") or ""),
                 str(row.get("next_look_text") or ""),
                 str(row.get("project") or ""),
             )
-            for row in _rows(reply.get("held"), "id", "title")
+            for row in _rows(reply.get("held"), "id")
         ]
         return rows, _number(reply.get("total"))
 
@@ -350,19 +356,19 @@ class DatawatchClient:
         if not _IDENTIFIER.fullmatch(automaton_id):
             raise DatawatchError("unexpected automaton id")
         reply = _table(await self._get(f"autonomous/prds/{automaton_id}"))
-        if not all(isinstance(reply.get(key), str) for key in ("id", "title", "status")):
+        if not all(isinstance(reply.get(key), str) for key in ("id", "status")):
             raise DatawatchError("unexpected automaton")
         tasks = []
         for story in _rows(reply.get("stories") or []):
-            for task in _rows(story.get("tasks") or [], "title"):
+            for task in _rows(story.get("tasks") or []):
                 reason = task.get("blocked_reason") or task.get("wait_reason") or ""
                 # A finished task's old waiting note no longer explains anything.
                 if task.get("status") == "completed":
                     reason = ""
-                tasks.append(Task(task["title"], str(task.get("status") or ""), str(reason)))
+                tasks.append(Task(_title(task), str(task.get("status") or ""), str(reason)))
         return Automaton(
             id=reply["id"],
-            title=reply["title"],
+            title=_title(reply),
             status=reply["status"],
             project=str(reply.get("project") or ""),
             reason=str(reply.get("blocked_reason") or ""),
@@ -395,13 +401,13 @@ class DatawatchClient:
         """A project's current plans, in datawatch's order."""
         reply = _table(await self._get(_project_path(project, "plans"), {"limit": str(PLAN_LIMIT)}))
         result = []
-        for row in _rows(reply.get("plans"), "title", "state"):
+        for row in _rows(reply.get("plans"), "state"):
             progress = row.get("progress")
             progress = progress if isinstance(progress, dict) else {}
             done, total = progress.get("done"), progress.get("total")
             result.append(
                 Plan(
-                    row["title"],
+                    _title(row),
                     row["state"],
                     done if isinstance(done, int) else 0,
                     total if isinstance(total, int) else 0,
@@ -488,12 +494,12 @@ class DatawatchClient:
             params["project"] = project
         reply = _table(await self._get("autonomous/prds", params, timeout=SLOW_TIMEOUT))
         rows = []
-        for row in _rows(reply.get("prds"), "id", "title"):
+        for row in _rows(reply.get("prds"), "id"):
             shipped = row.get("shipped")
             rows.append(
                 Finished(
                     row["id"],
-                    row["title"],
+                    _title(row),
                     shipped if isinstance(shipped, bool) else None,
                     str(row.get("merged_in_release") or ""),
                 )

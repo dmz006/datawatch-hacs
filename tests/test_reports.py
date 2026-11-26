@@ -236,7 +236,7 @@ def test_attention_is_chosen_as_datawatch_s_web_app_chooses(
         ("/api/autonomous/attention", {"items": []}, "attention", ()),
         ("/api/autonomous/attention", {"statuses": [], "items": [{}]}, "attention", ()),
         ("/api/automations", {"automations": []}, "automations", ()),
-        ("/api/projects/oak/plans", {"plans": [{"title": 1}]}, "plans", ("oak",)),
+        ("/api/projects/oak/plans", {"plans": [{"title": "No state"}]}, "plans", ("oak",)),
         ("/api/projects/oak/overview-summary", {"counts": []}, "overview", ("oak",)),
         (
             "/api/projects/oak/overview-summary",

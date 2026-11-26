@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: if datawatch left the title out of one record, a whole reply could fail with
+  "I can't reach datawatch". Such a record is now called "untitled".
+
 ## 0.6.1 (2026-11-26)
 
 - Fixed: asked what a session said, an AI assistant could give the session's name as if it

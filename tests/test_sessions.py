@@ -181,7 +181,7 @@ def test_the_tools_give_session_facts_only(certificate: Certificate, tmp_path: P
     ("path", "reply", "method", "args"),
     [
         ("/api/sessions", {"sessions": [{"name": "x"}], "total": 1}, "sessions", ("running",)),
-        ("/api/autonomous/prds", {"prds": [{"id": "a"}], "total": 1}, "finished", ()),
+        ("/api/autonomous/prds", {"prds": [{"title": "No id"}], "total": 1}, "finished", ()),
         ("/api/autonomous/prds/a/change-record", [], "delivery", ("a",)),
     ],
 )

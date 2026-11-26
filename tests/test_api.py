@@ -14,7 +14,7 @@ from typing import Any
 import aiohttp
 import pytest
 from aiohttp import web
-from fake_datawatch import Fake, serve
+from fake_datawatch import Fake, made_up_attention, serve
 
 from custom_components.datawatch.api import (
     DatawatchAuthError,
@@ -355,3 +355,30 @@ def test_an_answer_carries_the_token_and_a_question_id_cannot_change_the_address
         assert fake.seen == [], "nothing was requested"
 
     serve(certificate, body)
+
+
+def test_a_record_with_no_title_does_not_break_a_read(certificate: tuple[Path, Path, str]) -> None:
+    """datawatch can leave a title out. One such record must not fail the whole reply."""
+
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        client = DatawatchClient(session, url, certificate[2])
+        assert [r.title for r in await client.attention()] == ["untitled", "Has a name"]
+        assert [r.title for r in (await client.running())[0]] == ["untitled"]
+        assert [r.title for r in (await client.held_items())[0]] == ["untitled", "untitled"]
+        assert [r.title for r in (await client.finished())[0]] == ["untitled"]
+        automaton = await client.automaton("n1")
+        assert automaton.title == "untitled"
+        assert [task.title for task in automaton.tasks] == ["untitled"]
+        assert [plan.title for plan in await client.plans("oak")] == ["untitled"]
+
+    fake = Fake()
+    fake.attention = [
+        {"id": "n1", "status": "blocked"},
+        made_up_attention("n2", "Has a name", "blocked"),
+    ]
+    fake.running = [{"id": "n1", "task_count": 1}]
+    fake.held = [{"id": "n1"}, {"id": "n2", "title": "  "}]
+    fake.finished = [{"id": "n1"}]
+    fake.automata["n1"] = {"id": "n1", "status": "draft", "stories": [{"tasks": [{}]}]}
+    fake.plans["oak"] = [{"state": "planned"}]
+    serve(certificate, body, fake)
