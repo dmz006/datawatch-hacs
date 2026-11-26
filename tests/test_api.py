@@ -71,6 +71,8 @@ class Fake:
         if request.path == "/api/questions":
             rows = [{"id": str(n)} for n in range(self.questions)]
             return web.json_response({"count": len(rows), "questions": rows})
+        if request.path == "/api/autonomous/held":
+            return web.json_response({"held": [], "total": 7, "expired": 0})
         if request.path == "/api/sessions":
             everything, inside = self.totals[query["status"]]
             total = inside if "project" in query else everything
@@ -164,6 +166,7 @@ def test_snapshot_without_a_focus(certificate: tuple[Path, Path, str]) -> None:
             waiting=Tally(3),
             running=Tally(2),
             failed=Tally(5),
+            held=Tally(7),
         )
         assert {method for method, *_ in fake.seen} == {"GET"}
         assert all("project" not in query for _, _, query, _ in fake.seen)
@@ -183,6 +186,7 @@ def test_snapshot_with_a_focus_uses_datawatch_s_own_filter(
             Tally(5, 4),
         )
         assert result.questions == Tally(4), "datawatch cannot filter questions yet"
+        assert result.held == Tally(7), "datawatch cannot filter held items yet"
         filtered = [query for _, path, query, _ in fake.seen if "project" in query]
         assert len(filtered) == 3
         assert all(q == {**q, "view": "summary", "limit": "1", "project": "oak"} for q in filtered)
@@ -267,6 +271,7 @@ def test_failures_raise_and_never_look_like_an_empty_list(
         ("/api/questions", {"count": 1}),
         ("/api/sessions", {"sessions": []}),
         ("/api/sessions", {"sessions": [], "total": True}),
+        ("/api/autonomous/held", {"held": []}),
     ],
 )
 def test_unexpected_shapes_raise(

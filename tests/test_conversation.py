@@ -25,6 +25,7 @@ def snapshot(
         waiting=tally(3, inside[0]),
         running=tally(1, inside[1]),
         failed=tally(2, inside[2]),
+        held=Tally(6),
     )
 
 
@@ -83,19 +84,28 @@ def test_counts_fetched_for_another_focus_are_never_reported_as_this_one() -> No
 
 
 def test_more_detail() -> None:
-    assert say(start(), "more detail").text == "2 failed sessions."
+    assert say(start(), "more detail").text == "6 held items and 2 failed sessions."
 
 
 def test_more_detail_with_a_focus() -> None:
     assert say(start("elm"), "more detail").text == (
-        "In project elm: 1 failed session. Elsewhere: 1 failed session."
+        "In project elm: 1 failed session. Elsewhere: 1 failed session. "
+        "6 held items across all projects."
+    )
+
+
+def test_held_items_join_the_focus_counts_once_datawatch_can_filter_them() -> None:
+    filterable = Snapshot(projects=PROJECTS, focus="oak", failed=Tally(2, 2), held=Tally(3, 1))
+    assert start("oak").hear("more detail", filterable).text == (
+        "In project oak: 1 held item and 2 failed sessions. "
+        "Elsewhere: 2 held items and 0 failed sessions."
     )
 
 
 def test_nothing_elsewhere_is_not_mentioned() -> None:
-    only_here = Snapshot(projects=PROJECTS, focus="oak", failed=Tally(2, 2))
+    only_here = Snapshot(projects=PROJECTS, focus="oak", failed=Tally(2, 2), held=Tally(1, 1))
     assert start("oak").hear("more detail", only_here).text == (
-        "In project oak: 2 failed sessions."
+        "In project oak: 1 held item and 2 failed sessions."
     )
 
 
