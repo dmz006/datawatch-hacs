@@ -19,7 +19,14 @@ from aiohttp import web
 from fake_datawatch import Fake, make_certificate, serve
 from ha_harness import add_datawatch, running_hass
 from homeassistant.components import conversation
-from homeassistant.components.assist_pipeline import PipelineEvent, PipelineEventType
+from homeassistant.components.assist_pipeline import (
+    Pipeline,
+    PipelineEvent,
+    PipelineEventType,
+    PipelineInput,
+    PipelineRun,
+    PipelineStage,
+)
 from homeassistant.components.assist_satellite import (
     AssistSatelliteAnnouncement,
     AssistSatelliteEntity,
@@ -27,7 +34,9 @@ from homeassistant.components.assist_satellite import (
 )
 from homeassistant.components.assist_satellite.const import DATA_COMPONENT
 from homeassistant.components.conversation.agent_manager import AgentManager
+from homeassistant.components.conversation.const import DATA_COMPONENT as CONVERSATION_COMPONENT
 from homeassistant.core import Context, HomeAssistant
+from homeassistant.helpers import chat_session, intent
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 
@@ -385,3 +394,87 @@ def test_the_warning_has_text() -> None:
     issue = json.loads((folder / "translations" / "en.json").read_text())["issues"]
     assert issue["voice_phrase_unavailable"]["title"]
     assert issue["voice_phrase_unavailable"]["description"]
+
+
+class FakeAiAssistant(conversation.ConversationEntity):
+    """Stands in for an AI assistant, such as one backed by a language model."""
+
+    _attr_supported_features = conversation.ConversationEntityFeature.CONTROL
+    entity_id = "conversation.fake_ai"
+    _attr_name = "Fake AI"
+
+    def __init__(self) -> None:
+        self.asked: list[str] = []
+
+    @property
+    def supported_languages(self) -> str:
+        return "*"
+
+    async def async_process(
+        self, user_input: conversation.ConversationInput
+    ) -> conversation.ConversationResult:
+        self.asked.append(user_input.text)
+        response = intent.IntentResponse(language=user_input.language)
+        response.async_set_speech("The AI answered.")
+        return conversation.ConversationResult(response=response)
+
+
+async def through_pipeline(
+    hass: HomeAssistant, words: str, satellite_id: str
+) -> list[PipelineEvent]:
+    """Home Assistant's voice pipeline from recognised text, with the AI as its assistant."""
+    events: list[PipelineEvent] = []
+    pipeline = Pipeline(
+        conversation_engine=FakeAiAssistant.entity_id,
+        conversation_language="en",
+        language="en",
+        name="Assistant with AI",
+        stt_engine=None,
+        stt_language=None,
+        tts_engine=None,
+        tts_language=None,
+        tts_voice=None,
+        wake_word_entity=None,
+        wake_word_id=None,
+        prefer_local_intents=True,
+    )
+    with chat_session.async_get_chat_session(hass, context=Context()) as session:
+        run = PipelineRun(
+            hass,
+            context=Context(),
+            pipeline=pipeline,
+            start_stage=PipelineStage.INTENT,
+            end_stage=PipelineStage.INTENT,
+            event_callback=events.append,
+        )
+        request = PipelineInput(
+            run=run, session=session, intent_input=words, satellite_id=satellite_id
+        )
+        await request.validate()
+        await request.execute()
+    return events
+
+
+def test_with_an_ai_assistant_the_entry_phrase_never_reaches_the_ai(
+    certificate: Certificate, tmp_path: Path
+) -> None:
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        assistant = FakeAiAssistant()
+        await hass.data[CONVERSATION_COMPONENT].async_add_entities([assistant])
+        await hass.async_block_till_done()
+
+        await through_pipeline(hass, "tell me a story", satellite.entity_id)
+        assert assistant.asked == ["tell me a story"], "other speech goes to the AI"
+        assert satellite.asked == []
+
+        satellite.script = ["stop"]
+        events = await through_pipeline(hass, "Open datawatch.", satellite.entity_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert assistant.asked == ["tell me a story"]
+        assert satellite.asked == ["Datawatch."]
+        (ended,) = [e for e in events if e.type is PipelineEventType.INTENT_END]
+        assert ended.data
+        speech = ended.data["intent_output"]["response"]["speech"]
+        assert speech.get("plain", {}).get("speech", "") == ""
+
+    voice_test(certificate, tmp_path, body)
