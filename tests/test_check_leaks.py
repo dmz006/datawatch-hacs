@@ -55,6 +55,7 @@ def test_generic_patterns_are_found(kind: str, sample: str) -> None:
         "listen on 127.0.0.1 or 0.0.0.0",
         "version 2026.11.1",
         "git@github.com:owner/repo.git",
+        "+@pytest.mark.parametrize(",
         "committer GitHub <noreply@github.com>",
         "user@example.com and 12345+someone@users.noreply.github.com",
         "Co-Authored-By: Someone <noreply@anthropic.com>",
