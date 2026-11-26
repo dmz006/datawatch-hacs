@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 (2026-11-26)
+
+- Fixed: asked what a session said, an AI assistant could give the session's name as if it
+  were a message. Names are now labelled "session named ...", and the assistant is told it
+  does not have anything a session said. This lowers the risk but cannot guarantee what an
+  AI model says.
+
 ## 0.6.0 (2026-11-26)
 
 - **Your own spoken reports.** On the datawatch page in Home Assistant choose "Add report",

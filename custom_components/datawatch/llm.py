@@ -193,6 +193,12 @@ _REPORT_TOPICS = {
     "failed_sessions": Topic.FAILED_SESSIONS,
     "finished": Topic.FINISHED,
 }
+_SESSION_TOPICS = ("sessions", "waiting_sessions", "running_sessions", "failed_sessions")
+_NOT_SAID = (
+    "These lines hold each session's name and state only. You do not have anything a session "
+    "said, asked or is waiting for. A name is a title, not a message. If the user asks what "
+    "a session said, tell them you cannot see it and that they can open it in datawatch."
+)
 # What a project argument may say to mean every project.
 _EVERY = ("all", "all projects", "everything")
 
@@ -244,6 +250,8 @@ class WorkTool(_DatawatchTool):
             "lines": lines,
             "more_lines": max(len(report.items) - start - len(lines), 0),
         }
+        if args["topic"] in _SESSION_TOPICS:
+            result["what_is_not_here"] = _NOT_SAID
         if wanted is not None and named is None:
             result["limited_to_project"] = wanted
             result["tell_the_user"] = (
@@ -369,6 +377,8 @@ def introduction(features: list[str]) -> str:
         "datawatch runs the user's AI coding work. Use the datawatch tools when the user asks "
         "about datawatch or that work.\n"
         f"What you can do with datawatch now:\n{listed}\n"
+        "Say only what a tool result states. You cannot see what any session said: never "
+        "present a name or title as a message from it.\n"
         "You cannot change anything in datawatch or send an answer. To answer a question the "
         'user says "open datawatch", then "questions", then "option" and a number or "my '
         'answer", and then "confirm answer". Other datawatch features are not available to '

@@ -59,11 +59,11 @@ def test_session_lines_and_details() -> None:
     report = work.sessions(TOTALS, rows, None, NOW)
     assert report.summary == "All projects: sessions, 2 waiting for input, 1 running and 0 failed."
     assert report.items == (
-        "1, Helper, waiting for input, project oak, active 2 hours ago.",
-        "2, unnamed, waiting for input.",
+        "1, session named Helper, waiting for input, project oak, active 2 hours ago.",
+        "2, session named unnamed, waiting for input.",
     )
     assert report.details[0] == (
-        "Session Helper: waiting for input. Project oak. It uses a-model. Last activity "
+        "Session named Helper: waiting for input. Project oak. It uses a-model. Last activity "
         "2 hours ago. To see what it said, open it in datawatch."
     )
     assert work.sessions(TOTALS, [], "oak", NOW).summary.startswith("Project oak: sessions,")
@@ -105,7 +105,7 @@ def listed() -> Conversation:
 def test_choosing_a_session_needs_no_read(words: str) -> None:
     conversation = listed()
     assert conversation.needs(words).name == "NOTHING"
-    assert conversation.hear(words, None).text.startswith("Session Other")
+    assert conversation.hear(words, None).text.startswith("Session named Other")
 
 
 def test_a_session_has_no_tasks_or_reason() -> None:
@@ -135,9 +135,13 @@ def test_voice_sessions_and_finished_work_never_read_terminal_output(
         assert said[0].startswith(
             "All projects: sessions, 3 waiting for input, 2 running and 5 failed."
         )
-        assert said[1].startswith("Session Made-up helper: waiting for input. Project oak.")
-        assert said[2].startswith("All projects: sessions, 3 waiting for input. 1, Made-up")
-        assert said[3].startswith("All projects: sessions, 2 running. 1, Made-up runner")
+        assert said[1].startswith("Session named Made-up helper: waiting for input. Project oak.")
+        assert said[2].startswith(
+            "All projects: sessions, 3 waiting for input. 1, session named Made-up"
+        )
+        assert said[3].startswith(
+            "All projects: sessions, 2 running. 1, session named Made-up runner"
+        )
         assert said[4] == "All projects: sessions, 5 failed."
         assert "1, Build the made-up shed, shipped in 9.9.9." in said[5]
         assert said[6].startswith("Build the made-up shed: completed.")
@@ -155,8 +159,14 @@ def test_voice_sessions_and_finished_work_never_read_terminal_output(
 def test_the_tools_give_session_facts_only(certificate: Certificate, tmp_path: Path) -> None:
     async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
         await choose(hass, "conversation.home_assistant")
+        for topic in ("sessions", "waiting_sessions", "running_sessions", "failed_sessions"):
+            found, _ = await call(hass, "work", topic=topic)
+            assert RAW not in str(found)
+            assert "A name is a title, not a message." in found["what_is_not_here"], topic
         found, _ = await call(hass, "work", topic="sessions")
-        assert found["lines"] and RAW not in str(found)
+        assert found["lines"][0].startswith("1, session named ")
+        other, _ = await call(hass, "work", topic="plans")
+        assert "what_is_not_here" not in other
         done, _ = await call(hass, "work", topic="finished", project="oak")
         assert "shipped in 9.9.9" in done["lines"][0]
         one, _ = await call(hass, "automaton", name="made-up shed")

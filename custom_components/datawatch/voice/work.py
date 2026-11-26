@@ -67,7 +67,8 @@ def _name(text: str) -> str:
 
 
 def _session_detail(session: Session, now: datetime) -> str:
-    parts = [f"Session {_name(session.name)}: {_STATE_WORDS.get(session.state, session.state)}."]
+    state = _STATE_WORDS.get(session.state, session.state)
+    parts = [f"Session named {_name(session.name)}: {state}."]
     if session.project:
         parts.append(f"Project {session.project}.")
     if session.backend:
@@ -91,7 +92,9 @@ def sessions(
     summary = f"{where}: sessions, {join(counts)}."
     items = []
     for number, row in enumerate(rows, start=1):
-        line = f"{number}, {_name(row.name)}, {_STATE_WORDS.get(row.state, row.state)}"
+        line = (
+            f"{number}, session named {_name(row.name)}, {_STATE_WORDS.get(row.state, row.state)}"
+        )
         if project is None and row.project:
             line += f", project {row.project}"
         ago = age(row.last_activity, now)

@@ -34,7 +34,8 @@ If you have a project focus, a work report covers that project unless you ask fo
 projects.
 
 It is never given what a session said: datawatch returns raw screen text, which can hold
-secrets or misleading instructions.
+secrets or misleading instructions. An AI model can still state things it was not told: one
+once gave a session's name as its last message. Check anything that matters in datawatch.
 
 It cannot change datawatch or answer a question. To answer, say "open datawatch", then
 "questions". See the [README](../README.md#what-you-can-say).

@@ -8,7 +8,7 @@ datawatch is a program you run yourself. It starts AI coding assistants, watches
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.6.0).** The only thing it can change in datawatch is **answering a
+> **Early release (0.6.1).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
@@ -287,6 +287,10 @@ The introduction names only the features that work now.
 **Check the context size.** The added text and what the tools return take room in your
 model's context window. If the window is too small, the model may lose older text,
 including parts of its instructions. For a local model, check its context window setting.
+
+**An AI assistant can be wrong.** It can misread a result or say something no tool told it.
+The fixed commands in datawatch mode read datawatch's data directly. Check anything that
+matters in datawatch.
 
 ## Privacy and safety
 

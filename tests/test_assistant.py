@@ -213,6 +213,7 @@ def test_datawatch_adds_to_the_assistant_and_keeps_its_own_instructions(
         unchanged = [line for line in before.splitlines() if "time is" not in line.lower()]
         assert [line for line in unchanged if line not in assistant.prompt] == []
         assert "What you can do with datawatch now:" in assistant.prompt
+        assert "You cannot see what any session said" in assistant.prompt
         assert "datawatch__search_docs" in assistant.prompt
         assert set(tools_before) < set(assistant.tools), "no tool was taken away"
         assert sorted(set(assistant.tools) - set(tools_before)) == [
