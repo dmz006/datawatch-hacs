@@ -54,6 +54,9 @@ This repository is public. Enable the hooks once per clone:
 git config core.hooksPath .githooks
 ```
 
+Before a push, the hooks also run lint, type checks and the tests, and refuse a failing or
+half-committed tree.
+
 The hooks need [gitleaks](https://github.com/gitleaks/gitleaks) and a private deny list at
 `~/.config/datawatch-hacs/leak-denylist.txt` (or `LEAK_DENYLIST=/path`): one term per line,
 such as your own host names, addresses and device names. Keep that file out of the
