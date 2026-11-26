@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Home Assistant runtime and anything that can hold secrets
+.storage/
+home-assistant.log*
+secrets.yaml
+.env
+.env.*
+*.pem
+*.key
+*denylist*
+
+# Agent, session and local tool files: local paths and per-user config, never published
+CLAUDE.md
+CLAUDE.local.md
+AGENT.md
+AGENTS.md
+.claude/
+.datawatch/
+.mcp.json
+worker-*.json
+worker-*.md
+.aider*
+.goose/
+.gemini/
+.rtk/
+
+# Private working notes
+docs/private/
