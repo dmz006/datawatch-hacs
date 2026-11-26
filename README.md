@@ -87,6 +87,10 @@ These counts are made up.
 To change the address or token, or to approve a replaced certificate, choose
 **Reconfigure** on the integration. One datawatch server is supported for now.
 
+**Recommended if you use the Whisper app:** give it a hint so it recognises the word
+"datawatch". See
+[Speech-to-text does not understand "datawatch"](docs/troubleshooting.md#speech-to-text-does-not-understand-datawatch).
+
 ## What you can say
 
 To start: your wake word, then **"open datawatch"**, **"use datawatch"** or just

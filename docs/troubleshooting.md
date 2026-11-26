@@ -11,6 +11,32 @@
   **Settings → Voice assistants**. The phrase must be the whole sentence: "open datawatch",
   "use datawatch" or "datawatch" ("data watch" as two words works too).
 - Another automation using the same sentence can answer instead.
+- If speech-to-text wrote something else in place of "datawatch", see the next section.
+
+## Speech-to-text does not understand "datawatch"
+
+"datawatch" is not an everyday word, so speech-to-text may write something like "did watch"
+instead. The phrase then does not match, and your usual assistant gets it.
+
+**Try "open datawatch"** rather than "datawatch" on its own. A longer phrase may be easier to
+recognise.
+
+**If you use the Whisper app, give it a hint:**
+
+1. Open the **Whisper** app in Home Assistant and go to its **Configuration** tab.
+2. Set **Initial prompt** to `datawatch`. It is an optional setting, so you may have to show
+   the unused options first. If it already has text, add `datawatch` to it.
+3. Save, then **restart Whisper**. Speech recognition stops while it restarts. Home Assistant
+   itself does not need a restart.
+
+Things to know:
+
+- It is a hint, not voice training. It may not fix every mistake.
+- It applies to **all** speech that this Whisper app transcribes, not only datawatch.
+  Whisper might also write "datawatch" when you said something that sounds like it.
+- To undo it, clear the setting and restart Whisper.
+
+Other speech-to-text services have their own settings, or none for this.
 
 ## "This voice device can't hold a datawatch conversation."
 

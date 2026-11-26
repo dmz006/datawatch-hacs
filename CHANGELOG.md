@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Documentation: how to give the Whisper app a hint when it does not recognise "datawatch".
+
 ## 0.1.1 (2026-11-26)
 
 - Opening datawatch mode now says "Datawatch activated."
