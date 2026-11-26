@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Block a commit message that looks private.
+set -euo pipefail
+python3 "$(git rev-parse --show-toplevel)/scripts/check_leaks.py" message "$1"

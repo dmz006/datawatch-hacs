@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Block a push if anything in the files or in any commit looks private.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+python3 scripts/check_leaks.py tree
+python3 scripts/check_leaks.py history
+gitleaks git --no-banner --redact --log-opts="--all" .
