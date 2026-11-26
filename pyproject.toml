@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
 authors = [{ name = "dmz006" }]
-dependencies = []
+# aiohttp ships with Home Assistant, so manifest.json lists no requirement.
+dependencies = ["aiohttp>=3.10"]
 
 [project.optional-dependencies]
 test = ["pytest>=9.0", "pytest-cov>=7.0"]

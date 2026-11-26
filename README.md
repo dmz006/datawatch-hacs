@@ -18,21 +18,23 @@ integration's setup screens; no server is built in.
 
 ## Voice commands (in development)
 
-These are implemented as conversation logic only. They are not connected to Home Assistant
-or datawatch yet, and the wording may change.
+The conversation logic and a read-only datawatch client exist, but are not connected to
+Home Assistant yet, and the wording may change. The client talks only to the server you
+configure, over HTTPS, and only if it presents the certificate you approved.
 
 | Say | What happens |
 |---|---|
 | "status" | Whether new work is paused, open questions, sessions waiting and running |
-| "more detail" | Held or blocked items and failed sessions |
+| "more detail" | Failed sessions |
 | "list projects", then "more" | Three at a time, alphabetical; numbers continue across groups |
 | "set two", "set project <name>" | Focus on a project. A name may be partial; if several match, you are asked which number |
 | "where am I" / "unset" | Say or clear the focus. The focus is kept until you clear it |
 | "repeat" / "help" | Say the last reply again / list the commands |
 | "stop", "exit", "done", "close datawatch" | Leave datawatch mode |
 
-With a focus, status and detail count what is inside it, and also say what is elsewhere or
-cannot be linked to any project. If nothing is heard you are asked once, "Still there?";
+With a focus, status and detail count sessions inside it and elsewhere, using datawatch's
+own project filter. datawatch cannot filter questions by project yet, so they are given for
+all projects, and said that way. If nothing is heard you are asked once, "Still there?";
 a second silence leaves the mode. Everything here only reads from datawatch.
 
 ## Development

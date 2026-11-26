@@ -6,20 +6,25 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Item:
-    """Something to count. project is None when it cannot be tied to a project."""
+class Tally:
+    """A count. in_focus is None when datawatch cannot filter it, or there is no focus."""
 
-    project: str | None
+    total: int = 0
+    in_focus: int | None = None
+    capped: bool = False
 
 
 @dataclass(frozen=True)
 class Snapshot:
-    """A read-only picture. A failed read must raise, never appear as an empty list."""
+    """A read-only picture. A failed read must raise, never appear as zero.
+
+    focus is the project the in_focus counts were fetched for.
+    """
 
     paused: bool = False
     projects: tuple[str, ...] = ()
-    questions: tuple[Item, ...] = ()
-    waiting: tuple[Item, ...] = ()
-    running: tuple[Item, ...] = ()
-    failed: tuple[Item, ...] = ()
-    held: tuple[Item, ...] = ()
+    focus: str | None = None
+    questions: Tally = Tally()
+    waiting: Tally = Tally()
+    running: Tally = Tally()
+    failed: Tally = Tally()

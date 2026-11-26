@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .model import Item, Snapshot
+from .model import Snapshot, Tally
 
-# (items, singular, plural)
-_Counted = tuple[tuple[Item, ...], str, str]
+# (count, singular, plural)
+_Counted = tuple[Tally, str, str]
 
 
 def join(parts: Sequence[str]) -> str:
@@ -22,45 +22,46 @@ def count(number: int, singular: str, plural: str) -> str:
     return f"{number} {singular if number == 1 else plural}"
 
 
-def _summary(counted: Sequence[_Counted], focus: str | None, prefix: str) -> str:
+def _total(tally: Tally, singular: str, plural: str) -> str:
+    words = count(tally.total, singular, plural)
+    return f"at least {words}" if tally.capped else words
+
+
+def _summary(counted: Sequence[_Counted], snapshot: Snapshot, focus: str | None, lead: str) -> str:
+    everything = join([_total(*entry) for entry in counted])
     if focus is None:
-        return prefix + join([count(len(items), one, many) for items, one, many in counted]) + "."
+        return f"{lead}{everything}."
 
-    inside, elsewhere, unlinked = [], [], []
-    for items, one, many in counted:
-        here = sum(item.project == focus for item in items)
-        nowhere = sum(item.project is None for item in items)
-        inside.append((here, count(here, one, many)))
-        elsewhere.append(
-            (len(items) - here - nowhere, count(len(items) - here - nowhere, one, many))
-        )
-        unlinked.append((nowhere, count(nowhere, one, many)))
+    # Counts fetched for another focus must not be reported as this one's.
+    usable = snapshot.focus == focus
+    filtered = [e for e in counted if usable and e[0].in_focus is not None]
+    unfiltered = [e for e in counted if e not in filtered]
+    if not filtered:
+        return f"In project {focus}: {lead}{everything} across all projects."
 
-    text = f"In project {focus}: {prefix}{join([words for _, words in inside])}."
-    if any(number for number, _ in elsewhere):
-        text += f" Elsewhere: {join([words for _, words in elsewhere])}."
-    if any(number for number, _ in unlinked):
-        text += f" Not linked: {join([words for number, words in unlinked if number])}."
+    here = [(tally.in_focus or 0, one, many) for tally, one, many in filtered]
+    there = [(tally.total - (tally.in_focus or 0), one, many) for tally, one, many in filtered]
+    text = f"In project {focus}: {lead}{join([count(*entry) for entry in here])}."
+    if any(number > 0 for number, _, _ in there):
+        text += f" Elsewhere: {join([count(*entry) for entry in there])}."
+    if unfiltered:
+        text += f" {join([_total(*entry) for entry in unfiltered])} across all projects."
     return text
 
 
 def status(snapshot: Snapshot, focus: str | None) -> str:
     """The short status: paused or not, questions, waiting and running sessions."""
-    paused = ""
+    lead = ""
     if snapshot.paused:
-        paused = "all new work is paused. " if focus else "New work is paused. "
+        lead = "all new work is paused. " if focus else "New work is paused. "
     counted: list[_Counted] = [
         (snapshot.questions, "open question", "open questions"),
         (snapshot.waiting, "session waiting for input", "sessions waiting for input"),
         (snapshot.running, "running", "running"),
     ]
-    return _summary(counted, focus, paused) + " Say more detail for more."
+    return _summary(counted, snapshot, focus, lead) + " Say more detail for more."
 
 
 def detail(snapshot: Snapshot, focus: str | None) -> str:
-    """The follow-up: held or blocked items and failed sessions."""
-    counted: list[_Counted] = [
-        (snapshot.held, "held or blocked item", "held or blocked items"),
-        (snapshot.failed, "failed session", "failed sessions"),
-    ]
-    return _summary(counted, focus, "")
+    """The follow-up: failed sessions."""
+    return _summary([(snapshot.failed, "failed session", "failed sessions")], snapshot, focus, "")
