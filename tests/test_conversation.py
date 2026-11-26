@@ -3,20 +3,28 @@
 from __future__ import annotations
 
 from custom_components.datawatch.voice.conversation import Conversation, Reply
-from custom_components.datawatch.voice.model import Item, Snapshot
+from custom_components.datawatch.voice.model import Snapshot, Tally
 
 PROJECTS = ("walnut", "maple-syrup", "Birch", "maple-leaf", "oak", "cedar", "elm")
 
 
-def snapshot(*, paused: bool = False) -> Snapshot:
+def snapshot(
+    focus: str | None = None, *, paused: bool = False, filtered_questions: bool = False
+) -> Snapshot:
+    """Counts as datawatch would give them: sessions can be filtered, questions cannot."""
+    inside = {"oak": (1, 1, 0), "elm": (2, 0, 1)}.get(focus or "", (0, 0, 0))
+
+    def tally(total: int, here: int) -> Tally:
+        return Tally(total, here if focus else None)
+
     return Snapshot(
         paused=paused,
         projects=PROJECTS,
-        questions=(Item("oak"), Item("oak"), Item("elm"), Item(None)),
-        waiting=(Item("oak"), Item("elm"), Item("elm")),
-        running=(Item("oak"),),
-        failed=(Item("elm"), Item(None)),
-        held=(Item("elm"),),
+        focus=focus,
+        questions=Tally(4, 2 if focus and filtered_questions else None),
+        waiting=tally(3, inside[0]),
+        running=tally(1, inside[1]),
+        failed=tally(2, inside[2]),
     )
 
 
@@ -27,7 +35,7 @@ def start(focus: str | None = None) -> Conversation:
 
 
 def say(conversation: Conversation, words: str, **kwargs: bool) -> Reply:
-    return conversation.hear(words, snapshot(**kwargs))
+    return conversation.hear(words, snapshot(conversation.focus, **kwargs))
 
 
 def test_entering_without_a_focus() -> None:
@@ -50,22 +58,44 @@ def test_status_says_when_new_work_is_paused() -> None:
     assert say(start(), "status", paused=True).text.startswith("New work is paused. ")
 
 
-def test_status_with_a_focus_counts_inside_and_says_what_is_outside_or_unlinked() -> None:
-    text = say(start("oak"), "status").text
-    assert text == (
+def test_status_with_a_focus_counts_sessions_and_says_questions_are_for_all_projects() -> None:
+    assert say(start("oak"), "status").text == (
+        "In project oak: 1 session waiting for input and 1 running. "
+        "Elsewhere: 2 sessions waiting for input and 0 running. "
+        "4 open questions across all projects. Say more detail for more."
+    )
+
+
+def test_questions_join_the_focus_counts_once_datawatch_can_filter_them() -> None:
+    assert say(start("oak"), "status", filtered_questions=True).text == (
         "In project oak: 2 open questions, 1 session waiting for input and 1 running. "
-        "Elsewhere: 1 open question, 2 sessions waiting for input and 0 running. "
-        "Not linked: 1 open question. Say more detail for more."
+        "Elsewhere: 2 open questions, 2 sessions waiting for input and 0 running. "
+        "Say more detail for more."
+    )
+
+
+def test_counts_fetched_for_another_focus_are_never_reported_as_this_one() -> None:
+    reply = start("oak").hear("status", snapshot("elm"))
+    assert reply.text == (
+        "In project oak: 4 open questions, 3 sessions waiting for input and 1 running "
+        "across all projects. Say more detail for more."
     )
 
 
 def test_more_detail() -> None:
-    assert say(start(), "more detail").text == "1 held or blocked item and 2 failed sessions."
+    assert say(start(), "more detail").text == "2 failed sessions."
 
 
 def test_more_detail_with_a_focus() -> None:
     assert say(start("elm"), "more detail").text == (
-        "In project elm: 1 held or blocked item and 1 failed session. Not linked: 1 failed session."
+        "In project elm: 1 failed session. Elsewhere: 1 failed session."
+    )
+
+
+def test_nothing_elsewhere_is_not_mentioned() -> None:
+    only_here = Snapshot(projects=PROJECTS, focus="oak", failed=Tally(2, 2))
+    assert start("oak").hear("more detail", only_here).text == (
+        "In project oak: 2 failed sessions."
     )
 
 
@@ -217,4 +247,4 @@ def test_a_focus_on_a_project_that_no_longer_exists_is_said_and_cleared() -> Non
 
 def test_paused_with_a_focus_still_says_the_focus_first() -> None:
     text = say(start("oak"), "status", paused=True).text
-    assert text.startswith("In project oak: all new work is paused. 2 open questions")
+    assert text.startswith("In project oak: all new work is paused. 1 session waiting")
