@@ -32,11 +32,13 @@ _WAITING = "Not sent yet. Say confirm answer, or cancel."
 _HELP = (
     "You can say: questions, next question, option and a number, my answer, confirm answer, "
     "cancel, status, more detail, attention, running, held items, tell me about a number "
-    "or name, why, tasks, progress, plans, overview, what's next, automations, "
+    "or name, why, tasks, progress, results, what finished, sessions, waiting sessions, "
+    "running sessions, failed sessions, plans, overview, what's next, automations, "
     "list projects, more, set and a number or name, where am I, unset, repeat, or stop."
 )
 _NO_AUTOMATON = "Say attention, running or held items, then a number."
-_ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS)
+_ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS, Kind.RESULTS)
+_SESSIONS_ONLY = "That is a session. I can only say what is in the list and its details."
 
 
 class Topic(Enum):
@@ -49,6 +51,11 @@ class Topic(Enum):
     AUTOMATIONS = auto()
     RUNNING = auto()
     HELD = auto()
+    SESSIONS = auto()
+    WAITING = auto()
+    RUNNING_SESSIONS = auto()
+    FAILED_SESSIONS = auto()
+    FINISHED = auto()
 
 
 _TOPICS = {
@@ -59,6 +66,11 @@ _TOPICS = {
     Kind.AUTOMATIONS: Topic.AUTOMATIONS,
     Kind.RUNNING: Topic.RUNNING,
     Kind.HELD: Topic.HELD,
+    Kind.SESSIONS: Topic.SESSIONS,
+    Kind.WAITING: Topic.WAITING,
+    Kind.RUNNING_SESSIONS: Topic.RUNNING_SESSIONS,
+    Kind.FAILED_SESSIONS: Topic.FAILED_SESSIONS,
+    Kind.FINISHED: Topic.FINISHED,
 }
 
 
@@ -134,6 +146,7 @@ class Conversation:
         self._lines_read = 0
         # The automaton ids behind numbered lines, and the one being discussed.
         self._refs: tuple[str, ...] = ()
+        self._details: tuple[str, ...] = ()
         self._selected: Automaton | None = None
 
     @property
@@ -169,6 +182,8 @@ class Conversation:
         if picking or (command.kind in _ABOUT_AUTOMATON and command.number is not None):
             number = command.number or 0
             read = min(self._lines_read, len(self._refs))
+            if self._details:
+                return None
             return self._refs[number - 1] if 1 <= number <= read else None
         if command.kind in _ABOUT_AUTOMATON and self._selected is not None:
             return self._selected.id
@@ -222,6 +237,8 @@ class Conversation:
             and (asked_for is not None or command.kind is Kind.ABOUT)
         ):
             reply = self._about_automaton(command, report, automaton)
+        elif self._chooses_detail(command):
+            reply = self._detail(command)
         else:
             reply = self._reply_to(command, words, snapshot, questions, report)
         if reply.text.endswith((_NOT_UNDERSTOOD, _WAITING)) and command.kind is not Kind.REPEAT:
@@ -265,7 +282,7 @@ class Conversation:
         asked = self._about_questions(command, questions)
         if asked is not None:
             if command.kind is Kind.QUESTIONS and questions is not None:
-                self._lines, self._refs = None, ()
+                self._lines, self._refs, self._details = None, (), ()
             return self._say(asked)
 
         if snapshot is None and command.kind in _NEEDS_DATA:
@@ -277,12 +294,30 @@ class Conversation:
             self.focus = None
         if command.kind in (Kind.STATUS, Kind.LIST_PROJECTS, Kind.SET_NAME):
             self._reading_questions = False
-            self._lines, self._refs = None, ()
+            self._lines, self._refs, self._details = None, (), ()
         return self._say(notice + self._answer(command, snapshot or Snapshot()))
 
     def _say(self, text: str) -> Reply:
         self._last = text
         return Reply(text)
+
+    def _chooses_detail(self, command: Command) -> bool:
+        """Whether command picks a line that carries its own details, such as a session."""
+        if self._draft is not None or self._dictating or not self._details:
+            return False
+        if command.kind is Kind.NUMBER:
+            return self.current_question is None and not self._choosing
+        return command.kind is Kind.PICK or (
+            command.kind in _ABOUT_AUTOMATON and command.number is not None
+        )
+
+    def _detail(self, command: Command) -> Reply:
+        number = command.number or 0
+        if not 1 <= number <= min(self._lines_read, len(self._details)):
+            return self._say(f"I haven't read a number {number}. Say more, or pick one you heard.")
+        if command.kind in _ABOUT_AUTOMATON:
+            return self._say(_SESSIONS_ONLY)
+        return self._say(self._details[number - 1])
 
     def _about_automaton(
         self, command: Command, report: Report | None, automaton: Automaton | None
@@ -297,6 +332,8 @@ class Conversation:
             return self._say(automata.why(automaton))
         if command.kind is Kind.PROGRESS:
             return self._say(automata.progress(automaton))
+        if command.kind is Kind.RESULTS:
+            return self._say(automata.results(automaton))
         if command.kind is Kind.TASKS:
             # The task lines replace the list, so its numbers no longer choose.
             return self._say(self._start_report(automata.tasks(automaton)))
@@ -307,7 +344,7 @@ class Conversation:
             return _UNREACHABLE
         self._reading_questions = False
         self._lines, self._lines_read = report.items or None, 0
-        self._refs = report.refs
+        self._refs, self._details = report.refs, report.details
         if not report.items:
             return report.summary
         return f"{report.summary} {self._next_lines()}"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (2026-11-26)
+
+- **Sessions and finished work.** New in datawatch mode: "sessions", "waiting sessions",
+  "running sessions", "failed sessions", "what finished" and "results". Your AI assistant,
+  if turned on, can give the same facts.
+- What a session said is deliberately not read: datawatch returns raw terminal text.
+
 ## 0.4.0 (2026-11-26)
 
 - **Why is it stuck?** Say "what's running" or "what's on hold", pick a line by number from

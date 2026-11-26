@@ -128,8 +128,8 @@ and you stay in datawatch mode.
 Entering, leaving, "help", "repeat", "where am I", "unset", "more" and choosing a number
 read nothing. "questions" reads the open questions. "status", "more detail" (after status),
 "list projects" and setting a project by name read counts or names. The work reports
-("attention", "plans", "overview", "what's next", "automations", "running", "held") read
-their own lists. Choosing one automaton, "why", "tasks" and "progress" read it again each
+("attention", "plans", "overview", "what's next", "automations", "running", "held",
+the session lists and "what finished") read their own lists. Choosing one automaton, "why", "tasks" and "progress" read it again each
 time, so what you hear is current.
 Everything is read fresh each time; nothing is cached and nothing is checked in the
 background.
@@ -151,10 +151,15 @@ background.
 | `GET /api/autonomous/prds?status=running` | Running automata; with a focus, datawatch's `project=` filter |
 | `GET /api/autonomous/held` | Also: what is on hold and why |
 | `GET /api/autonomous/prds/{id}` | One automaton: its reason and tasks |
+| `GET /api/autonomous/prds/{id}/change-record` | What it delivered, if datawatch recorded it |
+| `GET /api/autonomous/prds?status=completed` | Completed automata, 50 at most, in datawatch's order (last update). Allowed 30 seconds |
 | `GET /api/docs/search`, `GET /api/docs/read` | Documentation, for the AI assistant only |
 
 For the commands, only the focused project's name and your confirmed answer are sent. An AI
 assistant's documentation search sends its search words to datawatch.
+
+Session lists use the session summaries only. The integration **never requests** a
+session's terminal output, last response or prompt.
 
 If datawatch returns something unexpected, you are told it cannot be read. A failed read is
 never reported as zero.

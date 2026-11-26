@@ -14,12 +14,14 @@ from .speech import count, join
 class Report:
     """A summary, and the lines that can be read after it.
 
-    refs: for lines that can be chosen by number, the automaton id behind each line.
+    refs: for lines that can be chosen by number, the id behind each line. details: what to
+    say when a line is chosen, for lines that are not automata.
     """
 
     summary: str
     items: tuple[str, ...] = ()
     refs: tuple[str, ...] = ()
+    details: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

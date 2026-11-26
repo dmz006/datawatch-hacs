@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from .reports import Report, words
 from .speech import count, join
+from .work import Delivery, delivery
 
 # The most of one reason that is read out.
 _REASON = 600
@@ -34,6 +35,7 @@ class Automaton:
     reason: str = ""
     hold: str = ""
     tasks: tuple[Task, ...] = ()
+    delivered: Delivery | None = None
 
 
 def task_status(status: str) -> str:
@@ -71,6 +73,14 @@ def summary(automaton: Automaton) -> str:
     return (
         f"{_clean(automaton.title)}: {words(automaton.status)}.{where} {progress(automaton)} "
         "Say why, or tasks."
+    )
+
+
+def results(automaton: Automaton) -> str:
+    """What it delivered, as far as datawatch recorded it."""
+    done = sum(task.status == "completed" for task in automaton.tasks)
+    return delivery(
+        automaton.title, automaton.status, done, len(automaton.tasks), automaton.delivered
     )
 
 

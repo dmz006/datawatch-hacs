@@ -95,6 +95,41 @@ class Fake:
         self.answers: list[tuple[str, dict[str, Any]]] = []
         self.answer_status = 201
         self.closed: set[str] = set()
+        self.sessions: dict[str, list[dict[str, Any]]] = {
+            "waiting_input": [
+                {
+                    "full_id": "host-1111",
+                    "name": "Made-up helper",
+                    "project": "oak",
+                    "llm_ref": "made-up-model",
+                    "last_activity": "2020-01-01T00:00:00+00:00",
+                    "status_line": "raw terminal text that must never be spoken",
+                },
+                {"full_id": "host-2222"},
+            ],
+            "running": [
+                {
+                    "full_id": "host-3333",
+                    "name": "Made-up runner",
+                    "project": "elm",
+                    "backend": "shell",
+                }
+            ],
+            "failed": [],
+        }
+        self.finished = [
+            {
+                "id": "f1",
+                "title": "Build the made-up shed",
+                "shipped": True,
+                "merged_in_release": "9.9.9",
+            },
+            {"id": "f2", "title": "Sweep the made-up path", "shipped": False},
+            {"id": "f3", "title": "Count the made-up stars"},
+        ]
+        self.change_records = {
+            "f1": {"files": ["a", "b"], "packages": ["p"], "tests_added": ["t", "u", "v"]}
+        }
         self.held_total = 7
         self.running: list[dict[str, Any]] = [
             {
@@ -128,6 +163,14 @@ class Fake:
                 ],
             ),
             "h1": made_up_automaton("h1", "Plant the made-up tree", "draft", tasks=[]),
+            "f1": made_up_automaton(
+                "f1",
+                "Build the made-up shed",
+                "completed",
+                tasks=[("Walls", "completed", ""), ("Roof", "completed", "")],
+            ),
+            "f2": made_up_automaton("f2", "Sweep the made-up path", "completed", tasks=[]),
+            "f3": made_up_automaton("f3", "Count the made-up stars", "completed", tasks=[]),
         }
         # Per project: current plans in order, and what is next.
         self.plans: dict[str, list[dict[str, Any]]] = {
@@ -208,8 +251,12 @@ class Fake:
         if request.path == "/api/autonomous/held":
             return web.json_response({"held": self.held, "total": self.held_total, "expired": 0})
         if request.path == "/api/autonomous/prds":
-            rows = self.running if query.get("project") in (None, "oak") else []
+            source = self.finished if query.get("status") == "completed" else self.running
+            rows = source if query.get("project") in (None, "oak") else []
             return web.json_response({"prds": rows, "total": len(rows)})
+        if request.path.endswith("/change-record"):
+            change = self.change_records.get(request.path.split("/")[-2])
+            return web.json_response(change) if change else web.Response(status=404)
         if request.path.startswith("/api/autonomous/prds/"):
             record = self.automata.get(request.path.rsplit("/", 1)[1])
             if record is None:
@@ -221,7 +268,8 @@ class Fake:
         if request.path == "/api/sessions":
             everything, inside = self.totals[query["status"]]
             total = inside if "project" in query else everything
-            return web.json_response({"sessions": [], "total": total})
+            rows = self.sessions[query["status"]] if query.get("limit") != "1" else []
+            return web.json_response({"sessions": rows, "total": total})
         return web.Response(status=404)
 
 

@@ -21,22 +21,31 @@ from .voice.automata import Automaton, Task
 from .voice.model import Snapshot, Tally
 from .voice.questions import Option, Question
 from .voice.reports import Attention, Automation, Held, Listed, Overview, Plan
+from .voice.work import Delivery, Finished, Session
 
 QUESTION_LIMIT = 1000
 # The most plans datawatch returns in one page.
 PLAN_LIMIT = 500
 # Running automata and held items read at once.
 LIST_LIMIT = 200
+# Sessions and finished automata read at once.
+RECENT_LIMIT = 50
 # datawatch's ids. Anything else could change which address is requested.
 _IDENTIFIER = re.compile(r"[A-Za-z0-9_-]+")
 # How an answer is marked in datawatch.
 ANSWER_SURFACE = "comm:voice"
 DEFAULT_TIMEOUT = 10.0
+# For a list datawatch is known to take several seconds over.
+SLOW_TIMEOUT = 30.0
 _SESSION_STATES = ("waiting_input", "running", "failed")
 
 
 class DatawatchError(Exception):
     """datawatch could not be read."""
+
+
+class DatawatchMissingError(DatawatchError):
+    """datawatch has no such thing."""
 
 
 class DatawatchAuthError(DatawatchError):
@@ -184,16 +193,20 @@ class DatawatchClient:
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._timeout = aiohttp.ClientTimeout(total=timeout)
 
-    async def _get(self, path: str, params: Mapping[str, str] | None = None) -> Any:
+    async def _get(
+        self, path: str, params: Mapping[str, str] | None = None, timeout: float | None = None
+    ) -> Any:
         try:
             async with self._session.get(
                 f"{self._url}/api/{path}",
                 params=params,
                 headers=self._headers,
                 ssl=self._pin,
-                timeout=self._timeout,
+                timeout=aiohttp.ClientTimeout(total=timeout) if timeout else self._timeout,
                 allow_redirects=False,
             ) as response:
+                if response.status == 404:
+                    raise DatawatchMissingError(f"datawatch has no {path}")
                 if response.status in (401, 403):
                     raise DatawatchAuthError(f"datawatch refused access ({response.status})")
                 if response.status != 200:
@@ -448,6 +461,61 @@ class DatawatchClient:
         ):
             raise DatawatchError("unexpected triage list")
         return Tally(sum(row["status"] in ("failed", "blocked") for row in records))
+
+    async def sessions(self, state: str, project: str | None = None) -> tuple[list[Session], int]:
+        """Sessions in a state, and how many there are. Never their terminal output."""
+        params = {"view": "summary", "status": state, "limit": str(RECENT_LIMIT)}
+        if project is not None:
+            params["project"] = project
+        reply = _table(await self._get("sessions", params))
+        rows = [
+            Session(
+                row["full_id"],
+                str(row.get("name") or ""),
+                state,
+                str(row.get("project") or ""),
+                str(row.get("llm_ref") or row.get("backend") or ""),
+                str(row.get("last_activity") or row.get("updated_at") or ""),
+            )
+            for row in _rows(reply.get("sessions"), "full_id")
+        ]
+        return rows, _number(reply.get("total"))
+
+    async def finished(self, project: str | None = None) -> tuple[list[Finished], int]:
+        """Completed automata, most recently updated first, and how many there are."""
+        params = {"status": "completed", "limit": str(RECENT_LIMIT)}
+        if project is not None:
+            params["project"] = project
+        reply = _table(await self._get("autonomous/prds", params, timeout=SLOW_TIMEOUT))
+        rows = []
+        for row in _rows(reply.get("prds"), "id", "title"):
+            shipped = row.get("shipped")
+            rows.append(
+                Finished(
+                    row["id"],
+                    row["title"],
+                    shipped if isinstance(shipped, bool) else None,
+                    str(row.get("merged_in_release") or ""),
+                )
+            )
+        return rows, _number(reply.get("total"))
+
+    async def delivery(self, automaton_id: str) -> Delivery | None:
+        """datawatch's record of what an automaton changed, or None if it has none."""
+        if not _IDENTIFIER.fullmatch(automaton_id):
+            raise DatawatchError("unexpected automaton id")
+        try:
+            reply = _table(await self._get(f"autonomous/prds/{automaton_id}/change-record"))
+        except DatawatchMissingError:
+            return None
+
+        def size(key: str) -> int:
+            value = reply.get(key)
+            if isinstance(value, (list, dict)):
+                return len(value)
+            return value if isinstance(value, int) else 0
+
+        return Delivery(size("files"), size("packages"), size("tests_added"))
 
     async def session_total(self, state: str, project: str | None = None) -> int:
         """How many sessions are in a state, using datawatch's own project filter."""

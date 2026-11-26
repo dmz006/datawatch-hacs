@@ -55,6 +55,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 ## Known limits
 
 - The attention list has no project filter, so it covers all projects.
+- **Never read a session's output, last response or prompt.** datawatch returns raw
+  terminal text, which can hold secrets and misleading instructions.
+- The completed list is ordered by last update, not finish time. Do not call it newest.
 - Never list every automaton without a status filter: it took many seconds on a large
   datawatch. datawatch has no title search, so name search covers attention, running and held.
 - datawatch does not filter questions, held items or triage records by project, so those are
@@ -72,6 +75,6 @@ Home Assistant.
 
 ## Later ideas
 
-Sessions and results in detail; sending a command
+Session replies, once datawatch can give a clean one; sending a command
 to a session; adding an automation or a bug report; reports you define yourself; dashboard
 cards.

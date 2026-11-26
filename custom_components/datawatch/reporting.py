@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
+
+from homeassistant.util import dt as dt_util
 
 from .api import DatawatchClient
-from .voice import automata, reports
+from .voice import automata, reports, work
 from .voice.automata import Automaton
 from .voice.conversation import Topic
 from .voice.names import match_names
@@ -17,6 +20,23 @@ async def _overviews(client: DatawatchClient, projects: tuple[str, ...]) -> list
     return list(await asyncio.gather(*(client.overview(name) for name in ordered)))
 
 
+# The session states, waiting first.
+_STATES = ("waiting_input", "running", "failed")
+_ONE_STATE = {
+    Topic.WAITING: "waiting_input",
+    Topic.RUNNING_SESSIONS: "running",
+    Topic.FAILED_SESSIONS: "failed",
+}
+
+
+async def _sessions(client: DatawatchClient, topic: Topic, project: str | None) -> Report:
+    """One state's sessions, or counts of all states and then the waiting ones."""
+    states = (_ONE_STATE[topic],) if topic in _ONE_STATE else _STATES
+    found = await asyncio.gather(*(client.sessions(state, project) for state in states))
+    totals = [(state, total) for state, (_, total) in zip(states, found, strict=True)]
+    return work.sessions(totals, found[0][0], project, dt_util.now())
+
+
 async def build(client: DatawatchClient, topic: Topic, project: str | None) -> Report:
     """A report on topic, for one project or for all. project must be a registered one."""
     match topic:
@@ -25,6 +45,11 @@ async def build(client: DatawatchClient, topic: Topic, project: str | None) -> R
         case Topic.RUNNING:
             rows, total = await client.running(project)
             return reports.running(rows, total, project)
+        case Topic.SESSIONS | Topic.WAITING | Topic.RUNNING_SESSIONS | Topic.FAILED_SESSIONS:
+            return await _sessions(client, topic, project)
+        case Topic.FINISHED:
+            done, how_many = await client.finished(project)
+            return work.finished(done, how_many, project)
         case Topic.HELD:
             held, total = await client.held_items()
             return reports.held(held, total)
@@ -47,13 +72,19 @@ async def build(client: DatawatchClient, topic: Topic, project: str | None) -> R
 
 async def read_automaton(client: DatawatchClient, automaton_id: str) -> Automaton:
     """One automaton, with why it is on hold if it is."""
-    held, _ = await client.held_items()
+    (held, _), delivered = await asyncio.gather(client.held_items(), client.delivery(automaton_id))
     reason = next((item.reason for item in held if item.id == automaton_id), "")
-    return await client.automaton(automaton_id, reason)
+    return replace(await client.automaton(automaton_id, reason), delivered=delivered)
+
+
+def _matching(spoken: str, titles: dict[str, str]) -> list[tuple[str, str]]:
+    names = set(match_names(spoken, list(titles.values())))
+    return [(ident, title) for ident, title in titles.items() if title in names]
 
 
 async def find(client: DatawatchClient, spoken: str) -> tuple[Automaton | None, Report]:
-    """Search by name among automata needing attention, running or on hold.
+    """Search by name among automata needing attention, running or on hold, then among the
+    most recently completed ones.
 
     datawatch has no title search, and listing every automaton is too slow for voice.
     Returns the automaton when exactly one fits, and a report to say otherwise.
@@ -67,13 +98,15 @@ async def find(client: DatawatchClient, spoken: str) -> tuple[Automaton | None, 
     titles: dict[str, str] = {}
     for ident, title in pairs:
         titles.setdefault(ident, title)
-    names = set(match_names(spoken, list(titles.values())))
-    found = [(ident, title) for ident, title in titles.items() if title in names]
+    found = _matching(spoken, titles)
+    if not found:
+        done, _ = await client.finished()
+        found = _matching(spoken, {row.id: row.title for row in done})
     if len(found) == 1:
         return await read_automaton(client, found[0][0]), Report("")
     if not found:
         return None, Report(
-            f"I couldn't find {spoken} among the automata that need attention, are running "
-            "or are on hold."
+            f"I couldn't find {spoken} among the automata that need attention, are running, "
+            "are on hold or finished recently."
         )
     return None, automata.choices(spoken, found)

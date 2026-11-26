@@ -26,10 +26,14 @@ paragraph: it says the assistant cannot read datawatch.
 | "Any datawatch questions?" or "What do you think about this one?" | questions |
 | "What needs my attention?", "How many plans do we have?", "What's next?", "What's on hold?" | work |
 | "Why is the release job blocked?" | automaton |
+| "Which sessions are waiting?", "What finished?", "What did that deliver?" | work, automaton |
 | "What does 'held' mean in datawatch?" | documentation search and reading |
 
 If you have a project focus, a work report covers that project unless you ask for all
 projects.
+
+It is never given what a session said: datawatch returns raw screen text, which can hold
+secrets or misleading instructions.
 
 It cannot change datawatch or answer a question. To answer, say "open datawatch", then
 "questions". See the [README](../README.md#what-you-can-say).

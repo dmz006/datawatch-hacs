@@ -186,6 +186,11 @@ _REPORT_TOPICS = {
     "automations": Topic.AUTOMATIONS,
     "running": Topic.RUNNING,
     "held": Topic.HELD,
+    "sessions": Topic.SESSIONS,
+    "waiting_sessions": Topic.WAITING,
+    "running_sessions": Topic.RUNNING_SESSIONS,
+    "failed_sessions": Topic.FAILED_SESSIONS,
+    "finished": Topic.FINISHED,
 }
 # What a project argument may say to mean every project.
 _EVERY = ("all", "all projects", "everything")
@@ -199,12 +204,17 @@ class WorkTool(_DatawatchTool):
     description = (
         "Reports about the user's datawatch work. topic is one of: attention (what needs the "
         "user), plans (how many, and which), overview (one project's progress), next (what is "
-        "next), automations, running (automata running now), held (what is on hold and why). "
+        "next), automations, running (automata running now), held (what is on hold and why), "
+        "sessions, waiting_sessions, running_sessions, failed_sessions, finished (recently "
+        "updated completed work and its release; not ordered by finish date). Session terminal "
+        "output is not "
+        "available. "
         "project is optional; without it the user's focus is used, and 'all' means every "
         "project. start skips lines already given."
     )
     feature = (
-        "Work: what needs attention, what is running or on hold and why, plans and plan "
+        "Work: what needs attention, what is running or on hold and why, sessions and their "
+        "state (not what they said), completed work and its release, plans and plan "
         "counts, what is next, automations."
     )
     parameters = probatio.Schema(
@@ -249,9 +259,13 @@ class AutomatonTool(_DatawatchTool):
     title = "datawatch automaton"
     description = (
         "One automaton in detail, found by part of its title among those that need attention, "
-        "are running or are on hold: progress, why it is stuck, and its tasks."
+        "are running, are on hold or finished recently: progress, why it is stuck, its tasks "
+        "and what it delivered."
     )
-    feature = "One automaton: its progress, why it is blocked, failed or held, and its tasks."
+    feature = (
+        "One automaton: its progress, why it is blocked, failed or held, its tasks and what "
+        "it delivered."
+    )
     parameters = probatio.Schema({probatio.Required("name"): str})
 
     @override
@@ -263,6 +277,7 @@ class AutomatonTool(_DatawatchTool):
         return {
             "summary": automata.summary(found).removesuffix(" Say why, or tasks."),
             "why": automata.why(found),
+            "delivered": automata.results(found),
             "tasks": list(listing.items[:REPORT_LINES]),
             "more_tasks": max(len(listing.items) - REPORT_LINES, 0),
         }

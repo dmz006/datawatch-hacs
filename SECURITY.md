@@ -16,6 +16,8 @@ Only the newest release, on Home Assistant 2026.11 or later.
   single `POST`, only after reading the answer back and hearing you say "confirm answer". It
   does not retry that request or ask to replace an answer.
 - AI assistants get tools that only read. None can send an answer.
+- Session terminal output, last responses and prompts are never requested, so they are
+  neither spoken nor given to an AI model. Session names, questions, reasons and titles are.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
 - It does not follow redirects, so a token is not forwarded elsewhere.
 - A saved token is never sent to a different address.

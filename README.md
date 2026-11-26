@@ -1,13 +1,14 @@
 # datawatch for Home Assistant
 
 Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, what needs you,
-why something is stuck and what is next, hear its questions and answer them, by voice and without touching a screen.
+why something is stuck, what your sessions are doing and what is next, hear its questions and
+answer them, by voice and without touching a screen.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.4.0).** The only thing it can change in datawatch is **answering a
+> **Early release (0.5.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
@@ -162,8 +163,24 @@ Plans need datawatch's plan records to be turned on.
 Numbers work for the lists from "attention", "what's running" and "held items", and only for
 lines you have heard. A reason is what datawatch recorded, so it can be long and technical.
 It is never guessed; if there is none, you hear that. Finding by name searches only automata
-that need attention, are running or are on hold: datawatch has no title search, and listing
+that need attention, are running or are on hold, then recently updated completed ones: datawatch has no title search, and listing
 every automaton is too slow for voice.
+
+### Sessions and finished work
+
+| In datawatch mode, say | What you hear |
+|---|---|
+| "sessions" | How many are waiting for input, running and failed, then the waiting ones, numbered |
+| "waiting sessions", "running sessions", "failed sessions" | Those sessions, numbered. With a focus, only that project's |
+| "two" after a session list | That session: state, project, AI backend and when it was last active |
+| "what finished" | Completed automata with the release each shipped in, if datawatch recorded one |
+| "results" or "results for two" | What a chosen automaton delivered: tasks completed, and counts of changed files, packages and added tests if datawatch has a change record |
+
+**What a session said is not read out.** datawatch returns recent terminal screen text
+rather than just the last reply: long, cluttered, and able to hold secrets. Open the session
+in datawatch to read it. "What finished" lists the **most recently updated** first, because
+datawatch orders it that way. That may not be the order things finished. It can take several
+seconds on a large datawatch.
 
 ### Status and projects
 
@@ -199,7 +216,8 @@ short introduction and these tools while it is on:
 - status, projects and open questions
 - what needs attention, what is running or on hold, plans and plan counts, what is next,
   and automations. When it answers for your focused project only, it is told to say so
-- one automaton: progress, why it is stuck, and its tasks
+- one automaton: progress, why it is stuck, its tasks and what it delivered
+- sessions and their states (**never what they said**), and completed work
 - searching and reading datawatch's own documentation and how-tos
 
 The introduction names only the features that work now.
@@ -249,8 +267,8 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
   still closes it, and so does "stop".
 - **Commands are fixed phrases.** With the AI assistant on, other wording goes to the
   assistant, which can talk about datawatch but cannot run the commands for you.
-- **Not here yet:** sessions and results beyond the counts, and any change other than
-  answering a question.
+- **Not here:** what a session said, files or other output you can open, and any change
+  other than answering a question.
 - **Home Assistant upgrades.** Home Assistant has no public way for an integration to add a
   spoken phrase, so this one uses the same internal function as Home Assistant's own
   sentence automations. An upgrade could change it. If registering the phrase fails, Home

@@ -40,6 +40,12 @@ class Kind(Enum):
     WHY = auto()
     TASKS = auto()
     PROGRESS = auto()
+    SESSIONS = auto()
+    WAITING = auto()
+    RUNNING_SESSIONS = auto()
+    FAILED_SESSIONS = auto()
+    FINISHED = auto()
+    RESULTS = auto()
     UNKNOWN = auto()
 
 
@@ -122,6 +128,25 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
     ),
     Kind.TASKS: ("tasks", "show tasks", "list tasks", "its tasks", "what are the tasks"),
     Kind.PROGRESS: ("progress", "how far along is it", "how is it going"),
+    Kind.SESSIONS: ("sessions", "list sessions", "list the sessions"),
+    Kind.WAITING: ("waiting sessions", "whats waiting", "what is waiting", "waiting for input"),
+    Kind.RUNNING_SESSIONS: ("running sessions", "which sessions are running"),
+    Kind.FAILED_SESSIONS: ("failed sessions", "which sessions failed"),
+    Kind.FINISHED: (
+        "finished",
+        "what finished",
+        "whats finished",
+        "recently finished",
+        "completed",
+        "what completed",
+    ),
+    Kind.RESULTS: (
+        "results",
+        "the results",
+        "what did it deliver",
+        "what did it change",
+        "what did it do",
+    ),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 
@@ -191,6 +216,7 @@ _ABOUT_ONE: tuple[tuple[Kind, re.Pattern[str]], ...] = (
     (Kind.WHY, re.compile(r"why (?:is |did )?(?:number )?(.+?)(?: blocked| held| fail| stuck)?")),
     (Kind.TASKS, re.compile(r"(?:show )?tasks (?:for|of) (?:number )?(.+)")),
     (Kind.PROGRESS, re.compile(r"progress (?:of|on|for) (?:number )?(.+)")),
+    (Kind.RESULTS, re.compile(r"results (?:of|for) (?:number )?(.+)")),
 )
 _ABOUT = re.compile(r"(?:tell me )?about (?:number )?(.+)")
 _OWN_WORDS = re.compile(r"^\W*(?:please\W+)?my\W+answer\W+is\b[\s,:.\-]*", re.IGNORECASE)

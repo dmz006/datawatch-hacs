@@ -87,7 +87,13 @@ by your voice devices and your AI assistant, and stays until you clear it.
 
 ## "I couldn't find ... among the automata"
 
-Finding by name searches only automata that need attention, are running or are on hold.
+Finding by name searches only automata that need attention, are running, are on hold or
+are among the 50 most recently updated completed ones.
+
+## It will not tell me what a session said
+
+This is on purpose. datawatch returns raw terminal text there, which can hold secrets. Open
+the session in datawatch.
 
 ## My assistant says it knows nothing about datawatch
 
