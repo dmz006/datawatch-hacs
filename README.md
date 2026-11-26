@@ -25,7 +25,7 @@ configure, over HTTPS, and only if it presents the certificate you approved.
 | Say | What happens |
 |---|---|
 | "status" | Whether new work is paused, open questions, sessions waiting and running |
-| "more detail" | Failed sessions |
+| "more detail" | Failed or blocked automata, held items and failed sessions |
 | "list projects", then "more" | Three at a time, alphabetical; numbers continue across groups |
 | "set two", "set project <name>" | Focus on a project. A name may be partial; if several match, you are asked which number |
 | "where am I" / "unset" | Say or clear the focus. The focus is kept until you clear it |
@@ -33,8 +33,8 @@ configure, over HTTPS, and only if it presents the certificate you approved.
 | "stop", "exit", "done", "close datawatch" | Leave datawatch mode |
 
 With a focus, status and detail count sessions inside it and elsewhere, using datawatch's
-own project filter. datawatch cannot filter questions by project yet, so they are given for
-all projects, and said that way. If nothing is heard you are asked once, "Still there?";
+own project filter. datawatch cannot filter questions, held items or failed and blocked automata by
+project yet, so those are given for all projects, and said that way. If nothing is heard you are asked once, "Still there?";
 a second silence leaves the mode. Everything here only reads from datawatch.
 
 ## Development

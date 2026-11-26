@@ -63,5 +63,10 @@ def status(snapshot: Snapshot, focus: str | None) -> str:
 
 
 def detail(snapshot: Snapshot, focus: str | None) -> str:
-    """The follow-up: failed sessions."""
-    return _summary([(snapshot.failed, "failed session", "failed sessions")], snapshot, focus, "")
+    """The follow-up: stuck automata (as datawatch's main view counts them), held, failed."""
+    counted: list[_Counted] = [
+        (snapshot.stuck, "failed or blocked automaton", "failed or blocked automata"),
+        (snapshot.held, "held item", "held items"),
+        (snapshot.failed, "failed session", "failed sessions"),
+    ]
+    return _summary(counted, snapshot, focus, "")

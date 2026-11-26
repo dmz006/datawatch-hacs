@@ -29,3 +29,4 @@ class Snapshot:
     running: Tally = Tally()
     failed: Tally = Tally()
     held: Tally = Tally()
+    stuck: Tally = Tally()

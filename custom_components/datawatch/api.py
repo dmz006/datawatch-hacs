@@ -138,6 +138,27 @@ class DatawatchClient:
         total = len(reply["questions"])
         return Tally(total, capped=total >= QUESTION_LIMIT)
 
+    async def held_total(self) -> Tally:
+        """Held items across all projects: datawatch cannot filter them by project yet."""
+        reply = await self._get("autonomous/held")
+        total = reply.get("total") if isinstance(reply, dict) else None
+        if not isinstance(total, int) or isinstance(total, bool):
+            raise DatawatchError("unexpected held list")
+        return Tally(total)
+
+    async def stuck_total(self) -> Tally:
+        """Failed or blocked automata, as datawatch's main view counts them.
+
+        Across all projects: datawatch cannot filter these records by project yet.
+        """
+        reply = await self._get("autonomous/triage")
+        records = reply.get("records") if isinstance(reply, dict) else None
+        if not isinstance(records, list) or not all(
+            isinstance(row, dict) and isinstance(row.get("status"), str) for row in records
+        ):
+            raise DatawatchError("unexpected triage list")
+        return Tally(sum(row["status"] in ("failed", "blocked") for row in records))
+
     async def session_total(self, state: str, project: str | None = None) -> int:
         """How many sessions are in a state, using datawatch's own project filter."""
         params = {"view": "summary", "status": state, "limit": "1"}
@@ -151,8 +172,12 @@ class DatawatchClient:
 
     async def snapshot(self, focus: str | None) -> Snapshot:
         """Everything the conversation needs. focus is dropped if it no longer exists."""
-        projects, paused, questions = await asyncio.gather(
-            self.project_names(), self.paused(), self.open_questions()
+        projects, paused, questions, held, stuck = await asyncio.gather(
+            self.project_names(),
+            self.paused(),
+            self.open_questions(),
+            self.held_total(),
+            self.stuck_total(),
         )
         if focus not in projects:
             focus = None
@@ -163,4 +188,14 @@ class DatawatchClient:
                 await asyncio.gather(*(self.session_total(s, focus) for s in _SESSION_STATES))
             )
         waiting, running, failed = (Tally(t, i) for t, i in zip(totals, inside, strict=True))
-        return Snapshot(paused, projects, focus, questions, waiting, running, failed)
+        return Snapshot(
+            paused=paused,
+            projects=projects,
+            focus=focus,
+            questions=questions,
+            waiting=waiting,
+            running=running,
+            failed=failed,
+            held=held,
+            stuck=stuck,
+        )
