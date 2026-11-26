@@ -1,0 +1,12 @@
+{
+  "domain": "datawatch",
+  "name": "datawatch",
+  "version": "0.1.0",
+  "documentation": "https://github.com/dmz006/datawatch-hacs",
+  "issue_tracker": "https://github.com/dmz006/datawatch-hacs/issues",
+  "codeowners": ["@dmz006"],
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "dependencies": [],
+  "requirements": []
+}
