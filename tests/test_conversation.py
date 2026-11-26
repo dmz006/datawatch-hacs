@@ -16,7 +16,6 @@ def snapshot(*, paused: bool = False) -> Snapshot:
         waiting=(Item("oak"), Item("elm"), Item("elm")),
         running=(Item("oak"),),
         failed=(Item("elm"), Item(None)),
-        alerts=(Item("oak"), Item(None), Item(None)),
         held=(Item("elm"),),
     )
 
@@ -61,16 +60,14 @@ def test_status_with_a_focus_counts_inside_and_says_what_is_outside_or_unlinked(
 
 
 def test_more_detail() -> None:
-    assert say(start(), "more detail").text == (
-        "3 unread alerts, 1 held or blocked item and 2 failed sessions."
-    )
+    assert say(start(), "more detail").text == "1 held or blocked item and 2 failed sessions."
 
 
 def test_more_detail_with_a_focus() -> None:
     assert say(start("elm"), "more detail").text == (
-        "In project elm: 0 unread alerts, 1 held or blocked item and 1 failed session. "
-        "Elsewhere: 1 unread alert, 0 held or blocked items and 0 failed sessions. "
-        "Not linked: 2 unread alerts and 1 failed session."
+        "In project elm: 1 held or blocked item and 1 failed session. "
+        "Elsewhere: 0 held or blocked items and 0 failed sessions. "
+        "Not linked: 1 failed session."
     )
 
 
