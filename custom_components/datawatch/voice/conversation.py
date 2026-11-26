@@ -67,7 +67,7 @@ class Conversation:
     def enter(self) -> Reply:
         """Start a visit: say the focus, forget the previous list."""
         self._reset()
-        self._last = "Datawatch."
+        self._last = "Datawatch activated."
         if self.focus:
             self._last += f" Focus: project {self.focus}."
         return Reply(self._last)

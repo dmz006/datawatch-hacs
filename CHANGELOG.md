@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.1.1 (unreleased)
+## 0.1.1 (2026-11-26)
 
+- Opening datawatch mode now says "Datawatch activated."
 - Datawatch mode closes after three phrases in a row that it does not understand, so a
   television or other talk cannot hold it open.
 

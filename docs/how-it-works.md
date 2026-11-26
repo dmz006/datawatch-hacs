@@ -24,7 +24,7 @@ sequenceDiagram
     HA->>I: matched the entry phrase
     Note over HA: Your usual assistant is not asked
     I-->>HA: nothing to say yet
-    I->>HA: ask on this device: "Datawatch."
+    I->>HA: ask on this device: "Datawatch activated."
     HA->>Device: speak, then listen
     You->>Device: "status" (no wake word)
     Device->>HA: your speech

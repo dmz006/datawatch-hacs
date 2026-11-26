@@ -40,7 +40,7 @@ More diagrams and detail: [How it works](docs/how-it-works.md).
 These counts are made up.
 
 > **You:** "Hey Jarvis, open datawatch." *(use your own wake word)*
-> **It:** "Datawatch."
+> **It:** "Datawatch activated."
 > **You:** "Status."
 > **It:** "4 open questions, 3 sessions waiting for input and 2 running. Say more detail for more."
 > **You:** "List projects."
