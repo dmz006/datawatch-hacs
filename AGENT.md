@@ -54,6 +54,16 @@ recommendation and why.
   `CHANGELOG.md`.
 - Patch: docs, tests, fixes. Minor: new voice command, action or setting. Major: a breaking
   change to setup, actions or commands.
+- **Every release ships with up-to-date documentation.** Before asking to publish, check
+  each of these against the code being released and fix what is out of date:
+  - `README.md`: what it can do, setup, voice commands, privacy and limits.
+  - `docs/how-it-works.md`: text, diagrams and the list of datawatch calls.
+  - `docs/troubleshooting.md` and `docs/assistant-context.md`.
+  - `SECURITY.md` and `CONTEXT.md`.
+  - `CHANGELOG.md`: move "Unreleased" under the new version and its date.
+- When asking to publish, say which documents changed and which were checked and left as
+  they are. Check that changed diagrams display. Home Assistant's Marketplace page shows
+  the README but does not draw Mermaid diagrams.
 - Ask the maintainer before publishing a release.
 
 ## 9. Dependencies
