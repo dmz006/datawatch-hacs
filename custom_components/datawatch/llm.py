@@ -19,8 +19,9 @@ from homeassistant.helpers.llm import LLMContext, ToolAnnotations, ToolInput, To
 
 from .api import DatawatchClient, DatawatchError
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS
-from .reporting import build, find
-from .voice import automata
+from .mode import custom_reports
+from .reporting import build, find, run
+from .voice import automata, custom
 from .voice.conversation import Topic
 from .voice.questions import Question, ordered
 
@@ -283,6 +284,36 @@ class AutomatonTool(_DatawatchTool):
         }
 
 
+class ReportTool(_DatawatchTool):
+    """The user's own reports."""
+
+    name = "datawatch__report"
+    title = "datawatch report"
+    description = (
+        "Run one of the reports the user defined, by name, such as a daily report. Without a "
+        "name, list them."
+    )
+    feature = "The user's own named reports: list them and run one."
+    parameters = probatio.Schema({probatio.Optional("name"): str})
+
+    @override
+    async def _read(self, hass: HomeAssistant, args: dict[str, Any]) -> dict[str, Any]:
+        defined = tuple(
+            report
+            for entry in hass.config_entries.async_loaded_entries(DOMAIN)
+            for report in custom_reports(entry)
+        )
+        name = args.get("name")
+        chosen = custom.match(name, defined) if name else None
+        if chosen is None:
+            return {"reports": [report.name for report in defined]}
+        focus = hass.data[FOCUS].project
+        result: dict[str, Any] = {"report": await run(self._client, chosen, focus)}
+        if focus is not None:
+            result["tell_the_user"] = f"Parts of this cover only project {focus}, their focus."
+        return result
+
+
 class SearchDocsTool(_DatawatchTool):
     """Search the documentation."""
 
@@ -325,6 +356,7 @@ _TOOLS: tuple[type[_DatawatchTool], ...] = (
     QuestionsTool,
     WorkTool,
     AutomatonTool,
+    ReportTool,
     SearchDocsTool,
     ReadDocTool,
 )

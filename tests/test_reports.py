@@ -180,7 +180,7 @@ def test_a_focus_that_disappeared_is_cleared_before_a_report(
 
 def test_a_report_that_cannot_be_read_says_so(certificate: Certificate, tmp_path: Path) -> None:
     async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
-        fake.override["/api/autonomous/attention"] = web.Response(status=500)
+        fake.override["/api/autonomous/attention"] = lambda: web.Response(status=500)
         await visit(hass, satellite, "attention", "stop")
         assert satellite.asked[1].startswith("I can't reach datawatch.")
 

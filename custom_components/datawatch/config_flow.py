@@ -10,13 +10,18 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
+    ConfigSubentryFlow,
     OptionsFlow,
+    SubentryFlowResult,
 )
 from homeassistant.const import CONF_TOKEN, CONF_URL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     ConversationAgentSelector,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -30,7 +35,9 @@ from .api import (
     fetch_fingerprint,
     parse_server_url,
 )
-from .const import CONF_ASSISTANT, CONF_FINGERPRINT, DOMAIN
+from .const import CONF_ASSISTANT, CONF_FINGERPRINT, CONF_ITEMS, DOMAIN, SUBENTRY_REPORT
+from .voice.custom import ITEMS, spoken_form
+from .voice.phrases import Kind, parse
 
 _SERVER_SCHEMA = probatio.Schema(
     {
@@ -56,6 +63,15 @@ class DatawatchConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry) -> DatawatchOptionsFlow:
         """The AI assistant setting."""
         return DatawatchOptionsFlow()
+
+    @classmethod
+    @callback
+    @override
+    def async_get_supported_subentry_types(
+        cls, config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """Reports the user defines."""
+        return {SUBENTRY_REPORT: ReportSubentryFlow}
 
     @override
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -151,3 +167,67 @@ class DatawatchOptionsFlow(OptionsFlow):
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
         )
+
+
+class ReportSubentryFlow(ConfigSubentryFlow):
+    """Add or change a spoken report: its name and what goes in it."""
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        return self._step("user", user_input)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        return self._step("reconfigure", user_input)
+
+    def _step(self, step: str, user_input: dict[str, Any] | None) -> SubentryFlowResult:
+        current = self._get_reconfigure_subentry() if step == "reconfigure" else None
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = " ".join(str(user_input["name"]).split())
+            items = [item for item in ITEMS if item in user_input[CONF_ITEMS]]
+            if error := self._name_problem(name, current.subentry_id if current else None):
+                errors["name"] = error
+            elif not items:
+                errors[CONF_ITEMS] = "no_items"
+            elif current is None:
+                return self.async_create_entry(title=name, data={CONF_ITEMS: items})
+            else:
+                return self.async_update_and_abort(
+                    self._get_entry(), current, title=name, data={CONF_ITEMS: items}
+                )
+        suggested = user_input
+        if suggested is None and current is not None:
+            suggested = {"name": current.title, CONF_ITEMS: current.data[CONF_ITEMS]}
+        schema = probatio.Schema(
+            {
+                probatio.Required("name"): str,
+                probatio.Required(CONF_ITEMS): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(ITEMS),
+                        multiple=True,
+                        mode=SelectSelectorMode.LIST,
+                        translation_key="report_items",
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id=step,
+            data_schema=self.add_suggested_values_to_schema(schema, suggested or {}),
+            errors=errors,
+        )
+
+    def _name_problem(self, name: str, own_id: str | None) -> str | None:
+        """A name must be something you can say that means nothing else."""
+        spoken = spoken_form(name)
+        if not spoken:
+            return "no_name"
+        if any(parse(said).kind is not Kind.UNKNOWN for said in (name, spoken)):
+            return "name_is_a_command"
+        if spoken in ("datawatch", "data watch", "open datawatch", "use datawatch"):
+            return "name_is_a_command"
+        for subentry in self._get_entry().subentries.values():
+            if subentry.subentry_id != own_id and spoken_form(subentry.title) == spoken:
+                return "name_taken"
+        return None

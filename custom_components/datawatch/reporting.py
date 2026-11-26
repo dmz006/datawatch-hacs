@@ -8,9 +8,10 @@ from dataclasses import replace
 from homeassistant.util import dt as dt_util
 
 from .api import DatawatchClient
-from .voice import automata, reports, work
+from .voice import automata, custom, reports, speech, work
 from .voice.automata import Automaton
 from .voice.conversation import Topic
+from .voice.custom import CustomReport
 from .voice.names import match_names
 from .voice.reports import Overview, Report
 
@@ -110,3 +111,43 @@ async def find(client: DatawatchClient, spoken: str) -> tuple[Automaton | None, 
             "are on hold or finished recently."
         )
     return None, automata.choices(spoken, found)
+
+
+# Report contents that are one of datawatch mode's own reports.
+_ITEM_TOPICS = {
+    "attention": Topic.ATTENTION,
+    "next": Topic.NEXT,
+    "plans": Topic.PLANS,
+    "running": Topic.RUNNING,
+    "held": Topic.HELD,
+    "sessions": Topic.SESSIONS,
+    "automations": Topic.AUTOMATIONS,
+}
+# Items whose lines are short enough, and needed, to read in a combined report.
+_WITH_LINES = ("next",)
+
+
+async def run(client: DatawatchClient, report: CustomReport, project: str | None) -> str:
+    """One of the user's reports: a short sentence or two for each thing in it."""
+    parts: dict[str, str] = {}
+    if {"status", "detail", "questions"} & set(report.items):
+        snapshot = await client.snapshot(project)
+        project = snapshot.focus
+        if "status" in report.items:
+            parts["status"] = speech.status(snapshot, project).removesuffix(
+                " Say more detail for more."
+            )
+        if "detail" in report.items:
+            parts["detail"] = speech.detail(snapshot, project)
+        if "questions" in report.items:
+            total = speech.count(snapshot.questions.total, "open question", "open questions")
+            parts["questions"] = f"{total}, across all projects."
+    wanted = [item for item in report.items if item in _ITEM_TOPICS]
+    built = await asyncio.gather(*(build(client, _ITEM_TOPICS[i], project) for i in wanted))
+    for item, result in zip(wanted, built, strict=True):
+        # The hint about numbers only makes sense when the list follows.
+        text = result.summary.replace(" For a full reason say why and its number.", "")
+        if item in _WITH_LINES:
+            text = " ".join((text, *result.items[:3]))
+        parts[item] = text
+    return custom.compose(report.name, parts, report.items)

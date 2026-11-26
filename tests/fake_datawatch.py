@@ -87,6 +87,8 @@ class Fake:
     def __init__(self) -> None:
         self.seen: list[tuple[str, str, dict[str, str], str | None]] = []
         self.override: dict[str, web.Response | Callable[[], web.Response]] = {}
+        # (address asked for, authorization header) of every request, never cleared.
+        self.addressed: list[tuple[str, str | None]] = []
         self.questions = 4
         self.totals = {"waiting_input": (3, 1), "running": (2, 0), "failed": (5, 4)}
         # Full question records; when None, self.questions made-up ones are served.
@@ -196,6 +198,7 @@ class Fake:
 
     async def handle(self, request: web.Request) -> web.StreamResponse:
         query = dict(request.query)
+        self.addressed.append((request.host, request.headers.get("Authorization")))
         self.seen.append(
             (request.method, request.path, query, request.headers.get("Authorization"))
         )

@@ -115,6 +115,8 @@ def voice_test(
                 assert await async_setup_component(hass, component, {})
             satellite = await add_satellite(hass)
             await add_datawatch(hass, url)
+            # The sensors' first read happens in the background: let it finish first.
+            await hass.async_block_till_done(wait_background_tasks=True)
             fake.seen.clear()
             await body(hass, satellite, fake)
 

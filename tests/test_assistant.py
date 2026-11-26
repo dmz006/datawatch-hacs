@@ -220,6 +220,7 @@ def test_datawatch_adds_to_the_assistant_and_keeps_its_own_instructions(
             "datawatch__projects",
             "datawatch__questions",
             "datawatch__read_doc",
+            "datawatch__report",
             "datawatch__search_docs",
             "datawatch__status",
             "datawatch__work",

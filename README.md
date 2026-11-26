@@ -8,7 +8,7 @@ datawatch is a program you run yourself. It starts AI coding assistants, watches
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.5.0).** The only thing it can change in datawatch is **answering a
+> **Early release (0.6.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
@@ -206,6 +206,58 @@ and the reply says so.
 after a second silence it closes. It also closes after three phrases in a row that it does
 not understand. Saying "close datawatch" ends it straight away.
 
+## Your own reports
+
+Make a spoken report of just what you care about.
+
+1. Go to **Settings → Devices & services → datawatch** and choose **Add report**.
+2. Name it, for example "Daily report", and choose what goes in it: status, more detail,
+   attention, questions, what's next, plans, running automata, held items, sessions or
+   automations.
+3. In datawatch mode, say its name: **"daily report"** (or just "daily"). Say **"reports"**
+   to hear the names.
+
+Each part is a sentence or two, mostly counts, in the order the screen lists them, so it
+stays short. To hear a list afterwards, say the command for it, such as "attention". With a
+focus, parts that can cover one project do. Change or delete a report on the same page. A
+name cannot be words datawatch mode already uses, such as "status".
+
+## Dashboard sensors
+
+datawatch adds a **datawatch** service with these entities, for dashboards and your own
+automations:
+
+| Entity | Shows |
+|---|---|
+| `binary_sensor.datawatch_new_work_paused` | On while new work is paused |
+| `sensor.datawatch_open_questions` | Open questions |
+| `sensor.datawatch_automata_needing_attention` | Automata that need you |
+| `sensor.datawatch_sessions_waiting_for_input` | Sessions waiting for input |
+| `sensor.datawatch_sessions_running` | Running sessions |
+| `sensor.datawatch_sessions_failed` | Failed sessions |
+| `sensor.datawatch_automata_failed_or_blocked` | Failed or blocked automata |
+| `sensor.datawatch_items_on_hold` | Items on hold |
+
+They cover all projects, are **read from datawatch once a minute**, and show
+*unavailable*, never zero, when datawatch cannot be read. Home Assistant keeps their history
+like any other sensor. The names above are the defaults, and yours may differ if you rename
+them. To stop the reading, turn off **polling** in the integration's system options.
+
+Your dashboards are not changed. To add a card, choose **Add card → Manual** and paste:
+
+```yaml
+type: entities
+title: datawatch
+entities:
+  - binary_sensor.datawatch_new_work_paused
+  - sensor.datawatch_open_questions
+  - sensor.datawatch_automata_needing_attention
+  - sensor.datawatch_sessions_waiting_for_input
+  - sensor.datawatch_sessions_running
+  - sensor.datawatch_automata_failed_or_blocked
+  - sensor.datawatch_items_on_hold
+```
+
 ## Use your AI assistant (optional)
 
 This is **off** until you turn it on. Go to **Settings → Devices & services → datawatch →
@@ -218,6 +270,7 @@ short introduction and these tools while it is on:
   and automations. When it answers for your focused project only, it is told to say so
 - one automaton: progress, why it is stuck, its tasks and what it delivered
 - sessions and their states (**never what they said**), and completed work
+- your own reports
 - searching and reading datawatch's own documentation and how-tos
 
 The introduction names only the features that work now.
@@ -254,6 +307,8 @@ including parts of its instructions. For a local model, check its context window
   the certificate you approved.
 - **Speech** is turned into text by the speech-to-text service your assistant already uses.
   With the AI assistant off, your words in datawatch mode are not passed on to an AI model.
+- **Sensors** read counts once a minute, and their history is stored by Home Assistant.
+  Anyone who can see your Home Assistant can see them.
 - The address, certificate fingerprint and any token are kept in Home Assistant's
   integration settings. The focus (a project name) is kept in Home Assistant's storage.
 

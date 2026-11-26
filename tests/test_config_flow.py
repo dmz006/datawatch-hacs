@@ -215,9 +215,12 @@ def test_a_saved_token_is_never_sent_to_a_different_address(
         fake.seen.clear()
         moved = url.replace("127.0.0.1", "localhost")
         await reconfigure(hass, {"url": moved})
+        await hass.async_block_till_done(wait_background_tasks=True)
         (entry,) = hass.config_entries.async_entries(DOMAIN)
         assert entry.data == {"url": moved, "fingerprint": certificate[2]}
-        assert {auth for *_, auth in fake.seen} == {None}
+        new_address = [auth for host, auth in fake.addressed if host.startswith("localhost:")]
+        assert new_address, "the new address was read"
+        assert set(new_address) == {None}, "the saved token never went to the new address"
 
     in_hass(certificate, tmp_path, body)
 

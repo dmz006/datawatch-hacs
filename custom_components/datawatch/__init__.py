@@ -5,18 +5,20 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TOKEN, CONF_URL
+from homeassistant.const import CONF_TOKEN, CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import DatawatchClient
-from .const import CONF_FINGERPRINT, DISCUSSING, DOMAIN, FOCUS
+from .const import CONF_FINGERPRINT, COUNTS, DISCUSSING, DOMAIN, FOCUS
+from .coordinator import CountsCoordinator
 from .entry_phrase import async_listen
 from .mode import DatawatchMode, SharedFocus
 
 _LOGGER = logging.getLogger(__name__)
 _PHRASE_ISSUE = "voice_phrase_unavailable"
+_PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR)
 
 type DatawatchConfigEntry = ConfigEntry[DatawatchClient]
 
@@ -52,12 +54,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
         )
     else:
         ir.async_delete_issue(hass, DOMAIN, _PHRASE_ISSUE)
+
+    counts = CountsCoordinator(hass, entry, entry.runtime_data)
+    hass.data[COUNTS] = counts
+    await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
+    # Not awaited: setting up must not wait for datawatch, or fail without it.
+    entry.async_create_background_task(hass, counts.async_refresh(), f"{DOMAIN} first read")
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) -> bool:
-    """Home Assistant removes the phrase and stops any visit in progress."""
-    return True
+    """Remove the sensors. Home Assistant removes the phrase and stops any visit."""
+    return await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) -> None:

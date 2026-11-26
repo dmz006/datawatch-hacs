@@ -27,6 +27,7 @@ paragraph: it says the assistant cannot read datawatch.
 | "What needs my attention?", "How many plans do we have?", "What's next?", "What's on hold?" | work |
 | "Why is the release job blocked?" | automaton |
 | "Which sessions are waiting?", "What finished?", "What did that deliver?" | work, automaton |
+| "Give me my daily report." | report |
 | "What does 'held' mean in datawatch?" | documentation search and reading |
 
 If you have a project focus, a work report covers that project unless you ask for all
@@ -43,7 +44,7 @@ word, so let it finish before saying "open datawatch" with your wake word.
 
 ## Context window
 
-A model can only take in so much text at once. datawatch adds an introduction and seven tool
+A model can only take in so much text at once. datawatch adds an introduction and eight tool
 descriptions to every request, and a tool's reply can be a few thousand characters: a whole
 question, or a page of documentation (cut at 6,000 characters). Assistants with many exposed
 devices already use much of the window. If it overflows, some models silently drop older

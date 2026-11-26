@@ -46,6 +46,7 @@ class Kind(Enum):
     FAILED_SESSIONS = auto()
     FINISHED = auto()
     RESULTS = auto()
+    REPORTS = auto()
     UNKNOWN = auto()
 
 
@@ -147,6 +148,7 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
         "what did it change",
         "what did it do",
     ),
+    Kind.REPORTS: ("reports", "list reports", "my reports", "list my reports"),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 

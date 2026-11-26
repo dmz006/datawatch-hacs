@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 (2026-11-26)
+
+- **Your own spoken reports.** On the datawatch page in Home Assistant choose "Add report",
+  name it and pick what goes in it. In datawatch mode say its name, or "reports" to hear
+  them. Your AI assistant, if turned on, can run them too.
+- **Dashboard sensors:** counts of open questions, automata needing attention, sessions,
+  stuck automata and held items, and whether new work is paused. Read once a minute.
+
 ## 0.5.0 (2026-11-26)
 
 - **Sessions and finished work.** New in datawatch mode: "sessions", "waiting sessions",

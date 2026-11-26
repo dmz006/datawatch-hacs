@@ -9,8 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from . import automata, speech
+from . import automata, custom, speech
 from .automata import Automaton
+from .custom import CustomReport
 from .model import Snapshot
 from .names import match_names
 from .phrases import Command, Kind, parse
@@ -34,6 +35,7 @@ _HELP = (
     "cancel, status, more detail, attention, running, held items, tell me about a number "
     "or name, why, tasks, progress, results, what finished, sessions, waiting sessions, "
     "running sessions, failed sessions, plans, overview, what's next, automations, "
+    "reports or a report's name, "
     "list projects, more, set and a number or name, where am I, unset, repeat, or stop."
 )
 _NO_AUTOMATON = "Say attention, running or held items, then a number."
@@ -102,6 +104,7 @@ class Needs(Enum):
     REPORT = auto()
     AUTOMATON = auto()
     SEARCH = auto()
+    CUSTOM = auto()
 
 
 def alphabetical(names: tuple[str, ...]) -> list[str]:
@@ -117,6 +120,7 @@ class Conversation:
         focus: str | None = None,
         silences_before_closing: int | None = 2,
         assistant: bool = False,
+        reports: tuple[CustomReport, ...] = (),
     ) -> None:
         """silences_before_closing=None keeps the mode open until the user leaves.
 
@@ -125,6 +129,7 @@ class Conversation:
         self.focus = focus
         self._silence_limit = silences_before_closing
         self._assistant = assistant
+        self._reports = reports
         self._reset()
 
     def _reset(self) -> None:
@@ -165,6 +170,8 @@ class Conversation:
             return Needs.QUESTIONS
         if kind in _TOPICS:
             return Needs.REPORT
+        if kind is Kind.UNKNOWN and self.wanted_report(words) is not None:
+            return Needs.CUSTOM
         if kind is Kind.ABOUT:
             return Needs.SEARCH
         if self.wanted_automaton(words) is not None:
@@ -172,6 +179,10 @@ class Conversation:
         if kind is Kind.DETAIL and self.current_question is not None:
             return Needs.NOTHING
         return Needs.SNAPSHOT if kind in _NEEDS_DATA else Needs.NOTHING
+
+    def wanted_report(self, words: str) -> CustomReport | None:
+        """The user's own report that words name, if any."""
+        return custom.match(words, self._reports)
 
     def wanted_automaton(self, words: str) -> str | None:
         """The id of the automaton to read before replying to words, if one is meant."""
@@ -221,6 +232,7 @@ class Conversation:
         questions: list[Question] | None = None,
         report: Report | None = None,
         automaton: Automaton | None = None,
+        composed: str | None = None,
     ) -> Reply:
         """Answer one thing the user said.
 
@@ -237,6 +249,8 @@ class Conversation:
             and (asked_for is not None or command.kind is Kind.ABOUT)
         ):
             reply = self._about_automaton(command, report, automaton)
+        elif self._runs_report(command, words):
+            reply = self._say(composed if composed is not None else _UNREACHABLE)
         elif self._chooses_detail(command):
             reply = self._detail(command)
         else:
@@ -271,6 +285,8 @@ class Conversation:
             return self._dictated(command, words)
         if self._draft is not None:
             return self._confirming(self._draft, command)
+        if command.kind is Kind.REPORTS:
+            return self._say(custom.listing(self._reports))
         if command.kind is Kind.UNKNOWN and self._assistant:
             return Reply("", forward=words)
         if command.kind in _TOPICS:
@@ -300,6 +316,12 @@ class Conversation:
     def _say(self, text: str) -> Reply:
         self._last = text
         return Reply(text)
+
+    def _runs_report(self, command: Command, words: str) -> bool:
+        """Whether words name one of the user's reports. Never while an answer waits."""
+        if self._draft is not None or self._dictating or command.kind is not Kind.UNKNOWN:
+            return False
+        return self.wanted_report(words) is not None
 
     def _chooses_detail(self, command: Command) -> bool:
         """Whether command picks a line that carries its own details, such as a session."""

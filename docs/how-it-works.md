@@ -87,9 +87,10 @@ flowchart LR
 ```
 
 While an assistant is chosen in datawatch's options, the integration offers Home
-Assistant's "device control" tool set seven extra tools: `datawatch__status`,
+Assistant's "device control" tool set eight extra tools: `datawatch__status`,
 `datawatch__projects`, `datawatch__questions`, `datawatch__work`,
-`datawatch__automaton`, `datawatch__search_docs` and `datawatch__read_doc`. Home Assistant adds the tools and a short introduction to what each
+`datawatch__automaton`, `datawatch__report`, `datawatch__search_docs` and
+`datawatch__read_doc`. Home Assistant adds the tools and a short introduction to what each
 assistant with device control already has. The introduction lists what the tools can do, so
 a new feature appears in it when its tool is added. In datawatch mode, other talk is passed
 to the chosen assistant with Home Assistant's "process a conversation" action, as one
@@ -131,8 +132,13 @@ read nothing. "questions" reads the open questions. "status", "more detail" (aft
 ("attention", "plans", "overview", "what's next", "automations", "running", "held",
 the session lists and "what finished") read their own lists. Choosing one automaton, "why", "tasks" and "progress" read it again each
 time, so what you hear is current.
-Everything is read fresh each time; nothing is cached and nothing is checked in the
-background.
+Voice replies and AI tools read fresh each time; nothing is cached for them.
+
+The **dashboard sensors** are the one thing read in the background: once a minute the
+integration reads the projects, pause state, open questions, session counts, held items,
+triage records and the attention list. If any of those reads fails, every sensor shows
+unavailable. Turning off polling for the integration stops it. One of your own reports reads
+only what its parts need.
 
 | datawatch address | Used for |
 |---|---|

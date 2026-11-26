@@ -95,6 +95,16 @@ are among the 50 most recently updated completed ones.
 This is on purpose. datawatch returns raw terminal text there, which can hold secrets. Open
 the session in datawatch.
 
+## The sensors are unavailable
+
+datawatch could not be read: check it is running and reachable from Home Assistant, and see
+the Home Assistant log. They never show zero for a failed read. They update once a minute.
+
+## My report is not recognised
+
+Say "reports" to hear the exact names. Speech-to-text has to write the name as you typed it,
+so short, ordinary words work best.
+
 ## My assistant says it knows nothing about datawatch
 
 - Choose an assistant under **datawatch → Configure**.

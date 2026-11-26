@@ -21,6 +21,7 @@ Only the newest release, on Home Assistant 2026.11 or later.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
 - It does not follow redirects, so a token is not forwarded elsewhere.
 - A saved token is never sent to a different address.
+- The dashboard sensors hold counts only, no titles or question text.
 
 ## What it does not protect against
 

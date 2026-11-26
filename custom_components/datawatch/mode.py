@@ -28,9 +28,10 @@ from .api import (
     DatawatchRefusedError,
     DatawatchSecretError,
 )
-from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN
-from .reporting import build, find, read_automaton
+from .const import CONF_ASSISTANT, CONF_ITEMS, DISCUSSING, DOMAIN, SUBENTRY_REPORT
+from .reporting import build, find, read_automaton, run
 from .voice.conversation import Conversation, Needs, Reply, topic_of
+from .voice.custom import CustomReport
 from .voice.phrases import parse
 from .voice.questions import Draft
 from .voice.reports import Report
@@ -61,6 +62,15 @@ _NOT_CHECKED = "I can't reach datawatch, so nothing was sent. Say my answer or o
 _UNSURE = "I don't know whether the answer was sent. Say questions to check."
 _NO_ASSISTANT = "Your assistant didn't answer. Try again, or say stop."
 _SILENT_ASSISTANT = "Your assistant had nothing to say."
+
+
+def custom_reports(entry: ConfigEntry) -> tuple[CustomReport, ...]:
+    """The reports the user has defined."""
+    return tuple(
+        CustomReport(subentry.title, tuple(subentry.data[CONF_ITEMS]))
+        for subentry in entry.subentries.values()
+        if subentry.subentry_type == SUBENTRY_REPORT
+    )
 
 
 def _turn_limit(text: str) -> float:
@@ -152,7 +162,9 @@ class DatawatchMode:
 
     async def _converse(self, satellite_id: str) -> None:
         assistant = self._entry.options.get(CONF_ASSISTANT)
-        conversation = Conversation(self._focus.project, assistant=bool(assistant))
+        conversation = Conversation(
+            self._focus.project, assistant=bool(assistant), reports=custom_reports(self._entry)
+        )
         chat: str | None = None
         reply = conversation.enter()
         try:
@@ -197,6 +209,7 @@ class DatawatchMode:
         questions = None
         report = None
         automaton = None
+        composed = None
         needs = conversation.needs(heard)
         client = self._entry.runtime_data
         try:
@@ -210,6 +223,10 @@ class DatawatchMode:
                 automaton = await read_automaton(client, wanted)
             elif needs is Needs.SEARCH:
                 automaton, report = await find(client, parse(heard).name or "")
+            elif needs is Needs.CUSTOM:
+                chosen = conversation.wanted_report(heard)
+                assert chosen is not None, "a report was named"
+                composed = await run(client, chosen, conversation.focus)
             elif needs is Needs.REPORT:
                 topic = topic_of(heard)
                 assert topic is not None, "a report was asked for"
@@ -233,7 +250,7 @@ class DatawatchMode:
             return Reply(_REFUSED, ends=True)
         except DatawatchError:
             _LOGGER.warning("datawatch could not be read", exc_info=True)
-        reply = conversation.hear(heard, snapshot, questions, report, automaton)
+        reply = conversation.hear(heard, snapshot, questions, report, automaton, composed)
         await self._focus.async_set(conversation.focus)
         return reply
 

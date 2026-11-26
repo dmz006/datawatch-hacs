@@ -18,9 +18,10 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 
 | Path | Contents |
 |---|---|
-| `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata and the confirm step |
+| `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and answers questions |
 | `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |
+| `custom_components/datawatch/coordinator.py`, `sensor.py`, `binary_sensor.py` | Dashboard sensors, read once a minute |
 | `custom_components/datawatch/llm.py` | Read-only tools and introduction for AI assistants |
 | `custom_components/datawatch/mode.py` | Datawatch mode: ask, listen, answer; shared focus |
 | `custom_components/datawatch/entry_phrase.py` | **The only use of non-public Home Assistant code** |
@@ -75,6 +76,7 @@ Home Assistant.
 
 ## Later ideas
 
-Session replies, once datawatch can give a clean one; sending a command
-to a session; adding an automation or a bug report; reports you define yourself; dashboard
-cards.
+Confirmed changes beyond answering: saving a bug or idea without starting work, sending a
+message to a session, pause and resume, approve and reject. The maintainer's plan puts these
+after datawatch has its own access controls. Also: session replies once datawatch can give a
+clean one, and "artifacts" once it is agreed what that means here.

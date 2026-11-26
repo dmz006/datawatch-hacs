@@ -57,5 +57,93 @@
         }
       }
     }
+  },
+  "config_subentries": {
+    "report": {
+      "initiate_flow": {
+        "user": "Add report",
+        "reconfigure": "Change report"
+      },
+      "entry_type": "Spoken report",
+      "step": {
+        "user": {
+          "title": "Add a spoken report",
+          "data": {
+            "name": "Report name",
+            "items": "What goes in it"
+          },
+          "data_description": {
+            "name": "What you will say in datawatch mode, for example Daily report.",
+            "items": "Read in the order shown. With a project focus, most parts cover that project."
+          }
+        },
+        "reconfigure": {
+          "title": "Change a spoken report",
+          "data": {
+            "name": "Report name",
+            "items": "What goes in it"
+          },
+          "data_description": {
+            "name": "What you will say in datawatch mode, for example Daily report.",
+            "items": "Read in the order shown. With a project focus, most parts cover that project."
+          }
+        }
+      },
+      "error": {
+        "no_name": "Give the report a name you can say.",
+        "name_is_a_command": "datawatch mode already uses those words. Choose another name.",
+        "name_taken": "Another report is called that.",
+        "no_items": "Choose at least one thing."
+      },
+      "abort": {
+        "reconfigure_successful": "The report was updated."
+      }
+    }
+  },
+  "selector": {
+    "report_items": {
+      "options": {
+        "status": "Status: paused, questions, waiting and running sessions",
+        "detail": "More detail: stuck automata, held items, failed sessions",
+        "attention": "How much needs your attention",
+        "questions": "How many questions are open",
+        "next": "What is next",
+        "plans": "Plan counts",
+        "running": "How many automata are running",
+        "held": "How much is on hold",
+        "sessions": "Session counts",
+        "automations": "Automation counts"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_questions": {
+        "name": "Open questions"
+      },
+      "needs_attention": {
+        "name": "Automata needing attention"
+      },
+      "sessions_waiting": {
+        "name": "Sessions waiting for input"
+      },
+      "sessions_running": {
+        "name": "Sessions running"
+      },
+      "sessions_failed": {
+        "name": "Sessions failed"
+      },
+      "automata_stuck": {
+        "name": "Automata failed or blocked"
+      },
+      "held_items": {
+        "name": "Items on hold"
+      }
+    },
+    "binary_sensor": {
+      "new_work_paused": {
+        "name": "New work paused"
+      }
+    }
   }
 }
