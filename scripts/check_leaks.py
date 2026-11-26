@@ -39,7 +39,7 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(r"(?<![\w:])(?:fe80|f[cd][0-9a-f]{2}):[0-9a-f]{0,4}:[0-9a-f:]*", re.I),
     ),
     ("mac-address", re.compile(r"(?<![\w:-])(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}(?![\w:-])", re.I)),
-    ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
+    ("email", re.compile(r"[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
     ("home-path", re.compile(r"/(?:home|Users)/(?!runner\b|user\b|example\b)[A-Za-z0-9._-]+")),
     ("tailnet-name", re.compile(r"[a-z0-9-]+\.ts\.net\b", re.I)),
     ("private-key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
