@@ -29,8 +29,9 @@ from .api import (
     DatawatchSecretError,
 )
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN
-from .reporting import build
+from .reporting import build, find, read_automaton
 from .voice.conversation import Conversation, Needs, Reply, topic_of
+from .voice.phrases import parse
 from .voice.questions import Draft
 from .voice.reports import Report
 
@@ -195,6 +196,7 @@ class DatawatchMode:
         snapshot = None
         questions = None
         report = None
+        automaton = None
         needs = conversation.needs(heard)
         client = self._entry.runtime_data
         try:
@@ -202,6 +204,12 @@ class DatawatchMode:
                 snapshot = await client.snapshot(conversation.focus)
             elif needs is Needs.QUESTIONS:
                 questions = list(await client.questions())
+            elif needs is Needs.AUTOMATON:
+                wanted = conversation.wanted_automaton(heard)
+                assert wanted is not None, "an automaton was asked for"
+                automaton = await read_automaton(client, wanted)
+            elif needs is Needs.SEARCH:
+                automaton, report = await find(client, parse(heard).name or "")
             elif needs is Needs.REPORT:
                 topic = topic_of(heard)
                 assert topic is not None, "a report was asked for"
@@ -225,7 +233,7 @@ class DatawatchMode:
             return Reply(_REFUSED, ends=True)
         except DatawatchError:
             _LOGGER.warning("datawatch could not be read", exc_info=True)
-        reply = conversation.hear(heard, snapshot, questions, report)
+        reply = conversation.hear(heard, snapshot, questions, report, automaton)
         await self._focus.async_set(conversation.focus)
         return reply
 

@@ -33,6 +33,13 @@ class Kind(Enum):
     OVERVIEW = auto()
     WHATS_NEXT = auto()
     AUTOMATIONS = auto()
+    RUNNING = auto()
+    HELD = auto()
+    PICK = auto()
+    ABOUT = auto()
+    WHY = auto()
+    TASKS = auto()
+    PROGRESS = auto()
     UNKNOWN = auto()
 
 
@@ -91,6 +98,30 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
     Kind.OVERVIEW: ("overview", "project overview"),
     Kind.WHATS_NEXT: ("whats next", "what is next"),
     Kind.AUTOMATIONS: ("automations", "list automations", "list the automations"),
+    Kind.RUNNING: ("running", "whats running", "what is running", "running automata"),
+    Kind.HELD: (
+        "held",
+        "held items",
+        "whats held",
+        "what is held",
+        "whats on hold",
+        "what is on hold",
+        "on hold",
+    ),
+    Kind.WHY: (
+        "why",
+        "why is it blocked",
+        "why is it held",
+        "why is it on hold",
+        "why is that blocked",
+        "why is that held",
+        "why is that one blocked",
+        "why is that one held",
+        "why did it fail",
+        "why is it stuck",
+    ),
+    Kind.TASKS: ("tasks", "show tasks", "list tasks", "its tasks", "what are the tasks"),
+    Kind.PROGRESS: ("progress", "how far along is it", "how is it going"),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 
@@ -155,6 +186,13 @@ def _parse_set(rest: str) -> Command:
 _CHOOSE = re.compile(
     r"(?:(?:answer|choose|pick) )?option (?:number )?(.+)|(?:answer|choose|pick) (.+)"
 )
+# "why is two blocked", "tasks for two", "tell me about two".
+_ABOUT_ONE: tuple[tuple[Kind, re.Pattern[str]], ...] = (
+    (Kind.WHY, re.compile(r"why (?:is |did )?(?:number )?(.+?)(?: blocked| held| fail| stuck)?")),
+    (Kind.TASKS, re.compile(r"(?:show )?tasks (?:for|of) (?:number )?(.+)")),
+    (Kind.PROGRESS, re.compile(r"progress (?:of|on|for) (?:number )?(.+)")),
+)
+_ABOUT = re.compile(r"(?:tell me )?about (?:number )?(.+)")
 _OWN_WORDS = re.compile(r"^\W*(?:please\W+)?my\W+answer\W+is\b[\s,:.\-]*", re.IGNORECASE)
 
 
@@ -168,6 +206,18 @@ def parse(heard: str) -> Command:
         # The user's words exactly as speech-to-text wrote them.
         words = heard[own.end() :].strip()
         return Command(Kind.OWN_WORDS, text=words or None)
+    for kind, pattern in _ABOUT_ONE:
+        found = pattern.fullmatch(text)
+        if found is not None:
+            chosen = _as_number(found.group(1))
+            if chosen is not None:
+                return Command(kind, number=chosen)
+    about = _ABOUT.fullmatch(text)
+    if about is not None:
+        chosen = _as_number(about.group(1))
+        if chosen is not None:
+            return Command(Kind.PICK, number=chosen)
+        return Command(Kind.ABOUT, name=about.group(1))
     choice = _CHOOSE.fullmatch(text)
     if choice is not None:
         chosen = _as_number(choice.group(1) or choice.group(2))

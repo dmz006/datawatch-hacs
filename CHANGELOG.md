@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 (2026-11-26)
+
+- **Why is it stuck?** Say "what's running" or "what's on hold", pick a line by number from
+  those or from "attention", or say "tell me about" and part of a title. Then "why", "tasks"
+  or "progress". Your AI assistant, if turned on, can do the same.
+- Fixed: when your project focus limited an AI assistant's report, it did not have to say
+  so. Reports now name the project, and the assistant can ask for all projects.
+
 ## 0.3.0 (2026-11-26)
 
 - **What needs you and what is next.** New in datawatch mode: "what needs my attention",

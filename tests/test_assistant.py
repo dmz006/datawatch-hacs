@@ -216,6 +216,7 @@ def test_datawatch_adds_to_the_assistant_and_keeps_its_own_instructions(
         assert "datawatch__search_docs" in assistant.prompt
         assert set(tools_before) < set(assistant.tools), "no tool was taken away"
         assert sorted(set(assistant.tools) - set(tools_before)) == [
+            "datawatch__automaton",
             "datawatch__projects",
             "datawatch__questions",
             "datawatch__read_doc",

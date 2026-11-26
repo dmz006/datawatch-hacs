@@ -62,10 +62,10 @@ def test_attention_is_ordered_counted_and_says_it_covers_everything() -> None:
         "1 paused and 1 finished or set aside with tasks held for review."
     )
     assert report.items == (
-        "Stuck: blocked.",
-        "Review me: waiting for review, 1 task held for review.",
-        "Paused one: paused.",
-        "Old: cancelled, 2 tasks held for review.",
+        "1, Stuck: blocked.",
+        "2, Review me: waiting for review, 1 task held for review.",
+        "3, Paused one: paused.",
+        "4, Old: cancelled, 2 tasks held for review.",
     )
     assert reports.attention([]) == Report("Nothing needs your attention.")
     assert reports.attention([Attention("x", "blocked")]).summary.startswith("1 automaton needs")
@@ -148,7 +148,7 @@ def test_voice_reports_with_and_without_a_focus(certificate: Certificate, tmp_pa
         )  # fmt: skip
         said = satellite.asked[1:]
         assert said[0].startswith("3 automata need attention, across all projects")
-        assert "Paint the made-up fence: blocked." in said[0]
+        assert "1, Paint the made-up fence: blocked." in said[0]
         assert said[1].startswith("2 current plans in 1 project.")
         assert said[2].startswith("All projects: 4 automations")
         assert said[4].startswith("Project oak has 2 current plans.")

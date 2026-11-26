@@ -17,15 +17,18 @@ from urllib.parse import quote, urlsplit
 
 import aiohttp
 
+from .voice.automata import Automaton, Task
 from .voice.model import Snapshot, Tally
 from .voice.questions import Option, Question
-from .voice.reports import Attention, Automation, Overview, Plan
+from .voice.reports import Attention, Automation, Held, Listed, Overview, Plan
 
 QUESTION_LIMIT = 1000
 # The most plans datawatch returns in one page.
 PLAN_LIMIT = 500
-# datawatch's question ids. Anything else could change which address is requested.
-_QUESTION_ID = re.compile(r"[A-Za-z0-9_-]+")
+# Running automata and held items read at once.
+LIST_LIMIT = 200
+# datawatch's ids. Anything else could change which address is requested.
+_IDENTIFIER = re.compile(r"[A-Za-z0-9_-]+")
 # How an answer is marked in datawatch.
 ANSWER_SURFACE = "comm:voice"
 DEFAULT_TIMEOUT = 10.0
@@ -57,7 +60,7 @@ class DatawatchRefusedError(DatawatchError):
 
 
 def _question_path(question_id: str) -> str:
-    if not _QUESTION_ID.fullmatch(question_id):
+    if not _IDENTIFIER.fullmatch(question_id):
         raise DatawatchError("unexpected question id")
     return f"questions/{question_id}"
 
@@ -287,8 +290,72 @@ class DatawatchClient:
             held_tasks = len(held) if isinstance(held, list) else int(bool(held))
             if row.get("is_template") or not (row["status"] in wanted or held_tasks):
                 continue
-            found.setdefault(row["id"], Attention(row["title"], row["status"], held_tasks))
+            found.setdefault(
+                row["id"], Attention(row["title"], row["status"], held_tasks, row["id"])
+            )
         return list(found.values())
+
+    async def running(self, project: str | None = None) -> tuple[list[Listed], int]:
+        """The automata running now, with datawatch's own filters, and how many there are."""
+        params = {"status": "running", "limit": str(LIST_LIMIT)}
+        if project is not None:
+            params["project"] = project
+        reply = _table(await self._get("autonomous/prds", params))
+        rows = []
+        for row in _rows(reply.get("prds"), "id", "title"):
+            counts = row.get("task_status_counts")
+            counts = counts if isinstance(counts, dict) else {}
+            done = counts.get("completed")
+            rows.append(
+                Listed(
+                    row["id"],
+                    row["title"],
+                    str(row.get("project") or ""),
+                    done if isinstance(done, int) else 0,
+                    _number(row.get("task_count") or 0),
+                )
+            )
+        return rows, _number(reply.get("total"))
+
+    async def held_items(self) -> tuple[list[Held], int]:
+        """What is on hold, across all projects: datawatch cannot filter this list."""
+        reply = _table(await self._get("autonomous/held"))
+        rows = [
+            Held(
+                row["id"],
+                row["title"],
+                str(row.get("reason") or ""),
+                str(row.get("next_look_text") or ""),
+                str(row.get("project") or ""),
+            )
+            for row in _rows(reply.get("held"), "id", "title")
+        ]
+        return rows, _number(reply.get("total"))
+
+    async def automaton(self, automaton_id: str, hold: str = "") -> Automaton:
+        """One automaton with its tasks."""
+        if not _IDENTIFIER.fullmatch(automaton_id):
+            raise DatawatchError("unexpected automaton id")
+        reply = _table(await self._get(f"autonomous/prds/{automaton_id}"))
+        if not all(isinstance(reply.get(key), str) for key in ("id", "title", "status")):
+            raise DatawatchError("unexpected automaton")
+        tasks = []
+        for story in _rows(reply.get("stories") or []):
+            for task in _rows(story.get("tasks") or [], "title"):
+                reason = task.get("blocked_reason") or task.get("wait_reason") or ""
+                # A finished task's old waiting note no longer explains anything.
+                if task.get("status") == "completed":
+                    reason = ""
+                tasks.append(Task(task["title"], str(task.get("status") or ""), str(reason)))
+        return Automaton(
+            id=reply["id"],
+            title=reply["title"],
+            status=reply["status"],
+            project=str(reply.get("project") or ""),
+            reason=str(reply.get("blocked_reason") or ""),
+            hold=hold,
+            tasks=tuple(tasks),
+        )
 
     async def overview(self, project: str) -> Overview:
         """A project's plans at a glance."""

@@ -1,13 +1,13 @@
 # datawatch for Home Assistant
 
-Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, what needs you
-and what is next, hear its questions and answer them, by voice and without touching a screen.
+Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, what needs you,
+why something is stuck and what is next, hear its questions and answer them, by voice and without touching a screen.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.3.0).** The only thing it can change in datawatch is **answering a
+> **Early release (0.4.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
@@ -147,6 +147,24 @@ all projects, because datawatch cannot filter that list by project. Like datawat
 app, it includes finished or cancelled automata that still have a task held for review.
 Plans need datawatch's plan records to be turned on.
 
+### One automaton: why it is stuck, and its tasks
+
+| In datawatch mode, say | What you hear |
+|---|---|
+| "what's running" | The automata running now, numbered. With a focus, only that project's |
+| "what's on hold" or "held items" | What is on hold, numbered, with the start of each reason. Covers all projects |
+| "two" or "tell me about two" | That line of the list: its status, project and task progress |
+| "tell me about *part of a title*" | Finds it by name. If several match, they are numbered |
+| "why" or "why is two blocked" | datawatch's own reason: why it is blocked or held, and any stuck or waiting task |
+| "tasks" or "tasks for two" | Its tasks and their statuses, three at a time |
+| "progress" | How many tasks are done and what the rest are doing |
+
+Numbers work for the lists from "attention", "what's running" and "held items", and only for
+lines you have heard. A reason is what datawatch recorded, so it can be long and technical.
+It is never guessed; if there is none, you hear that. Finding by name searches only automata
+that need attention, are running or are on hold: datawatch has no title search, and listing
+every automaton is too slow for voice.
+
 ### Status and projects
 
 | In datawatch mode, say | What you hear |
@@ -179,7 +197,9 @@ assistant's own instructions, personality and settings are not edited. datawatch
 short introduction and these tools while it is on:
 
 - status, projects and open questions
-- what needs attention, plans and plan counts, what is next, and automations
+- what needs attention, what is running or on hold, plans and plan counts, what is next,
+  and automations. When it answers for your focused project only, it is told to say so
+- one automaton: progress, why it is stuck, and its tasks
 - searching and reading datawatch's own documentation and how-tos
 
 The introduction names only the features that work now.
@@ -229,8 +249,8 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
   still closes it, and so does "stop".
 - **Commands are fixed phrases.** With the AI assistant on, other wording goes to the
   assistant, which can talk about datawatch but cannot run the commands for you.
-- **Not here yet:** why something is blocked, automata and tasks in detail, sessions and
-  results beyond the counts, and any change other than answering a question.
+- **Not here yet:** sessions and results beyond the counts, and any change other than
+  answering a question.
 - **Home Assistant upgrades.** Home Assistant has no public way for an integration to add a
   spoken phrase, so this one uses the same internal function as Home Assistant's own
   sentence automations. An upgrade could change it. If registering the phrase fails, Home

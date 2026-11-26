@@ -27,6 +27,25 @@ def make_certificate(folder: Path, name: str) -> tuple[Path, Path, str]:
     return cert, key, printed.strip().split("=", 1)[1]
 
 
+def made_up_automaton(
+    ident: str,
+    title: str,
+    status: str,
+    *,
+    tasks: list[tuple[str, str, str]],
+    reason: str = "",
+) -> dict[str, Any]:
+    rows = [{"title": t, "status": s, "wait_reason": why} for t, s, why in tasks]
+    return {
+        "id": ident,
+        "title": title,
+        "status": status,
+        "project": "oak",
+        "blocked_reason": reason,
+        "stories": [{"tasks": rows}],
+    }
+
+
 def made_up_plan(title: str, state: str, done: int = 0, total: int = 0) -> dict[str, Any]:
     return {"title": title, "state": state, "progress": {"done": done, "total": total}}
 
@@ -76,6 +95,40 @@ class Fake:
         self.answers: list[tuple[str, dict[str, Any]]] = []
         self.answer_status = 201
         self.closed: set[str] = set()
+        self.held_total = 7
+        self.running: list[dict[str, Any]] = [
+            {
+                "id": "r1",
+                "title": "Run the made-up errand",
+                "project": "oak",
+                "task_count": 4,
+                "task_status_counts": {"completed": 1, "": 3},
+            },
+        ]
+        self.held: list[dict[str, Any]] = [
+            {
+                "id": "h1",
+                "title": "Plant the made-up tree",
+                "reason": "waiting for spring.",
+                "next_look_text": "no date set",
+                "project": "elm",
+            },
+            {"id": "h2", "title": "Paint the made-up gate", "reason": ""},
+        ]
+        self.automata: dict[str, dict[str, Any]] = {
+            "a2": made_up_automaton(
+                "a2",
+                "Paint the made-up fence.",
+                "blocked",
+                reason="the made-up paint ran out",
+                tasks=[
+                    ("Buy paint", "completed", "an old note"),
+                    ("Paint it", "blocked", ""),
+                    ("Tidy up", "", "waiting for the painting"),
+                ],
+            ),
+            "h1": made_up_automaton("h1", "Plant the made-up tree", "draft", tasks=[]),
+        }
         # Per project: current plans in order, and what is next.
         self.plans: dict[str, list[dict[str, Any]]] = {
             "oak": [made_up_plan("Roots", "in_progress", 2, 5), made_up_plan("Leaves", "planned")],
@@ -153,7 +206,15 @@ class Fake:
         if request.path == "/api/docs/read":
             return web.json_response({"content": "words " * 2000})
         if request.path == "/api/autonomous/held":
-            return web.json_response({"held": [], "total": 7, "expired": 0})
+            return web.json_response({"held": self.held, "total": self.held_total, "expired": 0})
+        if request.path == "/api/autonomous/prds":
+            rows = self.running if query.get("project") in (None, "oak") else []
+            return web.json_response({"prds": rows, "total": len(rows)})
+        if request.path.startswith("/api/autonomous/prds/"):
+            record = self.automata.get(request.path.rsplit("/", 1)[1])
+            if record is None:
+                return web.Response(status=404)
+            return web.json_response(record)
         if request.path == "/api/autonomous/triage":
             states = ["blocked", "failed", "merge_pending", "merge_blocked"]
             return web.json_response({"records": [{"status": x} for x in states]})

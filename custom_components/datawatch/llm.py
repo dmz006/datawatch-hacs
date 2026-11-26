@@ -19,7 +19,8 @@ from homeassistant.helpers.llm import LLMContext, ToolAnnotations, ToolInput, To
 
 from .api import DatawatchClient, DatawatchError
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS
-from .reporting import build
+from .reporting import build, find
+from .voice import automata
 from .voice.conversation import Topic
 from .voice.questions import Question, ordered
 
@@ -183,7 +184,11 @@ _REPORT_TOPICS = {
     "overview": Topic.OVERVIEW,
     "next": Topic.NEXT,
     "automations": Topic.AUTOMATIONS,
+    "running": Topic.RUNNING,
+    "held": Topic.HELD,
 }
+# What a project argument may say to mean every project.
+_EVERY = ("all", "all projects", "everything")
 
 
 class WorkTool(_DatawatchTool):
@@ -194,10 +199,14 @@ class WorkTool(_DatawatchTool):
     description = (
         "Reports about the user's datawatch work. topic is one of: attention (what needs the "
         "user), plans (how many, and which), overview (one project's progress), next (what is "
-        "next), automations. project is optional; without it the user's focus is used. "
-        "start skips lines already given."
+        "next), automations, running (automata running now), held (what is on hold and why). "
+        "project is optional; without it the user's focus is used, and 'all' means every "
+        "project. start skips lines already given."
     )
-    feature = "Work: what needs attention, plans and plan counts, what is next, automations."
+    feature = (
+        "Work: what needs attention, what is running or on hold and why, plans and plan "
+        "counts, what is next, automations."
+    )
     parameters = probatio.Schema(
         {
             probatio.Required("topic"): probatio.In(list(_REPORT_TOPICS)),
@@ -208,20 +217,54 @@ class WorkTool(_DatawatchTool):
 
     @override
     async def _read(self, hass: HomeAssistant, args: dict[str, Any]) -> dict[str, Any]:
-        wanted = args.get("project") or hass.data[FOCUS].project
+        named = args.get("project")
+        wanted = named or hass.data[FOCUS].project
         if wanted is not None:
             names = await self._client.project_names()
             match = next((name for name in names if name.casefold() == wanted.casefold()), None)
-            if match is None:
+            if match is None and wanted.casefold() not in _EVERY:
                 return {"note": f"There is no project named {wanted}.", "projects": list(names)}
             wanted = match
         report = await build(self._client, _REPORT_TOPICS[args["topic"]], wanted)
         start = args.get("start", 0)
         lines = list(report.items[start : start + REPORT_LINES])
-        return {
+        result: dict[str, Any] = {
             "summary": report.summary,
             "lines": lines,
             "more_lines": max(len(report.items) - start - len(lines), 0),
+        }
+        if wanted is not None and named is None:
+            result["limited_to_project"] = wanted
+            result["tell_the_user"] = (
+                f"This is only project {wanted}, because their focus is set to it. Say that in "
+                "your answer. For every project, call again with project 'all'."
+            )
+        return result
+
+
+class AutomatonTool(_DatawatchTool):
+    """One automaton."""
+
+    name = "datawatch__automaton"
+    title = "datawatch automaton"
+    description = (
+        "One automaton in detail, found by part of its title among those that need attention, "
+        "are running or are on hold: progress, why it is stuck, and its tasks."
+    )
+    feature = "One automaton: its progress, why it is blocked, failed or held, and its tasks."
+    parameters = probatio.Schema({probatio.Required("name"): str})
+
+    @override
+    async def _read(self, hass: HomeAssistant, args: dict[str, Any]) -> dict[str, Any]:
+        found, report = await find(self._client, args["name"])
+        if found is None:
+            return {"summary": report.summary, "matches": list(report.items[:REPORT_LINES])}
+        listing = automata.tasks(found)
+        return {
+            "summary": automata.summary(found).removesuffix(" Say why, or tasks."),
+            "why": automata.why(found),
+            "tasks": list(listing.items[:REPORT_LINES]),
+            "more_tasks": max(len(listing.items) - REPORT_LINES, 0),
         }
 
 
@@ -266,6 +309,7 @@ _TOOLS: tuple[type[_DatawatchTool], ...] = (
     ProjectsTool,
     QuestionsTool,
     WorkTool,
+    AutomatonTool,
     SearchDocsTool,
     ReadDocTool,
 )

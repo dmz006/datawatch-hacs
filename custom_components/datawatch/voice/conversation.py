@@ -9,7 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from . import speech
+from . import automata, speech
+from .automata import Automaton
 from .model import Snapshot
 from .names import match_names
 from .phrases import Command, Kind, parse
@@ -30,9 +31,12 @@ _NOT_SENT = "Your answer was not sent."
 _WAITING = "Not sent yet. Say confirm answer, or cancel."
 _HELP = (
     "You can say: questions, next question, option and a number, my answer, confirm answer, "
-    "cancel, status, more detail, attention, plans, overview, what's next, automations, "
+    "cancel, status, more detail, attention, running, held items, tell me about a number "
+    "or name, why, tasks, progress, plans, overview, what's next, automations, "
     "list projects, more, set and a number or name, where am I, unset, repeat, or stop."
 )
+_NO_AUTOMATON = "Say attention, running or held items, then a number."
+_ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS)
 
 
 class Topic(Enum):
@@ -43,6 +47,8 @@ class Topic(Enum):
     OVERVIEW = auto()
     NEXT = auto()
     AUTOMATIONS = auto()
+    RUNNING = auto()
+    HELD = auto()
 
 
 _TOPICS = {
@@ -51,6 +57,8 @@ _TOPICS = {
     Kind.OVERVIEW: Topic.OVERVIEW,
     Kind.WHATS_NEXT: Topic.NEXT,
     Kind.AUTOMATIONS: Topic.AUTOMATIONS,
+    Kind.RUNNING: Topic.RUNNING,
+    Kind.HELD: Topic.HELD,
 }
 
 
@@ -80,6 +88,8 @@ class Needs(Enum):
     SNAPSHOT = auto()
     QUESTIONS = auto()
     REPORT = auto()
+    AUTOMATON = auto()
+    SEARCH = auto()
 
 
 def alphabetical(names: tuple[str, ...]) -> list[str]:
@@ -122,6 +132,9 @@ class Conversation:
         # A report's lines, and how many have been read.
         self._lines: tuple[str, ...] | None = None
         self._lines_read = 0
+        # The automaton ids behind numbered lines, and the one being discussed.
+        self._refs: tuple[str, ...] = ()
+        self._selected: Automaton | None = None
 
     @property
     def current_question(self) -> Question | None:
@@ -139,9 +152,27 @@ class Conversation:
             return Needs.QUESTIONS
         if kind in _TOPICS:
             return Needs.REPORT
+        if kind is Kind.ABOUT:
+            return Needs.SEARCH
+        if self.wanted_automaton(words) is not None:
+            return Needs.AUTOMATON
         if kind is Kind.DETAIL and self.current_question is not None:
             return Needs.NOTHING
         return Needs.SNAPSHOT if kind in _NEEDS_DATA else Needs.NOTHING
+
+    def wanted_automaton(self, words: str) -> str | None:
+        """The id of the automaton to read before replying to words, if one is meant."""
+        command = parse(words)
+        picking = command.kind is Kind.PICK or (
+            command.kind is Kind.NUMBER and self.current_question is None and not self._choosing
+        )
+        if picking or (command.kind in _ABOUT_AUTOMATON and command.number is not None):
+            number = command.number or 0
+            read = min(self._lines_read, len(self._refs))
+            return self._refs[number - 1] if 1 <= number <= read else None
+        if command.kind in _ABOUT_AUTOMATON and self._selected is not None:
+            return self._selected.id
+        return None
 
     def enter(self) -> Reply:
         """Start a visit: say the focus, forget the previous list."""
@@ -174,15 +205,25 @@ class Conversation:
         snapshot: Snapshot | None,
         questions: list[Question] | None = None,
         report: Report | None = None,
+        automaton: Automaton | None = None,
     ) -> Reply:
         """Answer one thing the user said.
 
-        snapshot, questions and report are None when they were not read, either because the
-        command does not need them or because they could not be.
+        snapshot, questions, report and automaton are None when they were not read, either
+        because the command does not need them or because they could not be. For a search by
+        name, give the automaton if one matched, otherwise a report.
         """
         self._silences = 0
         command = parse(words)
-        reply = self._reply_to(command, words, snapshot, questions, report)
+        asked_for = self.wanted_automaton(words)
+        if (
+            self._draft is None
+            and not self._dictating
+            and (asked_for is not None or command.kind is Kind.ABOUT)
+        ):
+            reply = self._about_automaton(command, report, automaton)
+        else:
+            reply = self._reply_to(command, words, snapshot, questions, report)
         if reply.text.endswith((_NOT_UNDERSTOOD, _WAITING)) and command.kind is not Kind.REPEAT:
             self._misses += 1
             if self._misses >= MISSES_BEFORE_CLOSING:
@@ -217,12 +258,14 @@ class Conversation:
             return Reply("", forward=words)
         if command.kind in _TOPICS:
             return self._say(self._start_report(report))
+        if command.kind in _ABOUT_AUTOMATON or command.kind is Kind.PICK:
+            return self._say(_NO_AUTOMATON)
         if command.kind is Kind.MORE and self._lines is not None and not self._reading_questions:
             return self._say(self._next_lines())
         asked = self._about_questions(command, questions)
         if asked is not None:
             if command.kind is Kind.QUESTIONS and questions is not None:
-                self._lines = None
+                self._lines, self._refs = None, ()
             return self._say(asked)
 
         if snapshot is None and command.kind in _NEEDS_DATA:
@@ -234,18 +277,37 @@ class Conversation:
             self.focus = None
         if command.kind in (Kind.STATUS, Kind.LIST_PROJECTS, Kind.SET_NAME):
             self._reading_questions = False
-            self._lines = None
+            self._lines, self._refs = None, ()
         return self._say(notice + self._answer(command, snapshot or Snapshot()))
 
     def _say(self, text: str) -> Reply:
         self._last = text
         return Reply(text)
 
+    def _about_automaton(
+        self, command: Command, report: Report | None, automaton: Automaton | None
+    ) -> Reply:
+        if automaton is None:
+            if command.kind is Kind.ABOUT and report is not None:
+                return self._say(self._start_report(report))
+            return self._say(_UNREACHABLE)
+        self._selected = automaton
+        self._reading_questions = False
+        if command.kind is Kind.WHY:
+            return self._say(automata.why(automaton))
+        if command.kind is Kind.PROGRESS:
+            return self._say(automata.progress(automaton))
+        if command.kind is Kind.TASKS:
+            # The task lines replace the list, so its numbers no longer choose.
+            return self._say(self._start_report(automata.tasks(automaton)))
+        return self._say(automata.summary(automaton))
+
     def _start_report(self, report: Report | None) -> str:
         if report is None:
             return _UNREACHABLE
         self._reading_questions = False
         self._lines, self._lines_read = report.items or None, 0
+        self._refs = report.refs
         if not report.items:
             return report.summary
         return f"{report.summary} {self._next_lines()}"

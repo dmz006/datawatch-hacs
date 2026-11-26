@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 
 from .api import DatawatchClient
-from .voice import reports
+from .voice import automata, reports
+from .voice.automata import Automaton
 from .voice.conversation import Topic
+from .voice.names import match_names
 from .voice.reports import Overview, Report
 
 
@@ -20,6 +22,12 @@ async def build(client: DatawatchClient, topic: Topic, project: str | None) -> R
     match topic:
         case Topic.ATTENTION:
             return reports.attention(await client.attention())
+        case Topic.RUNNING:
+            rows, total = await client.running(project)
+            return reports.running(rows, total, project)
+        case Topic.HELD:
+            held, total = await client.held_items()
+            return reports.held(held, total)
         case Topic.AUTOMATIONS:
             return reports.automations(await client.automations(project), project)
         case Topic.PLANS if project is not None:
@@ -35,3 +43,37 @@ async def build(client: DatawatchClient, topic: Topic, project: str | None) -> R
             return reports.next_in(await client.overview(project))
         case Topic.NEXT:
             return reports.next_everywhere(await _overviews(client, await client.project_names()))
+
+
+async def read_automaton(client: DatawatchClient, automaton_id: str) -> Automaton:
+    """One automaton, with why it is on hold if it is."""
+    held, _ = await client.held_items()
+    reason = next((item.reason for item in held if item.id == automaton_id), "")
+    return await client.automaton(automaton_id, reason)
+
+
+async def find(client: DatawatchClient, spoken: str) -> tuple[Automaton | None, Report]:
+    """Search by name among automata needing attention, running or on hold.
+
+    datawatch has no title search, and listing every automaton is too slow for voice.
+    Returns the automaton when exactly one fits, and a report to say otherwise.
+    """
+    attention, (running, _), (held, _) = await asyncio.gather(
+        client.attention(), client.running(), client.held_items()
+    )
+    pairs = [(a.id, a.title) for a in attention]
+    pairs += [(r.id, r.title) for r in running]
+    pairs += [(h.id, h.title) for h in held]
+    titles: dict[str, str] = {}
+    for ident, title in pairs:
+        titles.setdefault(ident, title)
+    names = set(match_names(spoken, list(titles.values())))
+    found = [(ident, title) for ident, title in titles.items() if title in names]
+    if len(found) == 1:
+        return await read_automaton(client, found[0][0]), Report("")
+    if not found:
+        return None, Report(
+            f"I couldn't find {spoken} among the automata that need attention, are running "
+            "or are on hold."
+        )
+    return None, automata.choices(spoken, found)

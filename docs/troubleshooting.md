@@ -80,6 +80,15 @@ Commands are fixed phrases. Say "help" to hear them, and see the list in the
   answering again.
 - "datawatch refused access": if you use a token, it must be allowed to write.
 
+## The counts are smaller than I expect
+
+You may have a **focus** set. Say "where am I", and "unset" to clear it. The focus is shared
+by your voice devices and your AI assistant, and stays until you clear it.
+
+## "I couldn't find ... among the automata"
+
+Finding by name searches only automata that need attention, are running or are on hold.
+
 ## My assistant says it knows nothing about datawatch
 
 - Choose an assistant under **datawatch → Configure**.

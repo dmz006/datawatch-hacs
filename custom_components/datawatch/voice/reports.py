@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -11,10 +12,14 @@ from .speech import count, join
 
 @dataclass(frozen=True)
 class Report:
-    """A summary, and the lines that can be read after it."""
+    """A summary, and the lines that can be read after it.
+
+    refs: for lines that can be chosen by number, the automaton id behind each line.
+    """
 
     summary: str
     items: tuple[str, ...] = ()
+    refs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -24,6 +29,29 @@ class Attention:
     title: str
     status: str
     held_tasks: int = 0
+    id: str = ""
+
+
+@dataclass(frozen=True)
+class Listed:
+    """An automaton in a list."""
+
+    id: str
+    title: str
+    project: str = ""
+    done: int = 0
+    tasks: int = 0
+
+
+@dataclass(frozen=True)
+class Held:
+    """Something on hold, and why."""
+
+    id: str
+    title: str
+    reason: str = ""
+    next_look: str = ""
+    project: str = ""
 
 
 @dataclass(frozen=True)
@@ -65,6 +93,8 @@ _STATUS_WORDS = {"needs_review": "waiting for review", "in_progress": "in progre
 # The order datawatch's web app lists automations in.
 _AUTOMATION_ORDER = ("active", "blocked", "paused", "draft", "completed", "cancelled")
 _FINISHED = ("completed", "cancelled")
+# The most of a reason read as part of a list.
+_BRIEF = 100
 
 
 def words(status: str) -> str:
@@ -93,12 +123,55 @@ def attention(rows: Sequence[Attention]) -> Report:
     need = "automaton needs" if len(rows) == 1 else "automata need"
     summary = f"{len(rows)} {need} attention, across all projects: {join(parts)}."
     items = []
-    for row in ordered:
-        line = f"{_title(row.title)}: {words(row.status)}"
+    for number, row in enumerate(ordered, start=1):
+        line = f"{number}, {_title(row.title)}: {words(row.status)}"
         if row.held_tasks:
             line += f", {count(row.held_tasks, 'task', 'tasks')} held for review"
         items.append(f"{line}.")
-    return Report(summary, tuple(items))
+    return Report(summary, tuple(items), tuple(row.id for row in ordered))
+
+
+def running(rows: Sequence[Listed], total: int, project: str | None) -> Report:
+    """The automata running now."""
+    where = f"in project {project}" if project else "across all projects"
+    if not total:
+        return Report(f"No automata are running {where}.")
+    summary = f"{count(total, 'automaton is', 'automata are')} running {where}."
+    items = []
+    for number, row in enumerate(rows, start=1):
+        line = f"{number}, {_title(row.title)}"
+        if project is None and row.project:
+            line += f", project {row.project}"
+        if row.tasks:
+            line += f", {row.done} of {row.tasks} tasks completed"
+        items.append(f"{line}.")
+    return Report(summary, tuple(items), tuple(row.id for row in rows))
+
+
+def _brief(reason: str) -> str:
+    """The start of a reason: its first sentence or clause, kept short enough for a list."""
+    first = re.split(r"(?<=[.!?;])\s", " ".join(reason.split()), maxsplit=1)[0].rstrip(".;")
+    if len(first) <= _BRIEF:
+        return first
+    return f"{first[:_BRIEF].rsplit(' ', 1)[0]}, and more"
+
+
+def held(rows: Sequence[Held], total: int) -> Report:
+    """What is on hold, with datawatch's reason for each."""
+    if not total:
+        return Report("Nothing is on hold.")
+    summary = (
+        f"{count(total, 'item is', 'items are')} on hold, across all projects. "
+        "For a full reason say why and its number."
+    )
+    items = []
+    for number, row in enumerate(rows, start=1):
+        line = f"{number}, {_title(row.title)}"
+        if row.project:
+            line += f", project {row.project}"
+        line += f". Reason: {_brief(row.reason)}" if row.reason else ". No reason given"
+        items.append(f"{line}.")
+    return Report(summary, tuple(items), tuple(row.id for row in rows))
 
 
 def _states(overview: Overview) -> str:
