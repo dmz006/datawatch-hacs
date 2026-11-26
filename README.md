@@ -24,7 +24,7 @@ or datawatch yet, and the wording may change.
 | Say | What happens |
 |---|---|
 | "status" | Whether new work is paused, open questions, sessions waiting and running |
-| "more detail" | Unread alerts, held or blocked items, failed sessions |
+| "more detail" | Held or blocked items and failed sessions |
 | "list projects", then "more" | Three at a time, alphabetical; numbers continue across groups |
 | "set two", "set project <name>" | Focus on a project. A name may be partial; if several match, you are asked which number |
 | "where am I" / "unset" | Say or clear the focus. The focus is kept until you clear it |

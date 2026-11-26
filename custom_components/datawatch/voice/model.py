@@ -22,5 +22,4 @@ class Snapshot:
     waiting: tuple[Item, ...] = ()
     running: tuple[Item, ...] = ()
     failed: tuple[Item, ...] = ()
-    alerts: tuple[Item, ...] = ()
     held: tuple[Item, ...] = ()

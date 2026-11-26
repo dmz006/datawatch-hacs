@@ -58,9 +58,8 @@ def status(snapshot: Snapshot, focus: str | None) -> str:
 
 
 def detail(snapshot: Snapshot, focus: str | None) -> str:
-    """The follow-up: alerts, held or blocked items and failed sessions."""
+    """The follow-up: held or blocked items and failed sessions."""
     counted: list[_Counted] = [
-        (snapshot.alerts, "unread alert", "unread alerts"),
         (snapshot.held, "held or blocked item", "held or blocked items"),
         (snapshot.failed, "failed session", "failed sessions"),
     ]
