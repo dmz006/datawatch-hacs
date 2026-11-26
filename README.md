@@ -9,9 +9,9 @@ Home Assistant voice device.
 
 > **Early release (0.2.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
-> tried on a real Voice PE. Reading and answering questions and the AI conversation have so
-> far been tested only with real Home Assistant code, a pretend voice device and a pretend
-> AI assistant.
+> tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
+> assistant. Reading and answering questions and the AI conversation have **not yet been
+> tried by voice**. Sending an answer has been tested only against a pretend datawatch.
 
 ## How it works
 
