@@ -46,5 +46,16 @@
       "title": "The datawatch voice phrase is not working",
       "description": "datawatch could not register \"open datawatch\" with Home Assistant, so saying it will not start datawatch mode. A Home Assistant upgrade may have changed how this works. Check for a datawatch update. The Home Assistant log has the details."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AI assistant",
+        "description": "Choose an AI assistant to use with datawatch. Leave it empty to keep AI off.\n\nWhile one is chosen:\n- Every assistant with device control can read datawatch status, projects, open questions and documentation. Their own instructions are not changed.\n- In datawatch mode, talk that is not a command goes to the chosen assistant, which keeps its control of your home.\n- datawatch text is sent to your AI model. It is written by other people and programs and could try to mislead it, so check that your assistants cannot control anything sensitive.\n\nNo assistant can send an answer. That always needs you to say \"confirm answer\".",
+        "data": {
+          "assistant": "AI assistant"
+        }
+      }
+    }
   }
 }

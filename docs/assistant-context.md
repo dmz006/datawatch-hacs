@@ -1,25 +1,50 @@
-# Telling your assistant about datawatch
+# Your AI assistant and datawatch
 
-If your assistant is an AI model, it does not know datawatch exists. This integration does
-not change your assistant or send it anything.
+## Turn it on
 
-If you would like it to be able to explain datawatch, you can add the text below to its
-instructions. **Add it after what is already there. Don't replace anything:** your
-assistant's name, personality and rules stay as you wrote them. The text sets no tone or
-personality. Any added text can still affect how a model answers, so try your assistant
-afterwards, and delete the paragraph if you don't like the result.
+**Settings → Devices & services → datawatch → Configure**, then choose an **AI assistant**.
+Leave it empty to turn it off.
 
-```text
-About datawatch: this home has a datawatch integration. datawatch is a program that runs and
-watches AI coding assistants and planned automated work, grouped into projects. You cannot
-read or change datawatch yourself. Never guess its status or make up numbers, names or
-results about it. If someone asks about datawatch, such as its status, open questions,
-sessions, projects, or failed or held work, tell them to say the wake word and then "open
-datawatch". In datawatch mode they can say: status, more detail, list projects, set followed
-by a number or a project name, where am I, unset, repeat, help, and close datawatch. It only
-reads information.
-```
+Your assistant stays yours: its instructions, personality and settings are **not edited**.
+While this is on, Home Assistant adds datawatch's tools and a short introduction to what the
+assistant already has, and removes them when you turn it off. Nothing needs pasting into its
+instructions. If you added a datawatch paragraph for version 0.1, remove just that
+paragraph: it says the assistant cannot read datawatch.
 
-With this, your assistant can point you to datawatch mode. It still cannot answer datawatch
-questions itself. If it asks you a follow-up question, your next reply goes straight to it,
-so say your wake word again before "open datawatch".
+## What it needs
+
+- **Device control** turned on in the assistant's own settings. That is how Home Assistant
+  gives an assistant these tools, and every assistant with it gets them.
+- **Enough context window.** See below.
+
+## What it can do
+
+| You might ask | It uses |
+|---|---|
+| "How is my datawatch work going?" | status |
+| "What datawatch projects do I have?" | projects |
+| "Any datawatch questions?" or "What do you think about this one?" | questions |
+| "What does 'held' mean in datawatch?" | documentation search and reading |
+
+It cannot change datawatch or answer a question. To answer, say "open datawatch", then
+"questions". See the [README](../README.md#what-you-can-say).
+
+If it asks you a follow-up question, your next reply goes straight to it without the wake
+word, so let it finish before saying "open datawatch" with your wake word.
+
+## Context window
+
+A model can only take in so much text at once. datawatch adds an introduction and five tool
+descriptions to every request, and a tool's reply can be a few thousand characters: a whole
+question, or a page of documentation (cut at 6,000 characters). Assistants with many exposed
+devices already use much of the window. If it overflows, some models silently drop older
+text, which can include your instructions.
+
+For a local model, such as one served by Ollama, check the context window setting in that
+assistant's settings, and give it more room if needed. More context uses more memory and can
+make replies slower.
+
+## Be careful
+
+Questions are written by programs and could contain text meant to mislead a model. See
+[Privacy and safety](../README.md#privacy-and-safety).

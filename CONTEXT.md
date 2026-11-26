@@ -18,8 +18,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 
 | Path | Contents |
 |---|---|
-| `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording |
-| `custom_components/datawatch/api.py` | Read-only client with certificate pinning |
+| `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions and the confirm step |
+| `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and answers questions |
+| `custom_components/datawatch/llm.py` | Read-only tools and introduction for AI assistants |
 | `custom_components/datawatch/mode.py` | Datawatch mode: ask, listen, answer; shared focus |
 | `custom_components/datawatch/entry_phrase.py` | **The only use of non-public Home Assistant code** |
 | `custom_components/datawatch/config_flow.py` | Setup screens |
@@ -28,7 +29,12 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 
 ## Decisions already made
 
-- Fixed phrases in datawatch mode, not AI interpretation. That may be revisited.
+- Commands in datawatch mode are fixed phrases. With an AI assistant chosen, other talk
+  goes to it.
+- The user's own assistant is used: only add to it, never change its instructions or
+  personality. AI is off until an assistant is chosen. AI tools only read.
+- **Every answer needs the user's confirmation**, checked by the integration's own code.
+- Do not over-engineer: get datawatch's functions working.
 - The integration registers the entry phrase itself, so there is no automation to maintain.
 - One focus shared by all voice devices. Accounts with different access may come later.
 - Silence: ask once, then close. A "stay until I leave" setting may be wanted later; the
@@ -36,7 +42,13 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - Close after three phrases in a row that are not understood. Silence does not restart that
   count; any understood command does.
 - Home Assistant 2026.11 and later only.
-- Read only for now. Anything that changes datawatch needs its own design.
+- Answering questions is the only change. Any other change needs the maintainer's approval.
+- Build order: conversation and questions; projects, plans and automations; automata and
+  tasks; sessions and results; reports and cards; later, other confirmed changes.
+- Not for voice: secrets, settings, managing models, servers or plugins, deleting,
+  restarting datawatch, stopping all sessions.
+- A new feature gets a command, and an AI tool in `llm.py` whose `feature` line adds it to
+  the assistant's introduction.
 - One datawatch server for now.
 
 ## Known limits
@@ -56,8 +68,6 @@ Home Assistant.
 
 ## Later ideas
 
-Browsing plans, automations, automata, tasks and sessions; answering questions one at a
-time; sending a command to a session; adding an automation or a bug report; reports you
-define yourself; dashboard cards; AI tools for the user's assistant. Any AI context must
-**only add to** a user's assistant, never change its personality or instructions, and should
-be off until the user turns it on.
+Plan counts and browsing plans, automations, automata, tasks and sessions; sending a command
+to a session; adding an automation or a bug report; reports you define yourself; dashboard
+cards.

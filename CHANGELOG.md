@@ -1,7 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-26)
 
+- **Questions by voice.** In datawatch mode say "questions" to hear datawatch's open questions
+  one at a time, the supervisor's first and blocking ones first.
+- **Answering.** Choose an option or say your own words. The answer is read back and is sent
+  only when you say "confirm answer".
+- **Your AI assistant** (off until you choose one in datawatch's options) can read datawatch
+  status, projects, open questions and documentation, and in datawatch mode you can talk to
+  it normally. Its own instructions are not changed. It cannot send answers.
+- The README's overview diagram now displays in Home Assistant.
 - Documentation: how to give the Whisper app a hint when it does not recognise "datawatch".
 
 ## 0.1.1 (2026-11-26)

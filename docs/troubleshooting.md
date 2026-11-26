@@ -66,7 +66,35 @@ The token is missing or no longer valid. Update it with **Reconfigure**.
 ## It says "Sorry, I didn't get that."
 
 Commands are fixed phrases. Say "help" to hear them, and see the list in the
-[README](../README.md#what-you-can-say).
+[README](../README.md#what-you-can-say). To talk normally,
+[turn on your AI assistant](assistant-context.md).
+
+## My answer was not sent
+
+- Only **"confirm answer"** sends it. "Yes" or "send it" do not.
+- "That question was already answered or withdrawn" means someone else got there first, or
+  datawatch withdrew it.
+- "datawatch refused that answer because it looks like it holds a secret": datawatch does not
+  store secrets in answers. Do not say passwords or keys.
+- "I don't know whether the answer was sent": say "questions", or look in datawatch, before
+  answering again.
+- "datawatch refused access": if you use a token, it must be allowed to write.
+
+## My assistant says it knows nothing about datawatch
+
+- Choose an assistant under **datawatch → Configure**.
+- Turn on **device control** in that assistant's own settings.
+- If you added a datawatch paragraph for version 0.1 to its instructions, remove just that
+  paragraph.
+
+## My assistant forgets its instructions or gets muddled
+
+Its context window may be too small for the added text. See
+[Context window](assistant-context.md#context-window).
+
+## "Your assistant didn't answer."
+
+Check that your AI assistant works in normal use. The Home Assistant log has the details.
 
 ## It closes while I am still using it
 
@@ -77,7 +105,8 @@ again. Say "help" to hear the commands.
 ## It stays open
 
 Speech from a television or other people that happens to match a command counts as a
-command. Say "close datawatch".
+command. With an AI assistant turned on, other talk goes to the assistant and does not count
+towards closing. Say "close datawatch".
 
 ## It stops partway or never starts talking
 

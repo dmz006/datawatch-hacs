@@ -27,6 +27,29 @@ def make_certificate(folder: Path, name: str) -> tuple[Path, Path, str]:
     return cert, key, printed.strip().split("=", 1)[1]
 
 
+def made_up_question(
+    ident: str,
+    text: str = "Should the made-up thing happen?",
+    *,
+    asker_kind: str = "system",
+    blocking: bool = False,
+) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "id": ident,
+        "text": text,
+        "asker_kind": asker_kind,
+        "options": [
+            {"id": "yes", "label": "Yes, do it", "tradeoffs": "It happens"},
+            {"id": "no", "label": "No, leave it"},
+        ],
+        "recommendation": {"option_id": "no", "rationale": "It is safer"},
+        "state": "open",
+    }
+    if blocking:
+        row["blocking"] = True
+    return row
+
+
 class Fake:
     """Answers like datawatch for the reads the client makes, and records them."""
 
@@ -35,6 +58,17 @@ class Fake:
         self.override: dict[str, web.Response | Callable[[], web.Response]] = {}
         self.questions = 4
         self.totals = {"waiting_input": (3, 1), "running": (2, 0), "failed": (5, 4)}
+        # Full question records; when None, self.questions made-up ones are served.
+        self.records: list[dict[str, Any]] | None = None
+        # The JSON bodies of answers received, as (question id, body).
+        self.answers: list[tuple[str, dict[str, Any]]] = []
+        self.answer_status = 201
+        self.closed: set[str] = set()
+
+    def rows(self) -> list[dict[str, Any]]:
+        if self.records is not None:
+            return self.records
+        return [made_up_question(str(n)) for n in range(self.questions)]
 
     async def handle(self, request: web.Request) -> web.StreamResponse:
         query = dict(request.query)
@@ -49,8 +83,20 @@ class Fake:
         if request.path == "/api/pause":
             return web.json_response({"paused": True, "global": {}})
         if request.path == "/api/questions":
-            rows = [{"id": str(n)} for n in range(self.questions)]
+            rows = self.rows()
             return web.json_response({"count": len(rows), "questions": rows})
+        if request.path.startswith("/api/questions/"):
+            parts = request.path.removeprefix("/api/questions/").split("/")
+            if parts[1:] == ["answer"] and request.method == "POST":
+                self.answers.append((parts[0], await request.json()))
+                return web.json_response({}, status=self.answer_status)
+            state = "answered" if parts[0] in self.closed else "open"
+            return web.json_response({"question": {"id": parts[0], "state": state}})
+        if request.path == "/api/docs/search":
+            hit = {"path": "howto/x.md", "anchor": "a", "heading": "H", "excerpt": "E", "score": 1}
+            return web.json_response({"hits": [hit]})
+        if request.path == "/api/docs/read":
+            return web.json_response({"content": "words " * 2000})
         if request.path == "/api/autonomous/held":
             return web.json_response({"held": [], "total": 7, "expired": 0})
         if request.path == "/api/autonomous/triage":

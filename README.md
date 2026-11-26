@@ -1,32 +1,41 @@
 # datawatch for Home Assistant
 
-Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, by voice,
-without touching a screen.
+Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, hear its
+questions and answer them, by voice and without touching a screen.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.1.0).** It only **reads** from datawatch: nothing you say can change
-> anything there. It has been tested with real Home Assistant code and a pretend voice
-> device, **not yet with a real microphone and speaker**.
+> **Early release (0.2.0).** The only thing it can change in datawatch is **answering a
+> question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
+> tried on a real Voice PE. Reading and answering questions and the AI conversation have so
+> far been tested only with real Home Assistant code, a pretend voice device and a pretend
+> AI assistant.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    you([You]) <-->|speak and listen| device[Voice device]
-    device <--> ha
-
-    subgraph ha[Home Assistant]
-        direction TB
-        speech[Your assistant's speech-to-text<br/>and text-to-speech]
-        speech --> phrase{"Did you say<br/>'open datawatch'?"}
-        phrase -->|no| usual[Your usual assistant]
-        phrase -->|yes| mode[datawatch integration]
-    end
-
-    mode <-->|HTTPS, approved certificate,<br/>read only| dw[(Your datawatch server)]
+```text
+You  <-- speak and listen -->  Voice device
+                                    |
+                     Home Assistant |
+                     your speech-to-text and text-to-speech
+                                    |
+                     Did you say "open datawatch"?
+                       |                           |
+                      no                          yes
+                       |                           |
+              your usual assistant          datawatch mode
+              (may read datawatch,            |          |
+               if you turn that on)       commands    other talk
+                       |                      |      (to your chosen AI,
+                       |                      |       if you turn it on)
+                       +----------+-----------+
+                                  |
+                  HTTPS, only the certificate you approved
+                                  |
+                        Your datawatch server
+             reads; sends an answer only after "confirm answer"
 ```
 
 Say your wake word and **"open datawatch"**. From then on you are in **datawatch mode**: it
@@ -37,16 +46,19 @@ More diagrams and detail: [How it works](docs/how-it-works.md).
 
 ## What a conversation sounds like
 
-These counts are made up.
+The counts and the question are made up.
 
 > **You:** "Hey Jarvis, open datawatch." *(use your own wake word)*
 > **It:** "Datawatch activated."
-> **You:** "Status."
-> **It:** "4 open questions, 3 sessions waiting for input and 2 running. Say more detail for more."
-> **You:** "List projects."
-> **It:** "5 projects. 1, birch. 2, cedar. 3, elm. Say more, or set and a number or name."
-> **You:** "Set two."
-> **It:** "Focus: project cedar."
+> **You:** "Questions."
+> **It:** "Question 1 of 4, from the supervisor. May the nightly job start. Option 1: Yes.
+> Option 2: Wait until morning. The asker recommends option 2. Say option and a number, my
+> answer, more detail, or next question."
+> **You:** "Option two."
+> **It:** "Not sent yet. The question begins: May the nightly job start. Your choice: option
+> 2, Wait until morning. Say confirm answer to send it, or cancel."
+> **You:** "Confirm answer."
+> **It:** "Answer sent. Say next question."
 > **You:** "Close datawatch."
 > **It:** "Closing datawatch."
 
@@ -96,10 +108,36 @@ To change the address or token, or to approve a replaced certificate, choose
 To start: your wake word, then **"open datawatch"**, **"use datawatch"** or just
 **"datawatch"**.
 
+### Questions and answers
+
+| In datawatch mode, say | What happens |
+|---|---|
+| "questions" or "what's the first question" | Reads the first open question in full, with its options and the asker's recommendation |
+| "next question" (or "next") | Reads the next one |
+| "more detail" | What each option costs or gives, and why one is recommended |
+| "option two" (or "answer two", "two") | Chooses an option and reads it back. **Not sent yet** |
+| "my answer is …" | Answers in your own words, and reads them back. **Not sent yet** |
+| "my answer", then speak | The same, with your whole next turn as the answer |
+| "confirm answer" | **Sends** the answer that was just read back |
+| "cancel" | Drops it |
+
+The supervisor's questions come first, and in each group the ones blocking work come first.
+A spoken turn can be about 15 seconds long.
+
+**Nothing is sent until you say "confirm answer".** No shorter word such as "yes" does it.
+Before sending, it checks that the question is still open. It never replaces an answer. Your
+own words are saved as speech-to-text wrote them, so **listen to the read-back**. You can
+give an option and your own words together: say one, then the other. If you leave first, you
+hear that your answer was not sent. If the connection fails while sending, it tells you that
+it does not know whether the answer arrived, and does not try again by itself. datawatch
+marks these answers as coming from voice. To correct a sent answer, use datawatch.
+
+### Status and projects
+
 | In datawatch mode, say | What you hear |
 |---|---|
 | "status" | Whether new work is paused, open questions, sessions waiting for you and running |
-| "more detail" | Failed or blocked automata, items on hold, and failed sessions |
+| "more detail" (after status) | Failed or blocked automata, items on hold, and failed sessions |
 | "list projects", then "more" | Your projects three at a time, in alphabetical order, numbered |
 | "set two" or "set project *name*" | Focus on a project. Part of a name works; if several match, you are asked which number |
 | "where am I" | The current focus |
@@ -118,15 +156,50 @@ and the reply says so.
 after a second silence it closes. It also closes after three phrases in a row that it does
 not understand. Saying "close datawatch" ends it straight away.
 
+## Use your AI assistant (optional)
+
+This is **off** until you turn it on. Go to **Settings → Devices & services → datawatch →
+Configure** and choose an **AI assistant**. Leave it empty to turn it off again. Your
+assistant's own instructions, personality and settings are not edited. datawatch only adds a
+short introduction and these tools while it is on:
+
+- status, projects and open questions
+- searching and reading datawatch's own documentation and how-tos
+
+The introduction names only the features that work now.
+
+- **In normal use**, ask your assistant, for example "any datawatch questions?". It must have
+  **device control** turned on in its own settings; Home Assistant gives datawatch's tools to
+  **every** assistant that has it, not only the chosen one.
+- **In datawatch mode**, anything that is not a command goes to the chosen assistant, so you
+  can talk it through without the wake word. Say "option two" or "my answer" when you are
+  ready.
+- **No assistant can send an answer.** It has no tool for that, and it never hears your
+  "confirm answer" while an answer is waiting.
+
+**Check the context size.** The added text and what the tools return take room in your
+model's context window. If the window is too small, the model may lose older text,
+including parts of its instructions. For a local model, check its context window setting.
+
 ## Privacy and safety
 
-- **Read only.** The integration only asks datawatch for information.
+- **One kind of change.** It reads datawatch. The only thing it can send is your answer to a
+  question, after you say "confirm answer".
 - **No check of who is speaking.** Anyone who can talk to one of your voice devices can hear
-  your datawatch counts and project names. Typed chat cannot start datawatch mode.
+  your datawatch questions, counts and project names, **and can answer questions**. Typed
+  chat cannot start datawatch mode. An answer can let work go ahead, so think about where
+  your voice devices are.
+- **AI and text from datawatch.** With the AI assistant on, datawatch text goes to your AI
+  model. Questions are written by programs and could contain text meant to mislead a model.
+  The model is told to treat it as information only, but that is **not a guarantee**. It
+  cannot send an answer, but it keeps whatever control of your home you gave it. Check that
+  your assistants cannot control anything sensitive, such as locks or garage doors. While
+  you are in datawatch mode, other talk in the room can reach the assistant without the wake
+  word.
 - **Your server only.** It connects to the address you enter, and only to a server showing
   the certificate you approved.
 - **Speech** is turned into text by the speech-to-text service your assistant already uses.
-  In datawatch mode your words are not passed on to an AI model.
+  With the AI assistant off, your words in datawatch mode are not passed on to an AI model.
 - The address, certificate fingerprint and any token are kept in Home Assistant's
   integration settings. The focus (a project name) is kept in Home Assistant's storage.
 
@@ -134,11 +207,14 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## Good to know
 
-- **Background talk does not keep it open for long.** After three phrases in a row that it
-  does not understand, it closes, even if there were silences between them.
-- **Fixed phrases.** It does not interpret free speech yet.
-- **Your AI assistant knows nothing about datawatch** unless you tell it. See
-  [Telling your assistant about datawatch](docs/assistant-context.md).
+- **Background talk.** With the AI assistant off, it closes after three phrases in a row
+  that it does not understand, even with silences between them. With the assistant **on**,
+  other talk goes to the assistant instead, so this limit does not apply to it. Silence
+  still closes it, and so does "stop".
+- **Commands are fixed phrases.** With the AI assistant on, other wording goes to the
+  assistant, which can talk about datawatch but cannot run the commands for you.
+- **Not here yet:** plans, automations, automata, tasks, sessions and results beyond the
+  counts, and any change other than answering a question.
 - **Home Assistant upgrades.** Home Assistant has no public way for an integration to add a
   spoken phrase, so this one uses the same internal function as Home Assistant's own
   sentence automations. An upgrade could change it. If registering the phrase fails, Home

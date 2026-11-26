@@ -1,4 +1,4 @@
-"""The read-only datawatch client, against a fake server with a throwaway certificate.
+"""The datawatch client, against a fake server with a throwaway certificate.
 
 Everything here is made up. Nothing talks to a real datawatch.
 """
@@ -251,5 +251,107 @@ def test_fetching_a_fingerprint_loads_no_certificate_files(
         for name in ("load_default_certs", "set_default_verify_paths"):
             monkeypatch.setattr(ssl.SSLContext, name, refuse)
         assert await fetch_fingerprint(url) == certificate[2]
+
+    serve(certificate, body)
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        "not a record",
+        {"id": "a"},
+        {"id": "a", "text": "t", "options": "none"},
+        {"id": "a", "text": "t", "options": [{"id": "x"}]},
+    ],
+)
+def test_a_malformed_question_raises(certificate: tuple[Path, Path, str], row: Any) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        with pytest.raises(DatawatchError):
+            await DatawatchClient(session, url, certificate[2]).questions()
+
+    fake = Fake()
+    fake.records = [row]
+    serve(certificate, body, fake)
+
+
+def test_a_question_with_little_in_it_is_still_read(certificate: tuple[Path, Path, str]) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        (question,) = await DatawatchClient(session, url, certificate[2]).questions()
+        assert (question.options, question.recommended, question.blocking) == ((), None, False)
+
+    fake = Fake()
+    fake.records = [{"id": "a", "text": "t", "recommendation": "odd", "blocking": "yes"}]
+    serve(certificate, body, fake)
+
+
+@pytest.mark.parametrize(
+    ("path", "reply", "method", "args"),
+    [
+        ("/api/questions", {"count": 0}, "questions", ()),
+        ("/api/questions/a", {"state": "open"}, "question_is_open", ("a",)),
+        ("/api/questions/a", {"question": {}}, "question_is_open", ("a",)),
+        ("/api/docs/search", {"hits": "none"}, "search_docs", ("x",)),
+        ("/api/docs/read", {"content": 3}, "read_doc", ("x.md",)),
+    ],
+)
+def test_other_unexpected_replies_raise(
+    certificate: tuple[Path, Path, str],
+    path: str,
+    reply: dict[str, Any],
+    method: str,
+    args: tuple[str, ...],
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        with pytest.raises(DatawatchError):
+            await getattr(DatawatchClient(session, url, certificate[2]), method)(*args)
+
+    fake = Fake()
+    fake.override[path] = lambda: web.json_response(reply)
+    serve(certificate, body, fake)
+
+
+def test_an_answer_is_never_sent_to_a_different_certificate(
+    certificate: tuple[Path, Path, str],
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        client = DatawatchClient(session, url, "00" * 32, token="fake-token-value")
+        with pytest.raises(DatawatchCertificateError):
+            await client.answer("a", "yes", None)
+        assert fake.seen == []
+
+    serve(certificate, body)
+
+
+def test_an_answer_with_no_server_may_not_have_been_sent(
+    certificate: tuple[Path, Path, str],
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        client = DatawatchClient(session, "https://127.0.0.1:1", certificate[2])
+        with pytest.raises(DatawatchError, match="may not have been sent"):
+            await client.answer("a", "yes", None)
+
+    serve(certificate, body)
+
+
+def test_an_answer_carries_the_token_and_a_question_id_cannot_change_the_address(
+    certificate: tuple[Path, Path, str],
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        client = DatawatchClient(session, url, certificate[2], "fake-token-value")
+        await client.answer("abc", None, "my words")
+        method, path, _, authorization = fake.seen[-1]
+        assert (method, path, authorization) == (
+            "POST",
+            "/api/questions/abc/answer",
+            "Bearer fake-token-value",
+        )
+        assert fake.answers == [("abc", {"surface": "comm:voice", "quote": "my words"})]
+        fake.seen.clear()
+        for bad in ("..", "../pause", "a/b", "a?x=1", ""):
+            with pytest.raises(DatawatchError, match="question id"):
+                await client.question_is_open(bad)
+            with pytest.raises(DatawatchError, match="question id"):
+                await client.answer(bad, "yes", None)
+        assert fake.seen == [], "nothing was requested"
 
     serve(certificate, body)

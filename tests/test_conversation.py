@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.datawatch.voice.conversation import Conversation, Reply, needs_data
+from custom_components.datawatch.voice.conversation import Conversation, Needs, Reply
 from custom_components.datawatch.voice.model import Snapshot, Tally
 
 PROJECTS = ("walnut", "maple-syrup", "Birch", "maple-leaf", "oak", "cedar", "elm")
@@ -271,14 +271,14 @@ def test_paused_with_a_focus_still_says_the_focus_first() -> None:
 
 @pytest.mark.parametrize("words", ["status", "more detail", "list projects", "set project oak"])
 def test_commands_that_must_read_datawatch(words: str) -> None:
-    assert needs_data(words)
+    assert Conversation().needs(words) is Needs.SNAPSHOT
 
 
 @pytest.mark.parametrize(
     "words", ["stop", "repeat", "help", "where am i", "unset", "more", "set two", "two", "banana"]
 )
 def test_commands_that_work_without_reading_datawatch(words: str) -> None:
-    assert not needs_data(words)
+    assert Conversation().needs(words) is Needs.NOTHING
 
 
 def test_without_datawatch_the_focus_is_never_dropped() -> None:

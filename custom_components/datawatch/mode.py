@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from typing import Any
 
 from homeassistant.components.assist_satellite import AssistSatelliteEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -22,16 +23,24 @@ from .api import (
     DatawatchAuthError,
     DatawatchCertificateError,
     DatawatchClient,
+    DatawatchClosedError,
     DatawatchError,
+    DatawatchRefusedError,
+    DatawatchSecretError,
 )
-from .const import DOMAIN
-from .voice.conversation import Conversation, Reply, needs_data
+from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN
+from .voice.conversation import Conversation, Needs, Reply
+from .voice.questions import Draft
 
 _LOGGER = logging.getLogger(__name__)
 
 # Seconds allowed for one spoken reply plus the answer to it. A device that is interrupted
 # may never answer, and this stops the mode waiting for ever.
 TURN_LIMIT = 90.0
+# A long question takes longer to say: allow for slow speech on top of TURN_LIMIT.
+CHARACTERS_PER_SECOND = 10
+# Seconds to wait for the AI assistant.
+ASSISTANT_LIMIT = 120.0
 # Seconds to wait for the device to finish the request that opened the mode.
 IDLE_WAIT = 10.0
 
@@ -41,6 +50,18 @@ _CLOSING = "Closing datawatch."
 _CERTIFICATE = f"The datawatch certificate has changed. Check it in Home Assistant. {_CLOSING}"
 _REFUSED = f"datawatch refused access. Check the token in Home Assistant. {_CLOSING}"
 _FAULT = f"Something went wrong in datawatch mode. {_CLOSING}"
+_SENT = "Answer sent. Say next question."
+_ALREADY_CLOSED = "That question was already answered or withdrawn. Nothing was sent."
+_SECRET = "datawatch refused that answer because it looks like it holds a secret. Nothing was sent."
+_NOT_ACCEPTED = "datawatch refused that answer. Nothing was sent."
+_NOT_CHECKED = "I can't reach datawatch, so nothing was sent. Say my answer or option again."
+_UNSURE = "I don't know whether the answer was sent. Say questions to check."
+_NO_ASSISTANT = "Your assistant didn't answer. Try again, or say stop."
+_SILENT_ASSISTANT = "Your assistant had nothing to say."
+
+
+def _turn_limit(text: str) -> float:
+    return TURN_LIMIT + len(text) / CHARACTERS_PER_SECOND
 
 
 class SharedFocus:
@@ -127,20 +148,33 @@ class DatawatchMode:
             stop()
 
     async def _converse(self, satellite_id: str) -> None:
-        conversation = Conversation(self._focus.project)
+        assistant = self._entry.options.get(CONF_ASSISTANT)
+        conversation = Conversation(self._focus.project, assistant=bool(assistant))
+        chat: str | None = None
         reply = conversation.enter()
-        while not reply.ends:
-            heard = await self._ask(satellite_id, reply.text)
-            if heard is None:
-                reply = conversation.silence()
-            else:
-                reply = await self._answer(conversation, heard)
+        try:
+            while not reply.ends:
+                question = conversation.current_question
+                # So that the AI assistant can tell which question is being discussed.
+                self._hass.data[DISCUSSING] = question.id if question else None
+                heard = await self._ask(satellite_id, reply.text)
+                if heard is None:
+                    reply = conversation.silence()
+                else:
+                    reply = await self._answer(conversation, heard)
+                if reply.send is not None:
+                    reply = await self._send(conversation, reply.send)
+                elif reply.forward is not None and assistant:
+                    text, chat = await self._talk(assistant, reply.forward, chat)
+                    reply = conversation.said(text)
+        finally:
+            self._hass.data[DISCUSSING] = None
         await self._announce(satellite_id, reply.text)
 
     async def _ask(self, satellite_id: str, text: str) -> str | None:
         """Say text and listen. None means nothing was heard."""
         try:
-            async with asyncio.timeout(TURN_LIMIT):
+            async with asyncio.timeout(_turn_limit(text)):
                 response = await self._hass.services.async_call(
                     _SATELLITE,
                     "ask_question",
@@ -157,23 +191,80 @@ class DatawatchMode:
     async def _answer(self, conversation: Conversation, heard: str) -> Reply:
         conversation.focus = self._focus.project
         snapshot = None
-        if needs_data(heard):
-            try:
-                snapshot = await self._entry.runtime_data.snapshot(conversation.focus)
-            except DatawatchCertificateError:
-                return Reply(_CERTIFICATE, ends=True)
-            except DatawatchAuthError:
-                return Reply(_REFUSED, ends=True)
-            except DatawatchError:
-                _LOGGER.warning("datawatch could not be read", exc_info=True)
-        reply = conversation.hear(heard, snapshot)
+        questions = None
+        needs = conversation.needs(heard)
+        client = self._entry.runtime_data
+        try:
+            if needs is Needs.SNAPSHOT:
+                snapshot = await client.snapshot(conversation.focus)
+            elif needs is Needs.QUESTIONS:
+                questions = list(await client.questions())
+        except DatawatchCertificateError:
+            return Reply(_CERTIFICATE, ends=True)
+        except DatawatchAuthError:
+            return Reply(_REFUSED, ends=True)
+        except DatawatchError:
+            _LOGGER.warning("datawatch could not be read", exc_info=True)
+        reply = conversation.hear(heard, snapshot, questions)
         await self._focus.async_set(conversation.focus)
         return reply
+
+    async def _send(self, conversation: Conversation, draft: Draft) -> Reply:
+        """Send an answer the user has just confirmed, and say what happened."""
+        client = self._entry.runtime_data
+        option = draft.option.id if draft.option else None
+        try:
+            try:
+                still_open = await client.question_is_open(draft.question.id)
+            except DatawatchCertificateError, DatawatchAuthError:
+                raise
+            except DatawatchError:
+                _LOGGER.warning("datawatch could not be read before answering", exc_info=True)
+                return conversation.sent(_NOT_CHECKED)
+            if not still_open:
+                return conversation.sent(_ALREADY_CLOSED)
+            await client.answer(draft.question.id, option, draft.quote)
+        except DatawatchCertificateError:
+            return Reply(_CERTIFICATE, ends=True)
+        except DatawatchAuthError:
+            return Reply(_REFUSED, ends=True)
+        except DatawatchClosedError:
+            return conversation.sent(_ALREADY_CLOSED)
+        except DatawatchSecretError:
+            return conversation.sent(_SECRET)
+        except DatawatchRefusedError:
+            _LOGGER.warning("datawatch refused an answer", exc_info=True)
+            return conversation.sent(_NOT_ACCEPTED)
+        except DatawatchError:
+            _LOGGER.warning("An answer may not have reached datawatch", exc_info=True)
+            return conversation.sent(_UNSURE)
+        return conversation.sent(_SENT)
+
+    async def _talk(self, assistant: str, words: str, chat: str | None) -> tuple[str, str | None]:
+        """Pass talk that is not a command to the AI assistant. Returns its reply."""
+        data = {"agent_id": assistant, "text": words, "language": self._hass.config.language}
+        if chat is not None:
+            data["conversation_id"] = chat
+        try:
+            async with asyncio.timeout(ASSISTANT_LIMIT):
+                result = await self._hass.services.async_call(
+                    "conversation", "process", data, blocking=True, return_response=True
+                )
+            response: Any = (result or {})["response"]
+            if response.get("response_type") == "error":
+                _LOGGER.warning("The AI assistant reported an error: %s", response)
+                return _NO_ASSISTANT, chat
+            speech = response.get("speech", {}).get("plain", {}).get("speech", "")
+        except Exception:
+            _LOGGER.warning("The AI assistant could not be asked", exc_info=True)
+            return _NO_ASSISTANT, chat
+        following = (result or {}).get("conversation_id")
+        return str(speech).strip() or _SILENT_ASSISTANT, str(following) if following else chat
 
     async def _announce(self, satellite_id: str, text: str) -> None:
         """Say text without listening. A device that cannot is only logged."""
         try:
-            async with asyncio.timeout(TURN_LIMIT):
+            async with asyncio.timeout(_turn_limit(text)):
                 await self._hass.services.async_call(
                     _SATELLITE,
                     "announce",

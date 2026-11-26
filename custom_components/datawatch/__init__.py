@@ -11,7 +11,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import DatawatchClient
-from .const import CONF_FINGERPRINT, DOMAIN
+from .const import CONF_FINGERPRINT, DISCUSSING, DOMAIN, FOCUS
 from .entry_phrase import async_listen
 from .mode import DatawatchMode, SharedFocus
 
@@ -34,6 +34,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
     )
     focus = SharedFocus(hass)
     await focus.async_load()
+    hass.data[FOCUS] = focus
+    hass.data[DISCUSSING] = None
     mode = DatawatchMode(hass, entry, focus)
     try:
         entry.async_on_unload(async_listen(hass, mode.async_entry_phrase))

@@ -12,7 +12,10 @@ Only the newest release, on Home Assistant 2026.11 or later.
 
 ## How the integration protects your datawatch
 
-- It only reads: it sends nothing but `GET` requests.
+- It reads with `GET` requests. The one thing it can change is answering a question, with a
+  single `POST`, only after reading the answer back and hearing you say "confirm answer". It
+  does not retry that request or ask to replace an answer.
+- AI assistants get tools that only read. None can send an answer.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
 - It does not follow redirects, so a token is not forwarded elsewhere.
 - A saved token is never sent to a different address.
@@ -20,7 +23,11 @@ Only the newest release, on Home Assistant 2026.11 or later.
 ## What it does not protect against
 
 - **It does not know who is speaking.** Anyone who can use your voice devices can hear
-  datawatch counts and project names.
+  datawatch questions, counts and project names, and can **answer questions**. Saying
+  "confirm answer" guards against mistakes and mishearing, not against another person.
+- **Misleading text and AI.** With an AI assistant on, questions and documentation reach
+  your model. It is told to treat them as information only, which cannot be guaranteed. The
+  assistant keeps whatever control of your home you gave it.
 - The token is stored with Home Assistant's other integration settings. Protect your Home
   Assistant and its backups.
 - It cannot tell whether the certificate you approve is the right one. Compare the

@@ -19,6 +19,11 @@ recommendation and why.
   maintainer approves a write.
 - Do not disturb other sessions working on the same machine.
 
+- The integration may change one thing: answering a question after the user says "confirm
+  answer". Keep that confirmation in the integration's own code, never in an AI tool. Any
+  other change to datawatch needs the maintainer's approval.
+- Only add to a user's AI assistant. Never edit its instructions or settings.
+
 ## 4. Public repository: nothing private, ever
 - No host names, IP or MAC addresses, network names, configuration, secrets, tokens, real
   device, entity, project or session names, or local paths: in code, tests, docs, commit

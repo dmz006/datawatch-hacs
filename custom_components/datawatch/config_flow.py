@@ -5,10 +5,22 @@ from __future__ import annotations
 from typing import Any, override
 
 import probatio
-from homeassistant.config_entries import SOURCE_RECONFIGURE, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    SOURCE_RECONFIGURE,
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_TOKEN, CONF_URL
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
+from homeassistant.helpers.selector import (
+    ConversationAgentSelector,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
 from .api import (
     DatawatchAuthError,
@@ -18,7 +30,7 @@ from .api import (
     fetch_fingerprint,
     parse_server_url,
 )
-from .const import CONF_FINGERPRINT, DOMAIN
+from .const import CONF_ASSISTANT, CONF_FINGERPRINT, DOMAIN
 
 _SERVER_SCHEMA = probatio.Schema(
     {
@@ -37,6 +49,13 @@ class DatawatchConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._data: dict[str, str] = {}
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: ConfigEntry) -> DatawatchOptionsFlow:
+        """The AI assistant setting."""
+        return DatawatchOptionsFlow()
 
     @override
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -117,4 +136,18 @@ class DatawatchConfigFlow(ConfigFlow, domain=DOMAIN):
                 _SERVER_SCHEMA, {CONF_URL: suggested} if suggested else {}
             ),
             errors={"base": error} if error else {},
+        )
+
+
+class DatawatchOptionsFlow(OptionsFlow):
+    """Choose the AI assistant that may use datawatch. None chosen means AI is off."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            chosen = user_input.get(CONF_ASSISTANT)
+            return self.async_create_entry(data={CONF_ASSISTANT: chosen} if chosen else {})
+        schema = probatio.Schema({probatio.Optional(CONF_ASSISTANT): ConversationAgentSelector()})
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
         )
