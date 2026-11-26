@@ -1,13 +1,13 @@
 # datawatch for Home Assistant
 
-Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, hear its
-questions and answer them, by voice and without touching a screen.
+Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, what needs you
+and what is next, hear its questions and answer them, by voice and without touching a screen.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.2.0).** The only thing it can change in datawatch is **answering a
+> **Early release (0.3.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
@@ -132,6 +132,21 @@ hear that your answer was not sent. If the connection fails while sending, it te
 it does not know whether the answer arrived, and does not try again by itself. datawatch
 marks these answers as coming from voice. To correct a sent answer, use datawatch.
 
+### Work: attention, plans and automations
+
+| In datawatch mode, say | What you hear |
+|---|---|
+| "what needs my attention" or "attention" | How many automata datawatch says need you, then the blocked ones first |
+| "how many plans do we have" or "plans" | Current plans per project. With a focus, that project's plans in datawatch's order, with progress |
+| "overview" | With a focus: that project's plans, progress and what is next |
+| "what's next" | What datawatch marks as next, for your focus or for every project |
+| "automations" | Counts by status, then the unfinished ones, in datawatch's order. With a focus, only that project's |
+
+Long lists are read **three at a time**: say "more". "What needs my attention" always covers
+all projects, because datawatch cannot filter that list by project. Like datawatch's own web
+app, it includes finished or cancelled automata that still have a task held for review.
+Plans need datawatch's plan records to be turned on.
+
 ### Status and projects
 
 | In datawatch mode, say | What you hear |
@@ -164,6 +179,7 @@ assistant's own instructions, personality and settings are not edited. datawatch
 short introduction and these tools while it is on:
 
 - status, projects and open questions
+- what needs attention, plans and plan counts, what is next, and automations
 - searching and reading datawatch's own documentation and how-tos
 
 The introduction names only the features that work now.
@@ -213,8 +229,8 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
   still closes it, and so does "stop".
 - **Commands are fixed phrases.** With the AI assistant on, other wording goes to the
   assistant, which can talk about datawatch but cannot run the commands for you.
-- **Not here yet:** plans, automations, automata, tasks, sessions and results beyond the
-  counts, and any change other than answering a question.
+- **Not here yet:** why something is blocked, automata and tasks in detail, sessions and
+  results beyond the counts, and any change other than answering a question.
 - **Home Assistant upgrades.** Home Assistant has no public way for an integration to add a
   spoken phrase, so this one uses the same internal function as Home Assistant's own
   sentence automations. An upgrade could change it. If registering the phrase fails, Home

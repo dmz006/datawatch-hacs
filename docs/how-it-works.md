@@ -87,9 +87,9 @@ flowchart LR
 ```
 
 While an assistant is chosen in datawatch's options, the integration offers Home
-Assistant's "device control" tool set five extra tools: `datawatch__status`,
-`datawatch__projects`, `datawatch__questions`, `datawatch__search_docs` and
-`datawatch__read_doc`. Home Assistant adds the tools and a short introduction to what each
+Assistant's "device control" tool set six extra tools: `datawatch__status`,
+`datawatch__projects`, `datawatch__questions`, `datawatch__work`, `datawatch__search_docs`
+and `datawatch__read_doc`. Home Assistant adds the tools and a short introduction to what each
 assistant with device control already has. The introduction lists what the tools can do, so
 a new feature appears in it when its tool is added. In datawatch mode, other talk is passed
 to the chosen assistant with Home Assistant's "process a conversation" action, as one
@@ -127,8 +127,10 @@ and you stay in datawatch mode.
 
 Entering, leaving, "help", "repeat", "where am I", "unset", "more" and choosing a number
 read nothing. "questions" reads the open questions. "status", "more detail" (after status),
-"list projects" and setting a project by name read counts or names. Everything is read
-fresh each time; nothing is cached and nothing is checked in the background.
+"list projects" and setting a project by name read counts or names. The work reports
+("attention", "plans", "overview", "what's next", "automations") read their own lists.
+Everything is read fresh each time; nothing is cached and nothing is checked in the
+background.
 
 | datawatch address | Used for |
 |---|---|
@@ -140,6 +142,10 @@ fresh each time; nothing is cached and nothing is checked in the background.
 | `GET /api/sessions?view=summary&status=…` | Counts of waiting, running and failed sessions; filtered by project when you have a focus |
 | `GET /api/autonomous/held` | Items on hold |
 | `GET /api/autonomous/triage` | Failed and blocked automata |
+| `GET /api/autonomous/attention` | What needs you. Chosen as datawatch's web app chooses: an attention status, or a task held for review |
+| `GET /api/projects/{name}/overview-summary` | Plan counts, progress and what is next. Without a focus, read once per project |
+| `GET /api/projects/{name}/plans` | A focused project's plans, up to 500 |
+| `GET /api/automations` | Automations; with a focus, datawatch's `project=` filter |
 | `GET /api/docs/search`, `GET /api/docs/read` | Documentation, for the AI assistant only |
 
 For the commands, only the focused project's name and your confirmed answer are sent. An AI

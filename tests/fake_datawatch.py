@@ -27,6 +27,18 @@ def make_certificate(folder: Path, name: str) -> tuple[Path, Path, str]:
     return cert, key, printed.strip().split("=", 1)[1]
 
 
+def made_up_plan(title: str, state: str, done: int = 0, total: int = 0) -> dict[str, Any]:
+    return {"title": title, "state": state, "progress": {"done": done, "total": total}}
+
+
+def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, Any]:
+    return {"name": name, "status": status, "members": [{}] * members}
+
+
+def made_up_attention(ident: str, title: str, status: str, **more: Any) -> dict[str, Any]:
+    return {"id": ident, "title": title, "status": status, **more}
+
+
 def made_up_question(
     ident: str,
     text: str = "Should the made-up thing happen?",
@@ -64,6 +76,22 @@ class Fake:
         self.answers: list[tuple[str, dict[str, Any]]] = []
         self.answer_status = 201
         self.closed: set[str] = set()
+        # Per project: current plans in order, and what is next.
+        self.plans: dict[str, list[dict[str, Any]]] = {
+            "oak": [made_up_plan("Roots", "in_progress", 2, 5), made_up_plan("Leaves", "planned")],
+            "elm": [],
+        }
+        self.automations = [
+            made_up_automation("Zeta", "draft"),
+            made_up_automation("Alpha", "completed"),
+            made_up_automation("Gamma", "blocked", members=2),
+            made_up_automation("Beta", "draft"),
+        ]
+        self.attention: list[dict[str, Any]] = [
+            made_up_attention("a1", "Mend the made-up gate", "needs_review"),
+            made_up_attention("a2", "Paint the made-up fence.", "blocked"),
+            made_up_attention("a3", "Old made-up work", "cancelled", review_needed=[{"t": 1}]),
+        ]
 
     def rows(self) -> list[dict[str, Any]]:
         if self.records is not None:
@@ -92,6 +120,33 @@ class Fake:
                 return web.json_response({}, status=self.answer_status)
             state = "answered" if parts[0] in self.closed else "open"
             return web.json_response({"question": {"id": parts[0], "state": state}})
+        if request.path == "/api/autonomous/attention":
+            return web.json_response(
+                {"statuses": ["blocked", "needs_review", "paused"], "items": self.attention}
+            )
+        if request.path == "/api/automations":
+            wanted = query.get("project")
+            return web.json_response(self.automations if wanted in (None, "oak") else [])
+        if request.path.startswith("/api/projects/"):
+            name, what = request.path.removeprefix("/api/projects/").split("/")
+            plans = self.plans[name]
+            if what == "plans":
+                return web.json_response({"project": name, "plans": plans, "page": {}})
+            states: dict[str, int] = {}
+            for plan in plans:
+                states[plan["state"]] = states.get(plan["state"], 0) + 1
+            following = (
+                {"automaton_title": "Dig the made-up hole", "plan_title": plans[0]["title"]}
+                if plans
+                else None
+            )
+            return web.json_response(
+                {
+                    "counts": {"plans": {"total": len(plans), "by_state": states, "archived": 3}},
+                    "progress": {"automata": {"done": 2, "total": 7, "percent": 28}},
+                    "next": following,
+                }
+            )
         if request.path == "/api/docs/search":
             hit = {"path": "howto/x.md", "anchor": "a", "heading": "H", "excerpt": "E", "score": 1}
             return web.json_response({"hits": [hit]})

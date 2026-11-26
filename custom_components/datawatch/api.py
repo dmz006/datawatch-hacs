@@ -13,14 +13,17 @@ import re
 import ssl
 from collections.abc import Mapping
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import aiohttp
 
 from .voice.model import Snapshot, Tally
 from .voice.questions import Option, Question
+from .voice.reports import Attention, Automation, Overview, Plan
 
 QUESTION_LIMIT = 1000
+# The most plans datawatch returns in one page.
+PLAN_LIMIT = 500
 # datawatch's question ids. Anything else could change which address is requested.
 _QUESTION_ID = re.compile(r"[A-Za-z0-9_-]+")
 # How an answer is marked in datawatch.
@@ -57,6 +60,34 @@ def _question_path(question_id: str) -> str:
     if not _QUESTION_ID.fullmatch(question_id):
         raise DatawatchError("unexpected question id")
     return f"questions/{question_id}"
+
+
+def _project_path(project: str, what: str) -> str:
+    if project in ("", ".", ".."):
+        raise DatawatchError("unexpected project name")
+    return f"projects/{quote(project, safe='')}/{what}"
+
+
+def _number(value: Any) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise DatawatchError("expected a number")
+    return value
+
+
+def _table(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise DatawatchError("expected a record")
+    return value
+
+
+def _rows(value: Any, *text: str) -> list[dict[str, Any]]:
+    """A list of records, each with these text fields."""
+    if not isinstance(value, list) or not all(
+        isinstance(row, dict) and all(isinstance(row.get(key), str) for key in text)
+        for row in value
+    ):
+        raise DatawatchError("unexpected list")
+    return value
 
 
 def _question(row: Any) -> Question:
@@ -242,6 +273,69 @@ class DatawatchClient:
         if not isinstance(content, str):
             raise DatawatchError("unexpected document")
         return content
+
+    async def attention(self) -> list[Attention]:
+        """The automata datawatch says need the user, chosen as its web app chooses them."""
+        reply = _table(await self._get("autonomous/attention"))
+        statuses = reply.get("statuses")
+        if not isinstance(statuses, list):
+            raise DatawatchError("unexpected attention reply")
+        wanted = {str(status).lower() for status in statuses}
+        found: dict[str, Attention] = {}
+        for row in _rows(reply.get("items"), "id", "title", "status"):
+            held = row.get("review_needed")
+            held_tasks = len(held) if isinstance(held, list) else int(bool(held))
+            if row.get("is_template") or not (row["status"] in wanted or held_tasks):
+                continue
+            found.setdefault(row["id"], Attention(row["title"], row["status"], held_tasks))
+        return list(found.values())
+
+    async def overview(self, project: str) -> Overview:
+        """A project's plans at a glance."""
+        reply = _table(await self._get(_project_path(project, "overview-summary")))
+        plans = _table(_table(reply.get("counts")).get("plans"))
+        done = _table(_table(reply.get("progress")).get("automata"))
+        following = reply.get("next")
+        following = following if isinstance(following, dict) else {}
+        return Overview(
+            project=project,
+            plan_states=tuple(
+                (str(state), _number(number))
+                for state, number in _table(plans.get("by_state") or {}).items()
+            ),
+            plans=_number(plans.get("total")),
+            archived=_number(plans.get("archived") or 0),
+            done=_number(done.get("done")),
+            total=_number(done.get("total")),
+            next_automaton=str(following.get("automaton_title") or ""),
+            next_plan=str(following.get("plan_title") or ""),
+        )
+
+    async def plans(self, project: str) -> list[Plan]:
+        """A project's current plans, in datawatch's order."""
+        reply = _table(await self._get(_project_path(project, "plans"), {"limit": str(PLAN_LIMIT)}))
+        result = []
+        for row in _rows(reply.get("plans"), "title", "state"):
+            progress = row.get("progress")
+            progress = progress if isinstance(progress, dict) else {}
+            done, total = progress.get("done"), progress.get("total")
+            result.append(
+                Plan(
+                    row["title"],
+                    row["state"],
+                    done if isinstance(done, int) else 0,
+                    total if isinstance(total, int) else 0,
+                )
+            )
+        return result
+
+    async def automations(self, project: str | None = None) -> list[Automation]:
+        """Automations, filtered by datawatch when a project is given."""
+        params = {"project": project} if project is not None else None
+        return [
+            Automation(row["name"], row["status"], len(row.get("members") or []))
+            for row in _rows(await self._get("automations", params), "name", "status")
+        ]
 
     async def project_names(self) -> tuple[str, ...]:
         """The registered projects."""

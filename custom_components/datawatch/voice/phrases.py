@@ -28,6 +28,11 @@ class Kind(Enum):
     OWN_WORDS = auto()
     CONFIRM = auto()
     CANCEL = auto()
+    ATTENTION = auto()
+    PLANS = auto()
+    OVERVIEW = auto()
+    WHATS_NEXT = auto()
+    AUTOMATIONS = auto()
     UNKNOWN = auto()
 
 
@@ -69,6 +74,23 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
     # Only these send an answer, so there is no shorter form such as "yes".
     Kind.CONFIRM: ("confirm answer", "confirm the answer", "confirm my answer"),
     Kind.CANCEL: ("cancel", "cancel answer", "cancel the answer", "cancel my answer"),
+    Kind.ATTENTION: (
+        "attention",
+        "needs attention",
+        "what needs attention",
+        "what needs my attention",
+    ),
+    Kind.PLANS: (
+        "plans",
+        "list plans",
+        "list the plans",
+        "how many plans",
+        "how many plans are there",
+        "how many plans do we have",
+    ),
+    Kind.OVERVIEW: ("overview", "project overview"),
+    Kind.WHATS_NEXT: ("whats next", "what is next"),
+    Kind.AUTOMATIONS: ("automations", "list automations", "list the automations"),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 

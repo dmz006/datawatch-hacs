@@ -14,6 +14,7 @@ from .model import Snapshot
 from .names import match_names
 from .phrases import Command, Kind, parse
 from .questions import Draft, Question, explained, ordered, read_back, spoken
+from .reports import Report
 
 PAGE_SIZE = 3
 # So that a television or other talk cannot hold the mode open.
@@ -29,9 +30,33 @@ _NOT_SENT = "Your answer was not sent."
 _WAITING = "Not sent yet. Say confirm answer, or cancel."
 _HELP = (
     "You can say: questions, next question, option and a number, my answer, confirm answer, "
-    "cancel, status, more detail, list projects, more, set and a number or name, "
-    "where am I, unset, repeat, or stop."
+    "cancel, status, more detail, attention, plans, overview, what's next, automations, "
+    "list projects, more, set and a number or name, where am I, unset, repeat, or stop."
 )
+
+
+class Topic(Enum):
+    """What a report is about."""
+
+    ATTENTION = auto()
+    PLANS = auto()
+    OVERVIEW = auto()
+    NEXT = auto()
+    AUTOMATIONS = auto()
+
+
+_TOPICS = {
+    Kind.ATTENTION: Topic.ATTENTION,
+    Kind.PLANS: Topic.PLANS,
+    Kind.OVERVIEW: Topic.OVERVIEW,
+    Kind.WHATS_NEXT: Topic.NEXT,
+    Kind.AUTOMATIONS: Topic.AUTOMATIONS,
+}
+
+
+def topic_of(words: str) -> Topic | None:
+    """The report words ask for, if any."""
+    return _TOPICS.get(parse(words).kind)
 
 
 @dataclass(frozen=True)
@@ -54,6 +79,7 @@ class Needs(Enum):
     NOTHING = auto()
     SNAPSHOT = auto()
     QUESTIONS = auto()
+    REPORT = auto()
 
 
 def alphabetical(names: tuple[str, ...]) -> list[str]:
@@ -93,6 +119,9 @@ class Conversation:
         self._reading_questions = False
         self._draft: Draft | None = None
         self._dictating = False
+        # A report's lines, and how many have been read.
+        self._lines: tuple[str, ...] | None = None
+        self._lines_read = 0
 
     @property
     def current_question(self) -> Question | None:
@@ -108,6 +137,8 @@ class Conversation:
         kind = parse(words).kind
         if kind is Kind.QUESTIONS:
             return Needs.QUESTIONS
+        if kind in _TOPICS:
+            return Needs.REPORT
         if kind is Kind.DETAIL and self.current_question is not None:
             return Needs.NOTHING
         return Needs.SNAPSHOT if kind in _NEEDS_DATA else Needs.NOTHING
@@ -142,15 +173,16 @@ class Conversation:
         words: str,
         snapshot: Snapshot | None,
         questions: list[Question] | None = None,
+        report: Report | None = None,
     ) -> Reply:
         """Answer one thing the user said.
 
-        snapshot and questions are None when they were not read, either because the command
-        does not need them or because they could not be.
+        snapshot, questions and report are None when they were not read, either because the
+        command does not need them or because they could not be.
         """
         self._silences = 0
         command = parse(words)
-        reply = self._reply_to(command, words, snapshot, questions)
+        reply = self._reply_to(command, words, snapshot, questions, report)
         if reply.text.endswith((_NOT_UNDERSTOOD, _WAITING)) and command.kind is not Kind.REPEAT:
             self._misses += 1
             if self._misses >= MISSES_BEFORE_CLOSING:
@@ -171,6 +203,7 @@ class Conversation:
         words: str,
         snapshot: Snapshot | None,
         questions: list[Question] | None,
+        report: Report | None,
     ) -> Reply:
         if command.kind is Kind.EXIT:
             return self._close(_CLOSING)
@@ -182,8 +215,14 @@ class Conversation:
             return self._confirming(self._draft, command)
         if command.kind is Kind.UNKNOWN and self._assistant:
             return Reply("", forward=words)
+        if command.kind in _TOPICS:
+            return self._say(self._start_report(report))
+        if command.kind is Kind.MORE and self._lines is not None and not self._reading_questions:
+            return self._say(self._next_lines())
         asked = self._about_questions(command, questions)
         if asked is not None:
+            if command.kind is Kind.QUESTIONS and questions is not None:
+                self._lines = None
             return self._say(asked)
 
         if snapshot is None and command.kind in _NEEDS_DATA:
@@ -195,11 +234,30 @@ class Conversation:
             self.focus = None
         if command.kind in (Kind.STATUS, Kind.LIST_PROJECTS, Kind.SET_NAME):
             self._reading_questions = False
+            self._lines = None
         return self._say(notice + self._answer(command, snapshot or Snapshot()))
 
     def _say(self, text: str) -> Reply:
         self._last = text
         return Reply(text)
+
+    def _start_report(self, report: Report | None) -> str:
+        if report is None:
+            return _UNREACHABLE
+        self._reading_questions = False
+        self._lines, self._lines_read = report.items or None, 0
+        if not report.items:
+            return report.summary
+        return f"{report.summary} {self._next_lines()}"
+
+    def _next_lines(self) -> str:
+        assert self._lines is not None
+        page = self._lines[self._lines_read : self._lines_read + PAGE_SIZE]
+        if not page:
+            return "That is the end of the list."
+        self._lines_read += len(page)
+        more = " Say more." if self._lines_read < len(self._lines) else " That is all."
+        return " ".join(page) + more
 
     def _about_questions(self, command: Command, questions: list[Question] | None) -> str | None:
         """The reply to a question command, or None if this is some other command."""

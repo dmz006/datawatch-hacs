@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (2026-11-26)
+
+- **What needs you and what is next.** New in datawatch mode: "what needs my attention",
+  "how many plans do we have", "overview", "what's next" and "automations", read three at a
+  time. With a focus, plans, overview, what's next and automations cover that project.
+- Your AI assistant, if turned on, can give the same reports.
+
 ## 0.2.0 (2026-11-26)
 
 - **Questions by voice.** In datawatch mode say "questions" to hear datawatch's open questions

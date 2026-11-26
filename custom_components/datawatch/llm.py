@@ -19,6 +19,8 @@ from homeassistant.helpers.llm import LLMContext, ToolAnnotations, ToolInput, To
 
 from .api import DatawatchClient, DatawatchError
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS
+from .reporting import build
+from .voice.conversation import Topic
 from .voice.questions import Question, ordered
 
 _LOGGER = logging.getLogger(__name__)
@@ -173,6 +175,56 @@ class QuestionsTool(_DatawatchTool):
         return result
 
 
+# Lines of a report given to an assistant at once.
+REPORT_LINES = 15
+_REPORT_TOPICS = {
+    "attention": Topic.ATTENTION,
+    "plans": Topic.PLANS,
+    "overview": Topic.OVERVIEW,
+    "next": Topic.NEXT,
+    "automations": Topic.AUTOMATIONS,
+}
+
+
+class WorkTool(_DatawatchTool):
+    """Reports about work."""
+
+    name = "datawatch__work"
+    title = "datawatch work"
+    description = (
+        "Reports about the user's datawatch work. topic is one of: attention (what needs the "
+        "user), plans (how many, and which), overview (one project's progress), next (what is "
+        "next), automations. project is optional; without it the user's focus is used. "
+        "start skips lines already given."
+    )
+    feature = "Work: what needs attention, plans and plan counts, what is next, automations."
+    parameters = probatio.Schema(
+        {
+            probatio.Required("topic"): probatio.In(list(_REPORT_TOPICS)),
+            probatio.Optional("project"): str,
+            probatio.Optional("start"): probatio.All(probatio.Coerce(int), probatio.Range(min=0)),
+        }
+    )
+
+    @override
+    async def _read(self, hass: HomeAssistant, args: dict[str, Any]) -> dict[str, Any]:
+        wanted = args.get("project") or hass.data[FOCUS].project
+        if wanted is not None:
+            names = await self._client.project_names()
+            match = next((name for name in names if name.casefold() == wanted.casefold()), None)
+            if match is None:
+                return {"note": f"There is no project named {wanted}.", "projects": list(names)}
+            wanted = match
+        report = await build(self._client, _REPORT_TOPICS[args["topic"]], wanted)
+        start = args.get("start", 0)
+        lines = list(report.items[start : start + REPORT_LINES])
+        return {
+            "summary": report.summary,
+            "lines": lines,
+            "more_lines": max(len(report.items) - start - len(lines), 0),
+        }
+
+
 class SearchDocsTool(_DatawatchTool):
     """Search the documentation."""
 
@@ -213,6 +265,7 @@ _TOOLS: tuple[type[_DatawatchTool], ...] = (
     StatusTool,
     ProjectsTool,
     QuestionsTool,
+    WorkTool,
     SearchDocsTool,
     ReadDocTool,
 )

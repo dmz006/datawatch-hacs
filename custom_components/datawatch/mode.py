@@ -29,8 +29,10 @@ from .api import (
     DatawatchSecretError,
 )
 from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN
-from .voice.conversation import Conversation, Needs, Reply
+from .reporting import build
+from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.questions import Draft
+from .voice.reports import Report
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -192,6 +194,7 @@ class DatawatchMode:
         conversation.focus = self._focus.project
         snapshot = None
         questions = None
+        report = None
         needs = conversation.needs(heard)
         client = self._entry.runtime_data
         try:
@@ -199,13 +202,30 @@ class DatawatchMode:
                 snapshot = await client.snapshot(conversation.focus)
             elif needs is Needs.QUESTIONS:
                 questions = list(await client.questions())
+            elif needs is Needs.REPORT:
+                topic = topic_of(heard)
+                assert topic is not None, "a report was asked for"
+                if conversation.focus is not None:
+                    names = await client.project_names()
+                    if conversation.focus not in names:
+                        gone = conversation.focus
+                        conversation.focus = None
+                        await self._focus.async_set(None)
+                        report = await build(client, topic, None)
+                        report = Report(
+                            f"Project {gone} no longer exists, so the focus is cleared. "
+                            f"{report.summary}",
+                            report.items,
+                        )
+                if report is None:
+                    report = await build(client, topic, conversation.focus)
         except DatawatchCertificateError:
             return Reply(_CERTIFICATE, ends=True)
         except DatawatchAuthError:
             return Reply(_REFUSED, ends=True)
         except DatawatchError:
             _LOGGER.warning("datawatch could not be read", exc_info=True)
-        reply = conversation.hear(heard, snapshot, questions)
+        reply = conversation.hear(heard, snapshot, questions, report)
         await self._focus.async_set(conversation.focus)
         return reply
 

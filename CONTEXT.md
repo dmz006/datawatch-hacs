@@ -20,6 +20,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 |---|---|
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions and the confirm step |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and answers questions |
+| `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |
 | `custom_components/datawatch/llm.py` | Read-only tools and introduction for AI assistants |
 | `custom_components/datawatch/mode.py` | Datawatch mode: ask, listen, answer; shared focus |
 | `custom_components/datawatch/entry_phrase.py` | **The only use of non-public Home Assistant code** |
@@ -53,6 +54,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 
 ## Known limits
 
+- The attention list has no project filter, so it covers all projects.
 - datawatch does not filter questions, held items or triage records by project, so those are
   reported across all projects. When it does, use its `project=` filter, and check it with a
   made-up project name: an ignored filter returns everything.
@@ -68,6 +70,6 @@ Home Assistant.
 
 ## Later ideas
 
-Plan counts and browsing plans, automations, automata, tasks and sessions; sending a command
+Automata, tasks and sessions in detail; sending a command
 to a session; adding an automation or a bug report; reports you define yourself; dashboard
 cards.
