@@ -65,9 +65,7 @@ def test_more_detail() -> None:
 
 def test_more_detail_with_a_focus() -> None:
     assert say(start("elm"), "more detail").text == (
-        "In project elm: 1 held or blocked item and 1 failed session. "
-        "Elsewhere: 0 held or blocked items and 0 failed sessions. "
-        "Not linked: 1 failed session."
+        "In project elm: 1 held or blocked item and 1 failed session. Not linked: 1 failed session."
     )
 
 
