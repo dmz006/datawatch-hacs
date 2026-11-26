@@ -44,11 +44,11 @@ def say(conversation: Conversation, words: str, **kwargs: bool) -> Reply:
 
 def test_entering_without_a_focus() -> None:
     reply = Conversation().enter()
-    assert reply == Reply("Datawatch.", ends=False)
+    assert reply == Reply("Datawatch activated.", ends=False)
 
 
 def test_entering_says_the_focus_first() -> None:
-    assert Conversation(focus="oak").enter().text == "Datawatch. Focus: project oak."
+    assert Conversation(focus="oak").enter().text == "Datawatch activated. Focus: project oak."
 
 
 def test_status_for_everything() -> None:

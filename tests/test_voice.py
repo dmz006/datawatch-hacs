@@ -150,7 +150,7 @@ def test_entry_phrases_start_the_mode_with_nothing_else_spoken(
         satellite.script = ["stop"]
         assert await say(hass, words, satellite.entity_id) == ""
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert satellite.asked == ["Datawatch."]
+        assert satellite.asked == ["Datawatch activated."]
         assert satellite.announced == [CLOSING]
         assert fake.seen == [], "entering and leaving read nothing"
 
@@ -179,7 +179,7 @@ def test_a_visit_asks_listens_and_answers_without_the_wake_word(
             "New work is paused. 4 open questions, 3 sessions waiting for input and 2 running."
             " Say more detail for more."
         )
-        assert satellite.asked == ["Datawatch.", status, status]
+        assert satellite.asked == ["Datawatch activated.", status, status]
         assert satellite.announced == [CLOSING]
         assert {method for method, *_ in fake.seen} == {"GET"}
 
@@ -189,7 +189,7 @@ def test_a_visit_asks_listens_and_answers_without_the_wake_word(
 def test_silence_asks_once_then_closes(certificate: Certificate, tmp_path: Path) -> None:
     async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
         await visit(hass, satellite, None, None)
-        assert satellite.asked == ["Datawatch.", "Still there?"]
+        assert satellite.asked == ["Datawatch activated.", "Still there?"]
         assert satellite.announced == [CLOSING]
 
     voice_test(certificate, tmp_path, body)
@@ -202,14 +202,14 @@ def test_the_focus_is_shared_by_voice_devices_and_survives_a_reload(
         await visit(hass, satellite, "set project oak", "stop")
         kitchen = await add_satellite(hass, "kitchen")
         await visit(hass, kitchen, "stop")
-        assert kitchen.asked == ["Datawatch. Focus: project oak."]
+        assert kitchen.asked == ["Datawatch activated. Focus: project oak."]
 
         (entry,) = hass.config_entries.async_entries(DOMAIN)
         assert await hass.config_entries.async_reload(entry.entry_id)
         await visit(hass, satellite, "unset", "stop")
-        assert satellite.asked[0] == "Datawatch. Focus: project oak."
+        assert satellite.asked[0] == "Datawatch activated. Focus: project oak."
         await visit(hass, kitchen, "stop")
-        assert kitchen.asked == ["Datawatch."]
+        assert kitchen.asked == ["Datawatch activated."]
 
     voice_test(certificate, tmp_path, body)
 
@@ -227,7 +227,7 @@ def test_removing_datawatch_forgets_the_focus(certificate: Certificate, tmp_path
         assert shared.project is None
         await say(hass, "open datawatch", satellite.entity_id)
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert satellite.asked[-1] != "Datawatch."
+        assert satellite.asked[-1] != "Datawatch activated."
 
     voice_test(certificate, tmp_path, body)
 
@@ -246,10 +246,10 @@ def test_when_datawatch_fails_it_is_said_out_loud(
         fake.override["/api/pause"] = lambda: web.Response(status=status)
         await visit(hass, satellite, "status", "stop")
         if stays:
-            assert satellite.asked == ["Datawatch.", message]
+            assert satellite.asked == ["Datawatch activated.", message]
             assert satellite.announced == [CLOSING]
         else:
-            assert satellite.asked == ["Datawatch."]
+            assert satellite.asked == ["Datawatch activated."]
             assert satellite.announced == [message]
 
     voice_test(certificate, tmp_path, body)
@@ -300,7 +300,7 @@ def test_a_device_that_never_answers_does_not_hang_the_mode(
         assert satellite.announced == [CLOSING]
         satellite.never_answers = False
         await visit(hass, satellite, "stop")
-        assert satellite.asked == ["Datawatch."], "the device can be used again"
+        assert satellite.asked == ["Datawatch activated."], "the device can be used again"
 
     voice_test(certificate, tmp_path, body)
 
@@ -317,7 +317,7 @@ def test_the_mode_waits_for_the_device_to_finish_the_first_request(
         assert satellite.asked == []
         satellite.tts_response_finished()
         await hass.async_block_till_done(wait_background_tasks=True)
-        assert satellite.asked == ["Datawatch."], "one visit, even if asked twice"
+        assert satellite.asked == ["Datawatch activated."], "one visit, even if asked twice"
 
     voice_test(certificate, tmp_path, body)
 
@@ -330,7 +330,7 @@ def test_a_device_that_stays_busy_is_still_served(
     async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
         satellite.busy()
         await visit(hass, satellite, "stop")
-        assert satellite.asked == ["Datawatch."]
+        assert satellite.asked == ["Datawatch activated."]
 
     voice_test(certificate, tmp_path, body)
 
@@ -471,7 +471,7 @@ def test_with_an_ai_assistant_the_entry_phrase_never_reaches_the_ai(
         events = await through_pipeline(hass, "Open datawatch.", satellite.entity_id)
         await hass.async_block_till_done(wait_background_tasks=True)
         assert assistant.asked == ["tell me a story"]
-        assert satellite.asked == ["Datawatch."]
+        assert satellite.asked == ["Datawatch activated."]
         (ended,) = [e for e in events if e.type is PipelineEventType.INTENT_END]
         assert ended.data
         speech = ended.data["intent_output"]["response"]["speech"]
