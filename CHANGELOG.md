@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Add an automaton by voice:** "add automation", your words, then "confirm automation". It
+  is added to the focused project as a draft, named from your first sentence.
+- **Report a bug by voice:** "add bug", your words, then "confirm bug". It goes to
+  datawatch's bug intake for the focused project.
+- Each is read back first, has its own confirming words, and is sent once.
+- Sending to a session is built and switched off until datawatch has the access controls
+  for it.
+- Your AI assistant is told these commands. It still cannot change anything.
+- Fixed: saying "more" while something waited for confirmation could make a later "go back"
+  repeat "Not sent yet".
+
 ## 0.7.0 (2026-11-26)
 
 - **Focus on anything:** a plan, automation, automaton, task or session, not only a project.

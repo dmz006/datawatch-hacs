@@ -114,6 +114,8 @@ class Fake:
         self.bug_status = 200
         self.bug_route = "new_batch"
         self.input_status = 200
+        # Whether to receive a change and then drop the connection without replying.
+        self.drop_changes = False
         self.closed: set[str] = set()
         self.sessions: dict[str, list[dict[str, Any]]] = {
             "waiting_input": [
@@ -247,6 +249,11 @@ class Fake:
         if request.path in self.override:
             answer = self.override[request.path]
             return answer() if callable(answer) else answer
+        if self.drop_changes and request.method in ("POST", "PATCH"):
+            self.changes.append((request.method, request.path, await request.json()))
+            assert request.transport is not None
+            request.transport.close()
+            return web.Response()
         if request.method == "POST" and request.path == "/api/autonomous/prds":
             self.changes.append(("POST", request.path, await request.json()))
             return web.json_response({"id": "made1", "status": "draft"}, status=self.create_status)

@@ -80,6 +80,25 @@ Commands are fixed phrases. Say "help" to hear them, and see the list in the
   answering again.
 - "datawatch refused access": if you use a token, it must be allowed to write.
 
+## My automaton or bug was not added
+
+- Set a **project** first: "list projects", or "set project *name*".
+- Only the matching words send it: "confirm automation" or "confirm bug".
+- "datawatch's bug intake is turned off": turn it on for that project in datawatch.
+- "datawatch gives no folder for project": add the folder to the project in datawatch.
+- "datawatch did not accept it": datawatch refused the request. Check its log.
+- "I don't know whether it was sent": **look in datawatch before saying it again.**
+- "datawatch refused access": if you use a token, it must be allowed to write.
+
+## "Sending to a session is not turned on yet."
+
+This is on purpose. It is waiting for datawatch's access controls.
+
+## A new automaton shows as "untitled"
+
+You were told it was added but could not be named. Name it in datawatch. Do not add it
+again.
+
 ## The counts are smaller than I expect
 
 You may have a **focus** set. Say "where am I", and "unset" to clear it. The focus is shared

@@ -5,6 +5,7 @@ Each is read back and sent only after its own confirming words.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -14,10 +15,14 @@ from homeassistant.core import HomeAssistant
 from test_voice import Certificate, FakeSatellite, visit, voice_test
 
 from custom_components.datawatch import const, mode
+from custom_components.datawatch.api import DatawatchCertificateError, DatawatchClient
+from custom_components.datawatch.doing import perform
+from custom_components.datawatch.llm import introduction
 from custom_components.datawatch.voice import actions
 from custom_components.datawatch.voice.actions import Act, Action, Target
 from custom_components.datawatch.voice.conversation import Conversation, Needs, Reply
 from custom_components.datawatch.voice.items import Item
+from custom_components.datawatch.voice.model import Snapshot
 from custom_components.datawatch.voice.phrases import Command, Kind, parse
 from custom_components.datawatch.voice.questions import Option, Question
 
@@ -391,3 +396,151 @@ def test_voice_an_action_leaves_questions_alone(certificate: Certificate, tmp_pa
     script = ["set oak", "add bug mend it", "confirm answer", "cancel", "stop"]
     seen = run(certificate, tmp_path, script, fake)
     assert seen["changes"] == [] and seen["answers"] == []
+
+
+@pytest.mark.parametrize("act", list(Act))
+def test_more_while_something_waits_does_not_change_what_go_back_says(act: Act) -> None:
+    conversation = pending(act)
+    say(conversation, "more")
+    say(conversation, "cancel")
+    # The next step remembers what was last said here, and "go back" repeats it.
+    conversation.hear("list projects", Snapshot(projects=("oak",)))
+    assert "Not sent yet" not in say(conversation, "go back").text
+
+
+def test_more_while_an_answer_waits_does_not_change_what_go_back_says() -> None:
+    conversation = Conversation()
+    conversation.enter()
+    asked = [Question(n, f"Question {n}?", (Option("y", "Yes"),)) for n in "abc"]
+    conversation.hear("questions", None, asked)
+    say(conversation, "next question")
+    say(conversation, "option one")
+    say(conversation, "more")
+    say(conversation, "cancel")
+    say(conversation, "next question")
+    said = say(conversation, "go back").text
+    assert "Not sent yet" not in said and "Question b?" in said
+
+
+def test_a_focus_changed_elsewhere_does_not_redirect_a_waiting_action() -> None:
+    conversation = pending(Act.BUG)
+    # Another voice device shares the focus and can change it between turns.
+    conversation.focus = "elm"
+    sent = say(conversation, "confirm bug").act
+    assert sent is not None and sent.target.project == "oak"
+
+
+@pytest.mark.parametrize("command", ["bug", "automation"])
+def test_voice_a_dropped_connection_is_unsure_and_not_retried(
+    certificate: Certificate, tmp_path: Path, command: str
+) -> None:
+    fake = Fake()
+    fake.drop_changes = True
+    script = ["set oak", f"add {command} mend it", f"confirm {command}", "repeat", "stop"]
+    seen = run(certificate, tmp_path, script, fake)
+    unsure = "I don't know whether it was sent. Check datawatch before saying it again."
+    assert seen["said"][3:5] == [unsure, unsure]  # type: ignore[index]
+    assert len(seen["changes"]) == 1  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("path", "command", "reply", "said"),
+    [
+        ("/api/autonomous/prds", "automation", lambda: web.Response(text="not json"), "know"),
+        ("/api/autonomous/prds", "automation", lambda: web.json_response({}), "know"),
+        ("/api/autonomous/defects/intake", "bug", lambda: web.Response(status=201), "know"),
+        ("/api/autonomous/defects/intake", "bug", lambda: web.Response(status=302), "know"),
+        ("/api/projects", "bug", lambda: web.json_response({"name": "oak"}), "can't reach"),
+    ],
+)
+def test_voice_a_reply_that_makes_no_sense_is_never_called_success(
+    certificate: Certificate,
+    tmp_path: Path,
+    path: str,
+    command: str,
+    reply: object,
+    said: str,
+) -> None:
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        await visit(hass, satellite, "set oak", "stop")
+        # The run of "automata" reads uses other addresses, so only the change is affected.
+        fake.override[path] = reply  # type: ignore[assignment]
+        script = [f"add {command} mend it", f"confirm {command}", "stop"]
+        await visit(hass, satellite, *script)
+        assert said in satellite.asked[2], satellite.asked
+        assert "Added" not in satellite.asked[2] and "reported" not in satellite.asked[2]
+
+    voice_test(certificate, tmp_path, body)
+
+
+@pytest.mark.parametrize(
+    ("status", "ending"),
+    [(401, "refused access"), (500, "I can't reach datawatch, so nothing was sent.")],
+)
+@pytest.mark.parametrize("act", ["bug", "session"])
+def test_voice_nothing_is_sent_when_the_check_first_fails(
+    certificate: Certificate,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    act: str,
+    status: int,
+    ending: str,
+) -> None:
+    monkeypatch.setattr(mode, "SESSION_SEND", True)
+
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        if act == "bug":
+            await visit(hass, satellite, "set oak", "stop")
+            path, script = "/api/projects", ["add bug mend it", "confirm bug", "stop"]
+        else:
+            await visit(hass, satellite, "sessions", "one", "set it", "stop")
+            path = "/api/sessions"
+            script = ["send to session carry on", "confirm send", "stop"]
+        fake.override[path] = lambda: web.Response(status=status)
+        await visit(hass, satellite, *script)
+        assert fake.changes == []
+        assert any(ending in text for text in [*satellite.asked, *satellite.announced])
+
+    voice_test(certificate, tmp_path, body)
+
+
+def test_voice_a_reply_of_not_ok_to_session_input_is_unsure(
+    certificate: Certificate, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(mode, "SESSION_SEND", True)
+
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        await visit(hass, satellite, "sessions", "one", "set it", "stop")
+        fake.override["/api/sessions/send"] = lambda: web.json_response({"ok": False})
+        await visit(hass, satellite, "send to session carry on", "confirm send", "stop")
+        assert "I don't know whether it was sent." in satellite.asked[2], satellite.asked
+
+    voice_test(certificate, tmp_path, body)
+
+
+def test_voice_a_changed_certificate_while_sending_closes_the_mode(
+    certificate: Certificate, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def changed(*args: object) -> str:
+        raise DatawatchCertificateError("made up")
+
+    monkeypatch.setattr(DatawatchClient, "report_bug", changed)
+    seen = run(certificate, tmp_path, ["set oak", "add bug mend it", "confirm bug", "stop"])
+    assert "certificate has changed" in seen["said"][-1]  # type: ignore[index]
+
+
+def test_session_input_is_refused_when_off_even_if_asked_directly() -> None:
+    action = Action(Target(Act.SESSION, session=SESSION), "carry on")
+    # No client is given: nothing may be read or sent.
+    said = asyncio.run(perform(None, action, session_send=False))  # type: ignore[arg-type]
+    assert said == actions.SESSION_SEND_OFF
+
+
+@pytest.mark.parametrize("session_send", [False, True])
+def test_the_assistant_is_told_what_only_the_user_can_do(session_send: bool) -> None:
+    told = introduction(["open questions"], session_send)
+    assert "You cannot add, report, answer or send anything" in told
+    for words in ("add automation", "add bug", "confirm automation", "confirm bug"):
+        assert words in told
+    assert ("confirm send" in told) is session_send
+    assert ("Sending to a session is not turned on" in told) is not session_send

@@ -2,19 +2,21 @@
 
 Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, what needs you,
 why something is stuck, what your sessions are doing and what is next, hear its questions and
-answer them, by voice and without touching a screen.
+answer them, add an automation or report a bug, by voice and without touching a screen.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.7.0).** The only thing it can change in datawatch is **answering a
-> question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
+> **Early release (0.7.0).** It can change datawatch in three ways: **answer a question**,
+> **add a draft automaton** and **report a bug**. Each is sent only after you confirm it
+> aloud. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
 > tried by voice**. Sending an answer has been tested only against a pretend datawatch.
 > Focus and "go back" have been tried against a real datawatch with a pretend voice device,
-> **not yet by voice**.
+> **not yet by voice**. Adding an automaton and reporting a bug have been tested only against
+> a pretend datawatch.
 
 ## How it works
 
@@ -38,7 +40,7 @@ You  <-- speak and listen -->  Voice device
                   HTTPS, only the certificate you approved
                                   |
                         Your datawatch server
-             reads; sends an answer only after "confirm answer"
+               reads; changes only what you confirm aloud
 ```
 
 Say your wake word and **"open datawatch"**. From then on you are in **datawatch mode**: it
@@ -258,6 +260,49 @@ What a focus can and cannot narrow:
 after a second silence it closes. It also closes after three phrases in a row that it does
 not understand. Saying "close datawatch" ends it straight away.
 
+## Add an automation or report a bug
+
+Set a **project** first. Then say what you want, and your words, either in one go or in two
+turns. A spoken turn can be about 15 seconds long.
+
+| In datawatch mode, say | What happens |
+|---|---|
+| "add automation" or "new automation" | Asks what it should do, then reads it back. **Not sent yet** |
+| "add automation: *what it should do*" | The same, in one go |
+| "confirm automation" | **Adds a draft automaton** to the project |
+| "add bug" or "report bug" | Asks you to describe it, then reads it back. **Not sent yet** |
+| "add bug: *what is wrong*" | The same, in one go |
+| "confirm bug" | **Reports the bug** to datawatch's bug intake |
+| the same command again | Replaces your words |
+| "cancel" or "go back" | Drops it |
+
+For example (the project and words are made up):
+
+> **You:** "Set project oak." **It:** "Focus: project oak."
+> **You:** "Add bug." **It:** "Go ahead. Describe the bug, or cancel."
+> **You:** "The gate latch is broken." **It:** "Not sent yet. This is a bug for project oak.
+> Your words: The gate latch is broken. Say confirm bug to send it, or cancel."
+> **You:** "Confirm bug." **It:** "Bug reported for project oak. datawatch made a new draft
+> bug group for it."
+
+- **Each thing has its own words.** "Confirm bug" cannot send an automaton or an answer, and
+  "yes" sends nothing.
+- **Your words are sent as speech-to-text wrote them,** so listen to the read-back. While it
+  waits for your words, your whole next turn is taken as them, even if it sounds like a
+  command. Say "cancel" to stop.
+- **The name** given to it is the first sentence of your words, up to 80 characters.
+- **An automaton is added as a draft.** The integration does not ask datawatch to plan or
+  start it. It needs datawatch to give a folder for the project.
+- **A bug goes to datawatch's bug intake,** which adds it to a draft bug group or makes one.
+  If the intake is turned off for that project, you are told.
+- **Sent once.** If the connection fails, you hear that it is not known whether it arrived.
+  **Check datawatch before saying it again,** or you may add it twice.
+- **datawatch's "Automation"** (a chain of automata) is not what "add automation" makes: it
+  adds one new automaton.
+
+**Sending to a session** ("send to session", then "confirm send") is built but **switched
+off**. It is waiting for datawatch's access controls, and says so if you try.
+
 ## Your own reports
 
 Make a spoken report of just what you care about.
@@ -333,8 +378,9 @@ The introduction names only the features that work now.
 - **In datawatch mode**, anything that is not a command goes to the chosen assistant, so you
   can talk it through without the wake word. Say "option two" or "my answer" when you are
   ready.
-- **No assistant can send an answer.** It has no tool for that, and it never hears your
-  "confirm answer" while an answer is waiting.
+- **No assistant can answer, add, report or send anything.** It has no tool for that, and it
+  does not hear what you say while you dictate something or while it waits to be confirmed.
+  It is told which commands do these, so it can tell you.
 
 **Check the context size.** The added text and what the tools return take room in your
 model's context window. If the window is too small, the model may lose older text,
@@ -346,12 +392,14 @@ matters in datawatch.
 
 ## Privacy and safety
 
-- **One kind of change.** It reads datawatch. The only thing it can send is your answer to a
-  question, after you say "confirm answer".
+- **Three kinds of change.** It reads datawatch. It can answer a question, add a draft
+  automaton and report a bug, each only after you confirm it aloud. Sending to a session is
+  switched off.
 - **No check of who is speaking.** Anyone who can talk to one of your voice devices can hear
-  your datawatch questions, counts and project names, **and can answer questions**. Typed
-  chat cannot start datawatch mode. An answer can let work go ahead, so think about where
-  your voice devices are.
+  your datawatch questions, counts and project names, **and can answer questions, add
+  automata and report bugs**. Typed chat cannot start datawatch mode. An answer can let work
+  go ahead, so think about where your voice devices are. Confirming words guard against
+  mistakes, not against another person.
 - **AI and text from datawatch.** With the AI assistant on, datawatch text goes to your AI
   model. Questions are written by programs and could contain text meant to mislead a model.
   The model is told to treat it as information only, but that is **not a guarantee**. It
@@ -380,8 +428,9 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
   still closes it, and so does "stop".
 - **Commands are fixed phrases.** With the AI assistant on, other wording goes to the
   assistant, which can talk about datawatch but cannot run the commands for you.
-- **Not here:** what a session said, files or other output you can open, and any change
-  other than answering a question.
+- **Not here:** what a session said, files or other output you can open, sending to a
+  session (switched off for now), and any other change, such as starting, approving,
+  stopping or deleting work.
 - **Home Assistant upgrades.** Home Assistant has no public way for an integration to add a
   spoken phrase, so this one uses the same internal function as Home Assistant's own
   sentence automations. An upgrade could change it. If registering the phrase fails, Home

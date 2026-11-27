@@ -6,8 +6,8 @@
 |---|---|
 | Voice device | Hears your wake word, sends your speech to Home Assistant, plays replies |
 | Your assistant | Turns speech into text and replies into speech |
-| datawatch integration | Notices "open datawatch", holds the conversation, reads datawatch, sends your confirmed answers |
-| datawatch server | Holds the information. The only thing sent to change it is an answer |
+| datawatch integration | Notices "open datawatch", holds the conversation, reads datawatch, sends what you confirm |
+| datawatch server | Holds the information. It is changed only by what you confirm aloud |
 | AI assistant (optional) | Can read datawatch through the integration's tools |
 
 ## One visit
@@ -75,6 +75,47 @@ from an AI assistant is never treated as it.
 The request holds the option and, if you gave them, your words exactly as speech-to-text
 wrote them, marked `comm:voice`. It never asks to replace an earlier answer, so datawatch
 refuses it if the question already has one.
+
+## Adding an automaton or reporting a bug
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant I as datawatch integration
+    participant DW as datawatch server
+
+    You->>I: "add automation" or "add bug"
+    Note over I: A project must be focused
+    I-->>You: "Go ahead..."
+    You->>I: your words
+    I-->>You: "Not sent yet." and your words read back
+    You->>I: "confirm automation" or "confirm bug"
+    I->>DW: is the project still there?
+    DW-->>I: yes, with its folder
+    alt automaton
+        I->>DW: add a draft, once
+        DW-->>I: its id
+        I->>DW: give it a short title
+    else bug
+        I->>DW: hand it to bug intake, once
+        DW-->>I: where it put it
+    end
+    I-->>You: what happened
+```
+
+Each kind of action has its own confirming words, and the words that confirm an answer send
+none of them. Where it goes is fixed when you start: if another voice device changes the
+focus while it waits, it still goes to the project you heard in the read-back. While an
+action waits, anything but its confirming words, "cancel", "go back", "repeat", saying the
+command again or leaving gets "Not sent yet" and is **not** passed to an AI assistant.
+
+A change is sent once and never retried. A lost connection, a fault reported by datawatch or
+a reply that makes no sense is reported as "I don't know whether it was sent", never as
+success. If a new automaton cannot be given its title, you are told it was added.
+
+Sending to a session follows the same steps ("confirm send"), only to a session you chose
+that is waiting for input. It is **switched off** in the code until datawatch has the access
+controls for it.
 
 ## The AI assistant
 
@@ -171,11 +212,15 @@ only what its parts need.
 
 | datawatch address | Used for |
 |---|---|
-| `GET /api/projects` | Project names |
+| `GET /api/projects` | Project names, and a project's folder just before adding an automaton or bug |
 | `GET /api/pause` | Whether new work is paused |
 | `GET /api/questions?state=open` | Open questions |
 | `GET /api/questions/{id}` | Whether a question is still open, just before answering |
-| `POST /api/questions/{id}/answer` | **The only change:** your confirmed answer |
+| `POST /api/questions/{id}/answer` | **Change:** your confirmed answer |
+| `POST /api/autonomous/prds` | **Change:** a confirmed new draft automaton: your words and the project's folder |
+| `PATCH /api/autonomous/prds/{id}` | **Change:** that new automaton's short title, right after |
+| `POST /api/autonomous/defects/intake` | **Change:** a confirmed bug: a new id, a short title, your words and the project |
+| `POST /api/sessions/send` | **Change, switched off:** confirmed words to a session |
 | `GET /api/sessions?view=summary&status=…` | Counts of waiting, running and failed sessions; filtered by project when you have a focus |
 | `GET /api/autonomous/held` | Items on hold |
 | `GET /api/autonomous/triage` | Failed and blocked automata |
@@ -195,8 +240,8 @@ only what its parts need.
 | `GET /api/autonomous/prds?status=completed` | Completed automata, 50 at most, in datawatch's order (last update). Allowed 30 seconds |
 | `GET /api/docs/search`, `GET /api/docs/read` | Documentation, for the AI assistant only |
 
-For the commands, only the focused project's name, the ids of items you ask about and your
-confirmed answer are sent. A search by name is matched inside Home Assistant. An AI
+For the commands, only the focused project's name, the ids of items you ask about and
+what you confirm are sent. A search by name is matched inside Home Assistant. An AI
 assistant's documentation search sends its search words to datawatch.
 
 Session lists use the session summaries only. The integration **never requests** a

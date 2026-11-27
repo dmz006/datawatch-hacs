@@ -19,7 +19,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | Path | Contents |
 |---|---|
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
-| `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and answers questions |
+| `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
+| `custom_components/datawatch/doing.py` | Carries out one confirmed action and words the outcome |
+| `custom_components/datawatch/voice/actions.py` | What an action is, its confirming words and read-back |
 | `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |
 | `custom_components/datawatch/coordinator.py`, `sensor.py`, `binary_sensor.py` | Dashboard sensors, read once a minute |
 | `custom_components/datawatch/llm.py` | Read-only tools and introduction for AI assistants |
@@ -37,7 +39,8 @@ lists three at a time, "repeat" and "help", and faults said out loud.
   goes to it.
 - The user's own assistant is used: only add to it, never change its instructions or
   personality. AI is off until an assistant is chosen. AI tools only read.
-- **Every answer needs the user's confirmation**, checked by the integration's own code.
+- **Every change needs the user's confirmation**, checked by the integration's own code.
+  Each kind has its own confirming words. A change is sent once and never retried.
 - Do not over-engineer: get datawatch's functions working.
 - The integration registers the entry phrase itself, so there is no automation to maintain.
 - One focus shared by all voice devices. Accounts with different access may come later.
@@ -49,7 +52,11 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - Close after three phrases in a row that are not understood. Silence does not restart that
   count; any understood command does.
 - Home Assistant 2026.11 and later only.
-- Answering questions is the only change. Any other change needs the maintainer's approval.
+- The changes are: answering a question, adding a draft automaton, reporting a bug, and
+  sending to a session, which is switched off (`SESSION_SEND` in `const.py`) until datawatch
+  has the controls for it. Any other change needs the maintainer's approval.
+- "Add automation" makes one draft automaton, not datawatch's Automation (a chain).
+  "Add bug" uses datawatch's bug intake.
 - Build order: conversation and questions; projects, plans and automations; automata and
   tasks; sessions and results; reports and cards; later, other confirmed changes.
 - Not for voice: secrets, settings, managing models, servers or plugins, deleting,
@@ -81,8 +88,5 @@ Home Assistant.
 
 ## Later ideas
 
-Next, each confirmed by voice before anything is sent: adding a draft automaton,
-reporting a bug through datawatch's bug intake, and sending a command to a session. Sending
-to a session stays switched off until datawatch has the controls for it. Access controls are
-to be tightened rigorously as datawatch gains them. Later: pause and resume, approve and
-reject, and session replies once datawatch can give a clean one.
+Access controls are to be tightened rigorously as datawatch gains them. Later: pause and
+resume, approve and reject, and session replies once datawatch can give a clean one.

@@ -40,8 +40,10 @@ It is never given what a session said: datawatch returns raw screen text, which 
 secrets or misleading instructions. An AI model can still state things it was not told: one
 once gave a session's name as its last message. Check anything that matters in datawatch.
 
-It cannot change datawatch or answer a question. To answer, say "open datawatch", then
-"questions". See the [README](../README.md#what-you-can-say).
+It cannot change datawatch, answer a question, add an automaton, report a bug or send to a
+session. It is told which commands do these, so you can ask it how. Say "open datawatch",
+then for example "questions" or "add bug". See the
+[README](../README.md#add-an-automation-or-report-a-bug).
 
 If it asks you a follow-up question, your next reply goes straight to it without the wake
 word, so let it finish before saying "open datawatch" with your wake word.

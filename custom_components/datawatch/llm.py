@@ -2,8 +2,8 @@
 
 Home Assistant adds both to assistants that have device control, and only while an assistant
 is chosen in datawatch's options. The assistant's own instructions are not touched. No tool
-here changes anything: answering a question needs the user's spoken confirmation in
-datawatch mode.
+here changes anything: every change needs the user's spoken confirmation in datawatch
+mode.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from homeassistant.helpers import llm
 from homeassistant.helpers.llm import LLMContext, ToolAnnotations, ToolInput, ToolResult
 
 from .api import DatawatchClient, DatawatchError
-from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS
+from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS, SESSION_SEND
 from .mode import custom_reports
 from .reporting import build, find, run
 from .voice import automata, custom, items
@@ -377,7 +377,25 @@ _TOOLS: tuple[type[_DatawatchTool], ...] = (
 )
 
 
-def introduction(features: list[str]) -> str:
+def _actions(session_send: bool) -> str:
+    """What only the user can do, and how, so the assistant can say so."""
+    told = (
+        "You cannot add, report, answer or send anything in datawatch, or change it in any "
+        "other way: never say you did. The user does these by voice, after saying "
+        '"open datawatch". To answer a question: "questions", then "option" and a number or '
+        '"my answer", then "confirm answer". To add a draft automaton: set a project, say '
+        '"add automation" and what it should do, then "confirm automation". To report a '
+        'bug: set a project, say "add bug" and describe it, then "confirm bug". '
+    )
+    if session_send:
+        return told + (
+            'To send to a session: choose a session, say "send to session" and the words, '
+            'then "confirm send". '
+        )
+    return told + "Sending to a session is not turned on yet. "
+
+
+def introduction(features: list[str], session_send: bool = SESSION_SEND) -> str:
     """What the assistant is told about datawatch: only what works now."""
     listed = "\n".join(f"- {feature}" for feature in features)
     return (
@@ -386,10 +404,8 @@ def introduction(features: list[str]) -> str:
         f"What you can do with datawatch now:\n{listed}\n"
         "Say only what a tool result states. You cannot see what any session said: never "
         "present a name or title as a message from it.\n"
-        "You cannot change anything in datawatch or send an answer. To answer a question the "
-        'user says "open datawatch", then "questions", then "option" and a number or "my '
-        'answer", and then "confirm answer". Other datawatch features are not available to '
-        "you yet: say so.\n"
+        f"{_actions(session_send)}Other datawatch features are not available yet: say "
+        "so.\n"
         "To learn more, search datawatch's documentation with datawatch__search_docs and read "
         "it with datawatch__read_doc. It describes datawatch itself, which can do more than "
         "your tools.\n"

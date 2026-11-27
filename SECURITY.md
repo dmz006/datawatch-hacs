@@ -12,10 +12,12 @@ Only the newest release, on Home Assistant 2026.11 or later.
 
 ## How the integration protects your datawatch
 
-- It reads with `GET` requests. The one thing it can change is answering a question, with a
-  single `POST`, only after reading the answer back and hearing you say "confirm answer". It
-  does not retry that request or ask to replace an answer.
-- AI assistants get tools that only read. None can send an answer.
+- It reads with `GET` requests. It can make these changes, each only after reading it back
+  and hearing that kind's own confirming words: answer a question, add a draft automaton
+  (then set its title), and report a bug. It never retries a change or asks to replace an
+  answer.
+- Sending input to a session is in the code but switched off, and is checked in two places.
+- AI assistants get tools that only read. None can make a change.
 - Session terminal output, last responses and prompts are never requested, so they are
   neither spoken nor given to an AI model. Session names, questions, reasons and titles are.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
@@ -26,8 +28,10 @@ Only the newest release, on Home Assistant 2026.11 or later.
 ## What it does not protect against
 
 - **It does not know who is speaking.** Anyone who can use your voice devices can hear
-  datawatch questions, counts and project names, and can **answer questions**. Saying
-  "confirm answer" guards against mistakes and mishearing, not against another person.
+  datawatch questions, counts and project names, and can **answer questions, add draft
+  automata and report bugs**. Confirming words guard against mistakes and mishearing, not
+  against another person. Words you dictate are sent to datawatch as speech-to-text wrote
+  them.
 - **Misleading text and AI.** With an AI assistant on, questions and documentation reach
   your model. It is told to treat them as information only, which cannot be guaranteed. The
   assistant keeps whatever control of your home you gave it.

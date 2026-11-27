@@ -464,12 +464,13 @@ class Conversation:
         self._silences = 0
         command = parse(words)
         before = self._state()
+        held = self._holding
         reply = self._heard(command, words, snapshot, questions, report, automaton, composed, card)
         if command.kind not in (Kind.GO_BACK, Kind.REPEAT):
             if self._state().place() != before.place():
                 self._trail = [*self._trail, (before, self._here)][-_TRAIL:]
                 self._here = reply.text
-            elif command.kind is Kind.MORE:
+            elif command.kind is Kind.MORE and not held:
                 self._here = reply.text
         unmoved = (_NOT_UNDERSTOOD, _WAITING, *(actions.waiting(act) for act in Act))
         if reply.text.endswith(unmoved) and command.kind is not Kind.REPEAT:
