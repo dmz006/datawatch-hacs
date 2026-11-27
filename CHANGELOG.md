@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 (2026-11-26)
 
 - **Data for your own cards:** optional sensors, off until you enable them, read every 5
   minutes. Six hold datawatch's smaller dashboard data in a `data` attribute that is not

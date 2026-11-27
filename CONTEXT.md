@@ -73,9 +73,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
   terminal text, which can hold secrets and misleading instructions. The same goes for an
   alert's body: use titles only.
 - **Dashboard sensors start disabled.** Numbers are states, so they keep history; data sets
-  are the unrecorded `data` attribute. Unknown beats zero or old values. The user wants
-  ready-made cards that update every 5 minutes: a Gantt chart, and later a Kanban board,
-  which waits for datawatch 10.0.
+  are the unrecorded `data` attribute. Unknown beats zero or old values. The maintainer's
+  plan has ready-made cards that update every 5 minutes: a Gantt chart, and later a
+  Kanban board, which waits for datawatch 10.0.
 - The completed list is ordered by last update, not finish time. Do not call it newest.
 - Never list every automaton without a status filter: it took many seconds on a large
   datawatch. datawatch has no title search, so name search covers attention, running and held.
