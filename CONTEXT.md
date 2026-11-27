@@ -71,6 +71,8 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - A new feature gets a command, and an AI tool in `llm.py` whose `feature` line adds it to
   the assistant's introduction.
 - One datawatch server for now.
+- Screens and cards are in datawatch's languages (en, de, es, fr, ja). Voice is English
+  only for now; a language is added when someone can test it aloud.
 
 ## Adding a voice language
 

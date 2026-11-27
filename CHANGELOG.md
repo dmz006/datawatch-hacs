@@ -1,12 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.12.0 (2026-11-27)
 
 - **Screens in datawatch's languages:** setup, settings, report and sensor names are now in
-  German, Spanish, French and Japanese as well as English. Voice is still English only. If Home Assistant is set to German, Spanish or French, newly added
-  sensors get translated IDs; existing ones keep theirs.
+  German, Spanish, French and Japanese as well as English. If Home Assistant is set to
+  German, Spanish or French, newly added sensors get translated IDs; existing ones keep
+  theirs.
 - **Dashboard cards in the same languages:** each card follows the language of the person
   looking at it, with English for any other language.
+- **Voice is still English only.** What it hears and says is now kept apart by language,
+  ready for more. English commands and replies are unchanged.
 
 ## 0.11.1 (2026-11-26)
 

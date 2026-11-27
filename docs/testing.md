@@ -279,6 +279,9 @@ Not voice, but part of a full test. See
 | 14.7 | Tap a lane's name | Its line stands out | ☐ |
 | 14.8 | Wait 5 minutes | The "up to" time moves on | ☐ |
 | 14.9 | Enable a number sensor and wait | It has a value, or **unknown**, and builds history | ☐ |
+| 14.10 | Set your Home Assistant profile language to German, Spanish, French or Japanese, then open a dashboard with the cards | Card text, dates and the names in **Add card** are in that language; datawatch's own names are unchanged | ☐ |
+| 14.11 | With that language, open the datawatch setup and settings screens | Their text is in that language; the spoken commands they quote stay in English | ☐ |
+| 14.12 | Set the language back to English | Everything is in English again | ☐ |
 
 ## 15. Not available yet
 
