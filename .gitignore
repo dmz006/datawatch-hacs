@@ -47,3 +47,9 @@ worker-*.md
 
 # Private working notes
 docs/private/
+
+# datawatch-managed (BL219)
+.aider.conf.yml
+.aider.chat.history.md
+.aider.tags.cache.v*/
+*.pyc
