@@ -24,6 +24,9 @@ Home Assistant voice device.
 > Choosing a list order has been tried against a real datawatch with a pretend voice device,
 > **not yet by voice**.
 
+**Trying it out?** The [voice testing guide](docs/testing.md) is a checklist of every
+feature, with example conversations to start from.
+
 ## How it works
 
 ```text

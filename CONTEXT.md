@@ -22,6 +22,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
 | `custom_components/datawatch/dashboard.py` | Optional dashboard data sensors: what each reads and when it is unknown |
 | `custom_components/datawatch/charts.py`, `chart_api.py`, `frontend.py`, `frontend/` | The two dashboard cards: their data, the read-only commands they use, how they are offered, and the card script. Names and titles are only ever set as text, never as markup |
+| `docs/testing.md` | The voice testing guide. A new or changed feature gets its rows here; `tests/test_testing_guide.py` checks its commands |
 | `custom_components/datawatch/doing.py` | Carries out one confirmed action and words the outcome |
 | `custom_components/datawatch/voice/actions.py` | What an action is, its confirming words and read-back |
 | `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |

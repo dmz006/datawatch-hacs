@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **A voice testing guide** ([docs/testing.md](docs/testing.md)): a checklist of every
+  feature, with examples, so you can try it all.
 - Fixed: going back to no focus after "unset" said so twice.
 
 ## 0.11.0 (2026-11-26)
