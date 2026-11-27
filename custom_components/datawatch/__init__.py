@@ -11,8 +11,9 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import DatawatchClient
-from .const import CONF_FINGERPRINT, COUNTS, DISCUSSING, DOMAIN, FOCUS
+from .const import CONF_FINGERPRINT, COUNTS, DASHBOARD, DISCUSSING, DOMAIN, FOCUS
 from .coordinator import CountsCoordinator
+from .dashboard import DashboardCoordinator
 from .entry_phrase import async_listen
 from .mode import DatawatchMode, SharedFocus
 
@@ -57,9 +58,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
 
     counts = CountsCoordinator(hass, entry, entry.runtime_data)
     hass.data[COUNTS] = counts
+    dashboard = DashboardCoordinator(hass, entry, entry.runtime_data)
+    hass.data[DASHBOARD] = dashboard
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
     # Not awaited: setting up must not wait for datawatch, or fail without it.
     entry.async_create_background_task(hass, counts.async_refresh(), f"{DOMAIN} first read")
+    entry.async_create_background_task(
+        hass, dashboard.async_refresh(), f"{DOMAIN} first dashboard read"
+    )
     return True
 
 

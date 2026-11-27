@@ -8,6 +8,7 @@ from homeassistant.util.hass_dict import HassKey
 
 if TYPE_CHECKING:
     from .coordinator import CountsCoordinator
+    from .dashboard import DashboardCoordinator
     from .mode import SharedFocus
 
 DOMAIN = "datawatch"
@@ -20,6 +21,8 @@ DISCUSSING: HassKey[str | None] = HassKey(f"{DOMAIN}_discussing")
 FOCUS: HassKey[SharedFocus] = HassKey(f"{DOMAIN}_focus")
 # What the dashboard sensors read.
 COUNTS: HassKey[CountsCoordinator] = HassKey(f"{DOMAIN}_counts")
+# What the optional dashboard data sensors read.
+DASHBOARD: HassKey[DashboardCoordinator] = HassKey(f"{DOMAIN}_dashboard")
 # Reports the user defines: the kind of config subentry, and its list of contents.
 SUBENTRY_REPORT = "report"
 CONF_ITEMS = "items"

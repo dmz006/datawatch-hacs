@@ -128,7 +128,17 @@ the session in datawatch.
 ## The sensors are unavailable
 
 datawatch could not be read: check it is running and reachable from Home Assistant, and see
-the Home Assistant log. They never show zero for a failed read. They update once a minute.
+the Home Assistant log. They never show zero for a failed read. The counts update once a
+minute, and the dashboard data every 5 minutes.
+
+## A dashboard data sensor is missing, unknown or has no history
+
+- **Missing:** they start disabled. See
+  [Data for your own cards](../README.md#data-for-your-own-cards-optional).
+- **Unknown:** datawatch does not give that number now, or only as old: stale usage, a
+  forecast more than a day old, or a lane it reports nothing for. This is on purpose.
+- **No history:** history starts when you enable the sensor. The `data` attribute is never
+  saved in history.
 
 ## My report is not recognised
 

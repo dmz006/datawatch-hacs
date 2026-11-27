@@ -138,6 +138,48 @@
       },
       "held_items": {
         "name": "Items on hold"
+      },
+      "data_overview": {
+        "name": "Dashboard data: overview"
+      },
+      "data_lane_activity": {
+        "name": "Dashboard data: lane activity"
+      },
+      "data_lane_use": {
+        "name": "Dashboard data: lane use"
+      },
+      "data_bugs": {
+        "name": "Dashboard data: bugs"
+      },
+      "data_review": {
+        "name": "Dashboard data: review backlog"
+      },
+      "data_forecast": {
+        "name": "Dashboard data: forecast"
+      },
+      "usage_used": {
+        "name": "Weekly usage used"
+      },
+      "usage_pace": {
+        "name": "Weekly usage pace line"
+      },
+      "usage_last_day": {
+        "name": "Weekly usage used per 24 hours"
+      },
+      "review_held_questions": {
+        "name": "Held questions awaiting a decision"
+      },
+      "review_oldest": {
+        "name": "Longest wait for a decision"
+      },
+      "forecast_low": {
+        "name": "Forecast days to finish, low"
+      },
+      "forecast_high": {
+        "name": "Forecast days to finish, high"
+      },
+      "lane_busy": {
+        "name": "Lane {lane} busy, last full hour"
       }
     },
     "binary_sensor": {

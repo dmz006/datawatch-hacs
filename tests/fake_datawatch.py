@@ -6,6 +6,7 @@ import asyncio
 import ssl
 import subprocess
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,53 @@ def made_up_plan(title: str, state: str, done: int = 0, total: int = 0) -> dict[
 
 def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, Any]:
     return {"name": name, "status": status, "members": [{}] * members}
+
+
+def made_up_dashboards() -> dict[str, Any]:
+    today = datetime.now(UTC).date().isoformat()
+    note = "made-up free text from a ship note"
+    return {
+        "console": {
+            "questions_waiting": {"available": True, "count": 4, "summary": "4 open"},
+            "ci_release": {
+                "available": True,
+                "release": {"watch_mode": "on", "ship_last_note": note},
+            },
+        },
+        "lane-pulse": {
+            "series": [{"lane": "red"}, {"lane": "blue"}],
+            "burn": {
+                "available": True,
+                "points": 40,
+                "pace_line": 55.5,
+                "burn_per_24h": 12.25,
+            },
+        },
+        "series/lane-utilization": {
+            "lanes": [
+                {"lane": "red", "hours": [{"busy_fraction": 0.254}, {"busy_fraction": 1}]},
+                {"lane": "blue", "hours": [{"busy_fraction": None}, {"busy_fraction": 0.5}]},
+            ]
+        },
+        "series/defects-per-day": {"total_found": 6, "points": []},
+        "series/review-backlog": {
+            "plan_count": 3,
+            "question_count": 1,
+            "oldest_age_seconds": 5400,
+            "plans": [{"title": "Made-up waiting work"}],
+        },
+        "series/throughput-forecast": {
+            "points": [
+                {"date": "2020-01-01", "throughput_per_day": 99},
+                {
+                    "date": today,
+                    "throughput_per_day": 2.5,
+                    "completion_low_days": 3.5,
+                    "completion_high_days": 9,
+                },
+            ]
+        },
+    }
 
 
 RAW_BODY = "made-up raw terminal text that must never be spoken"
@@ -131,6 +179,7 @@ class Fake:
         self.bug_status = 200
         self.bug_route = "new_batch"
         self.input_status = 200
+        self.dashboards: dict[str, Any] = made_up_dashboards()
         # Alerts, newest first. A body can be raw terminal text and must never be heard.
         self.alerts: list[dict[str, Any]] = [
             made_up_alert("n1", "Made-up build finished", session="host-1111"),
@@ -290,6 +339,10 @@ class Fake:
         if request.method == "POST" and request.path == "/api/sessions/send":
             self.changes.append(("POST", request.path, await request.json()))
             return web.json_response({"ok": self.input_status == 200}, status=self.input_status)
+        if request.path.startswith("/api/dashboard/"):
+            found = self.dashboards.get(request.path.removeprefix("/api/dashboard/"))
+            if found is not None:
+                return web.json_response(found)
         if request.path == "/api/alerts":
             unread = sum(not row.get("read") for row in self.alerts)
             return web.json_response({"alerts": self.alerts, "unread_count": unread})

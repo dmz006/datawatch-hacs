@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Data for your own cards:** optional sensors, off until you enable them, read every 5
+  minutes. Six hold datawatch's smaller dashboard data in a `data` attribute that is not
+  saved in history. Numbers keep history, including weekly usage, waits for a decision, the
+  forecast and how busy each lane was.
 - **Alerts by voice:** "alerts" counts the unread ones and reads their titles, newest first.
   With a session focused, only its alerts. An alert's text is never read or given to an AI
   assistant, and hearing an alert does not mark it read.

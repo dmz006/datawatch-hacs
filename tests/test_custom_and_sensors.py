@@ -186,6 +186,8 @@ def states(hass: HomeAssistant) -> dict[str, str]:
     found = {}
     (entry,) = hass.config_entries.async_entries(DOMAIN)
     for item in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if item.disabled:
+            continue
         state = hass.states.get(item.entity_id)
         assert state is not None
         found[item.entity_id] = state.state

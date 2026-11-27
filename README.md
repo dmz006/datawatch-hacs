@@ -369,6 +369,70 @@ entities:
   - sensor.datawatch_items_on_hold
 ```
 
+## Data for your own cards (optional)
+
+The integration can also bring datawatch's smaller dashboard data into Home Assistant, so
+you can build your own cards and graph numbers over time. **All of these sensors start
+disabled.** To enable one: **Settings → Devices & services → datawatch**, open its device or
+entity list, choose the disabled entity, and turn **Enabled** on. Home Assistant starts it
+after a short reload. They are read every **5 minutes**.
+
+> **History starts when you enable a sensor.** Home Assistant cannot fill in earlier values,
+> so enable the numbers you may want to graph as soon as you can.
+
+**Data sensors.** Each shows one headline number and holds that data in an attribute named
+`data`:
+
+| Sensor (`sensor.datawatch_...`) | Headline number | `data` holds |
+|---|---|---|
+| `dashboard_data_overview` | Open questions | Summaries of questions, stuck work, lanes, usage, CI and release |
+| `dashboard_data_lane_activity` | Lanes in the last 6 hours | When each lane was busy, waiting or idle, and usage readings |
+| `dashboard_data_lane_use` | Lanes in the last 24 hours | How busy each lane was, hour by hour |
+| `dashboard_data_bugs` | Bugs taken in, last 14 days | Bugs per day. datawatch's "fixed" counts bugs it made a one-task fix for, not finished fixes |
+| `dashboard_data_review_backlog` | Automata waiting for a decision | Their titles and how long they have waited (50 at most) |
+| `dashboard_data_forecast` | Automata finished per day | The forecast over the last 30 days |
+
+**The `data` attribute is not saved in history.** It is current data only, in the shape
+datawatch sends it, which can change with datawatch versions. The one free-text note in the
+overview is left out. It includes titles, lane names, repository names and links.
+
+**Number sensors.** These keep history and long-term statistics:
+
+| Sensor (`sensor.datawatch_...`) | Number |
+|---|---|
+| `weekly_usage_used` | Weekly allowance used, in percent |
+| `weekly_usage_pace_line` | Where the pace line is now, in percent |
+| `weekly_usage_used_per_24_hours` | datawatch's burn rate: percent of the weekly allowance per 24 hours |
+| `held_questions_awaiting_a_decision` | Held questions waiting for you |
+| `longest_wait_for_a_decision` | Hours since the longest-waiting item last changed |
+| `forecast_days_to_finish_low`, `..._high` | datawatch's estimate of the days left |
+| `lane_<name>_busy_last_full_hour` | One for each lane: the share of the last full clock hour it was busy |
+
+The headline numbers above keep history too, and so do the
+[count sensors](#dashboard-sensors), which are on from the start.
+
+**"Unknown" is on purpose.** A number datawatch does not give is unknown, not zero. Usage is
+unknown while datawatch calls its reading stale. The forecast is unknown when datawatch's
+newest forecast point is more than a day old (by UTC date); the older points are still in
+`data`. A lane sensor is unknown when datawatch reports nothing for that lane. A lane is
+added when datawatch first reports it.
+
+**A graph over time** with Home Assistant's own card. In a dashboard, add a card, choose
+**Manual**, and paste this, after enabling the sensor in it:
+
+```yaml
+type: history-graph
+title: datawatch
+hours_to_show: 48
+entities:
+  - sensor.datawatch_weekly_usage_used
+  - sensor.datawatch_weekly_usage_pace_line
+```
+
+Drawing the lists in `data` (for example a chart of bugs per day) needs a card that can read
+attributes; Home Assistant's history cards cannot. datawatch's large work map and timeline
+are not included.
+
 ## Use your AI assistant (optional)
 
 This is **off** until you turn it on. Go to **Settings → Devices & services → datawatch →
@@ -407,6 +471,10 @@ matters in datawatch.
 
 ## Privacy and safety
 
+- **Dashboard data stays in Home Assistant**, only for sensors you enable. Anyone who can see
+  those entities can read the titles in them. With no data sensor enabled, one small lane
+  summary is still read every 5 minutes, to know which lanes exist.
+
 - **Three kinds of change.** It reads datawatch. It can answer a question, add a draft
   automaton and report a bug, each only after you confirm it aloud. Sending to a session is
   switched off.
@@ -426,8 +494,8 @@ matters in datawatch.
   the certificate you approved.
 - **Speech** is turned into text by the speech-to-text service your assistant already uses.
   With the AI assistant off, your words in datawatch mode are not passed on to an AI model.
-- **Sensors** read counts once a minute, and their history is stored by Home Assistant.
-  Anyone who can see your Home Assistant can see them.
+- **Sensors** read counts once a minute, and their history is stored by Home Assistant,
+  as is the history of any number sensor you enable. Anyone who can see your Home Assistant can see them.
 - The address, certificate fingerprint and any token are kept in Home Assistant's
   integration settings. The focus (the names and ids of what you focused on, which for a
   session includes your datawatch host name if datawatch puts it in the id) is kept in Home

@@ -18,6 +18,10 @@ Only the newest release, on Home Assistant 2026.11 or later.
   answer.
 - Sending input to a session is in the code but switched off, and is checked in two places.
 - AI assistants get tools that only read. None can make a change.
+- Optional dashboard sensors, off by default, put datawatch's dashboard data (numbers,
+  titles, lane and repository names, links) into an entity attribute that is not saved in
+  history. datawatch's one free-text release note is removed. Anyone who can see the entity
+  can read it. No tool of this integration gives it to an AI model.
 - Session terminal output, last responses and prompts are never requested, so they are
   neither spoken nor given to an AI model. Session names, questions, reasons and titles are.
   datawatch sends the text of alerts together with their list; it can be terminal text, so

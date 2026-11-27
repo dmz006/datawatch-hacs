@@ -204,11 +204,13 @@ Choosing a line that is not an automaton, such as a task or a session, gives wha
 with the list.
 Voice replies and AI tools read fresh each time; nothing is cached for them.
 
-The **dashboard sensors** are the one thing read in the background: once a minute the
+The **sensors** are the one thing read in the background. Once a minute the
 integration reads the projects, pause state, open questions, session counts, held items,
 triage records and the attention list. If any of those reads fails, every sensor shows
 unavailable. Turning off polling for the integration stops it. One of your own reports reads
-only what its parts need.
+only what its parts need. The optional [dashboard data](../README.md#data-for-your-own-cards-optional)
+is read every 5 minutes, one data set at a time; one that fails makes only its own sensors
+unavailable.
 
 | datawatch address | Used for |
 |---|---|
@@ -222,6 +224,8 @@ only what its parts need.
 | `POST /api/autonomous/defects/intake` | **Change:** a confirmed bug: a new id, a short title, your words and the project |
 | `POST /api/sessions/send` | **Change, switched off:** confirmed words to a session |
 | `GET /api/sessions?view=summary&status=…` | Counts of waiting, running and failed sessions; filtered by project when you have a focus |
+| `GET /api/dashboard/series/lane-utilization` | Every 5 minutes: lanes and their hourly use |
+| `GET /api/dashboard/console`, `lane-pulse`, `series/defects-per-day`, `series/review-backlog`, `series/throughput-forecast` | Every 5 minutes, only while a sensor that shows it is enabled |
 | `GET /api/alerts` | Unread alerts. Only titles, levels, times and session links are kept |
 | `GET /api/autonomous/held` | Items on hold |
 | `GET /api/autonomous/triage` | Failed and blocked automata |
