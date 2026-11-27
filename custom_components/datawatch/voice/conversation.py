@@ -19,6 +19,7 @@ from .actions import Act, Action, Target
 from .automata import Automaton
 from .custom import CustomReport
 from .items import GONE, KINDS, Card, Item
+from .language import N_, t, tn
 from .model import Snapshot
 from .names import match_names
 from .order import Order
@@ -29,16 +30,16 @@ from .reports import Report
 PAGE_SIZE = 3
 # So that a television or other talk cannot hold the mode open.
 MISSES_BEFORE_CLOSING = 3
-_NO_LIST = "There is no list yet. Say list projects."
-_NOT_UNDERSTOOD = "Sorry, I didn't get that. Say help."
-_CLOSING = "Closing datawatch."
-_GAVE_UP = f"I didn't understand three times. {_CLOSING}"
-_UNREACHABLE = "I can't reach datawatch. Try again, or say stop."
+_NO_LIST = N_("There is no list yet. Say list projects.")
+_NOT_UNDERSTOOD = N_("Sorry, I didn't get that. Say help.")
+_CLOSING = N_("Closing datawatch.")
+_GAVE_UP = N_("I didn't understand three times. Closing datawatch.")
+_UNREACHABLE = N_("I can't reach datawatch. Try again, or say stop.")
 _NEEDS_DATA = frozenset({Kind.STATUS, Kind.DETAIL, Kind.LIST_PROJECTS, Kind.SET_NAME})
-_NO_QUESTION = "I haven't read a question yet. Say questions."
-_NOT_SENT = "Your answer was not sent."
-_WAITING = "Not sent yet. Say confirm answer, or cancel."
-_HELP = (
+_NO_QUESTION = N_("I haven't read a question yet. Say questions.")
+_NOT_SENT = N_("Your answer was not sent.")
+_WAITING = N_("Not sent yet. Say confirm answer, or cancel.")
+_HELP = N_(
     "You can say: questions, next question, option and a number, my answer, confirm answer, "
     "cancel, status, more detail, attention, running, held items, tell me about a number "
     "or name, why, tasks, progress, results, what finished, sessions, waiting sessions, "
@@ -49,16 +50,16 @@ _HELP = (
     "alerts, list order, sort by name, most recent first, unset, repeat, or stop."
 )
 _ORDERS = {Kind.ORDER_NAME: Order.NAME, Kind.ORDER_RECENT: Order.RECENT}
-_NO_AUTOMATON = "Say attention, running or held items, then a number."
+_NO_AUTOMATON = N_("Say attention, running or held items, then a number.")
 _ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS, Kind.RESULTS)
-_SESSIONS_ONLY = "That is a session. I can only say what is in the list and its details."
-_NOTHING_CHOSEN = "Choose something first: say its number, then set it."
-_NO_HISTORY_TARGET = "Choose something first, then say history."
-_NO_QUESTION_TARGET = "Choose something first, then say its questions. Or say questions."
-_NO_PARENT = "Say plans or automations, choose one, then say automata."
-_NO_TASKS = "Tasks are listed for a plan or an automaton."
-_NOTHING_BEHIND = "There is nothing to go back to."
-_CLEARED = "Focus cleared. Now showing everything."
+_SESSIONS_ONLY = N_("That is a session. I can only say what is in the list and its details.")
+_NOTHING_CHOSEN = N_("Choose something first: say its number, then set it.")
+_NO_HISTORY_TARGET = N_("Choose something first, then say history.")
+_NO_QUESTION_TARGET = N_("Choose something first, then say its questions. Or say questions.")
+_NO_PARENT = N_("Say plans or automations, choose one, then say automata.")
+_NO_TASKS = N_("Tasks are listed for a plan or an automaton.")
+_NOTHING_BEHIND = N_("There is nothing to go back to.")
+_CLEARED = N_("Focus cleared. Now showing everything.")
 # Things that hold automata.
 _HOLDERS = ("plan", "automation")
 # How many steps "go back" remembers.
@@ -73,8 +74,20 @@ _CONFIRMS = {
     Kind.CONFIRM_BUG: Act.BUG,
     Kind.CONFIRM_SEND: Act.SESSION,
 }
-_NOTHING_WAITING = "There is nothing waiting to be sent."
+_NOTHING_WAITING = N_("There is nothing waiting to be sent.")
 _QUESTION_WORDS = (Kind.QUESTIONS, Kind.ALL_QUESTIONS, Kind.ITS_QUESTIONS)
+_GO_AHEAD = N_("Go ahead. Say your answer, or cancel.")
+_NOT_FOUND = {
+    "plan": N_("I couldn't find a plan matching {name}."),
+    "automation": N_("I couldn't find an automation matching {name}."),
+    "automaton": N_("I couldn't find an automaton matching {name}."),
+    "task": N_("I couldn't find a task matching {name}."),
+    "session": N_("I couldn't find a session matching {name}."),
+}
+
+
+def _unheard(number: int) -> str:
+    return t("I haven't read a number {number}. Say more, or pick one you heard.", number=number)
 
 
 class Topic(Enum):
@@ -436,21 +449,23 @@ class Conversation:
     def enter(self) -> Reply:
         """Start a visit: say the focus, forget the previous list."""
         self._reset()
-        self._last = "Datawatch activated."
+        self._last = t("Datawatch activated.")
         if self.focus or self.path:
             self._last += f" {self._where()}"
         return Reply(self._last)
 
     def _where(self) -> str:
         described = items.describe(self.focus, self.path)
-        return f"Focus: {described}." if described else "No focus. Showing everything."
+        if described:
+            return t("Focus: {focus}.", focus=described)
+        return t("No focus. Showing everything.")
 
     def silence(self) -> Reply:
         """Nothing was heard."""
         self._silences += 1
         if self._silence_limit is not None and self._silences >= self._silence_limit:
-            return self._close(_CLOSING)
-        return Reply("Still there?")
+            return self._close(t(_CLOSING))
+        return Reply(t("Still there?"))
 
     def sent(self, outcome: str) -> Reply:
         """What happened to the answer that was sent."""
@@ -490,11 +505,11 @@ class Conversation:
                 self._here = reply.text
             elif command.kind is Kind.MORE and not held:
                 self._here = reply.text
-        unmoved = (_NOT_UNDERSTOOD, _WAITING, *(actions.waiting(act) for act in Act))
+        unmoved = (t(_NOT_UNDERSTOOD), t(_WAITING), *(actions.waiting(act) for act in Act))
         if reply.text.endswith(unmoved) and command.kind is not Kind.REPEAT:
             self._misses += 1
             if self._misses >= MISSES_BEFORE_CLOSING:
-                return self._close(_GAVE_UP)
+                return self._close(t(_GAVE_UP))
         else:
             self._misses = 0
         return reply
@@ -515,7 +530,7 @@ class Conversation:
         if command.kind in _ACT_OF:
             return self._say(self._begin(_ACT_OF[command.kind], command.text))
         if command.kind in _CONFIRMS:
-            return self._say(_NOTHING_WAITING)
+            return self._say(t(_NOTHING_WAITING))
         if command.kind is Kind.GO_BACK:
             return self._back()
         if command.kind in _QUESTION_WORDS:
@@ -523,15 +538,19 @@ class Conversation:
         if self._to_set(command) or self.wanted_item_search(words) is not None:
             return self._say(self._set_item(command, words, report, card))
         if command.kind is Kind.SET_THIS:
-            return self._say(_NOTHING_CHOSEN)
+            return self._say(t(_NOTHING_CHOSEN))
         if command.kind is Kind.SET_NUMBER and command.item != "project" and self._refs:
             number = command.number or 0
             found = self._line(number)
             if found is None:
-                return self._say(
-                    f"I haven't read a number {number}. Say more, or pick one you heard."
+                return self._say(_unheard(number))
+            return self._say(
+                t(
+                    "Number {number} is the {item}. Say set {number}.",
+                    number=number,
+                    item=found.spoken(),
                 )
-            return self._say(f"Number {number} is the {found.spoken()}. Say set {number}.")
+            )
         children = self.wanted_children(words)
         if children is not None:
             return self._say(self._start_report(report))
@@ -541,19 +560,19 @@ class Conversation:
         if wanted is not None:
             return self._say(self._from_card(command, wanted, card))
         if self._runs_report(command, words):
-            return self._say(composed if composed is not None else _UNREACHABLE)
+            return self._say(composed if composed is not None else t(_UNREACHABLE))
         if self._chooses_detail(command):
             return self._detail(command)
         if command.kind is Kind.AUTOMATA:
-            return self._say(_NO_PARENT)
+            return self._say(t(_NO_PARENT))
         if command.kind is Kind.HISTORY:
-            return self._say(_NO_HISTORY_TARGET)
+            return self._say(t(_NO_HISTORY_TARGET))
         if command.kind in _ABOUT_AUTOMATON:
             item = self.target if command.number is None else self._line(command.number)
             if item is not None and item.kind == "session":
-                return self._say(_SESSIONS_ONLY)
+                return self._say(t(_SESSIONS_ONLY))
             if item is not None and command.kind is Kind.TASKS:
-                return self._say(_NO_TASKS)
+                return self._say(t(_NO_TASKS))
         return self._reply_to(command, words, snapshot, questions, report)
 
     def _state(self) -> _State:
@@ -592,23 +611,24 @@ class Conversation:
             self._restore(state)
             self._here = said
             # "Focus cleared" is news only when it happens; the focus is said instead.
-            said = "" if said == _CLEARED else said
-            parts = ["Back."]
+            said = "" if said == t(_CLEARED) else said
+            back = t("Back.")
+            parts = [back]
             if (self.focus, self.path) != focused and not said.startswith(self._where()):
                 parts.append(self._where())
             if said:
-                parts.append(said.removeprefix("Back. "))
+                parts.append(said.removeprefix(f"{back} "))
             elif len(parts) == 1:
                 parts.append(self._where())
             return self._say(" ".join(parts))
         if not self.path and self.focus is None:
-            return self._say(_NOTHING_BEHIND)
+            return self._say(t(_NOTHING_BEHIND))
         if self.path:
             self.path = self.path[:-1]
         else:
             self.focus = None
         self._selected = None
-        return self._say(f"Back. {self._where()}")
+        return self._say(f"{t('Back.')} {self._where()}")
 
     def _choose_item(self, item: Item) -> None:
         """Make item what "it" means. Asking again about the same one is not a step."""
@@ -624,20 +644,21 @@ class Conversation:
         for index, focused in enumerate(self.path):
             if _same(focused, item):
                 self.path = self.path[:index]
-                return (
-                    f"datawatch no longer has the {item.spoken()}, so I moved your focus "
-                    f"up. {self._where()}"
+                moved = t(
+                    "datawatch no longer has the {item}, so I moved your focus up.",
+                    item=item.spoken(),
                 )
-        return f"datawatch no longer has the {item.spoken()}."
+                return f"{moved} {self._where()}"
+        return t("datawatch no longer has the {item}.", item=item.spoken())
 
     def _from_card(self, command: Command, item: Item, card: Card | None) -> str:
         if card is None:
-            return _UNREACHABLE
+            return t(_UNREACHABLE)
         if card is GONE:
             return self._gone(item)
         self._reading_questions = False
         if command.kind is Kind.STATUS:
-            more = "" if card.status == card.detail else " Say more detail for more."
+            more = "" if card.status == card.detail else f" {speech.more_hint()}"
             return f"{card.status}{more}"
         self._choose_item(item)
         return card.history if command.kind is Kind.HISTORY else card.detail
@@ -650,20 +671,16 @@ class Conversation:
         search = self.wanted_item_search(words)
         if search is not None:
             if report is None:
-                return _UNREACHABLE
+                return t(_UNREACHABLE)
             kind, name = search
             found = self.matching(report.refs, kind, name)
             source, under = report.refs, report.under
             if not found:
-                return (
-                    f"I couldn't find {'an' if kind[0] == 'a' else 'a'} {kind} matching {name}."
-                    if report.refs
-                    else report.summary
-                )
+                return t(_NOT_FOUND[kind], name=name) if report.refs else report.summary
         if len(found) > 1:
             return self._start_report(
                 Report(
-                    f"I found {len(found)} matches. Say set and a number.",
+                    t("I found {number} matches. Say set and a number.", number=len(found)),
                     tuple(f"{n}, {i.spoken()}." for n, i in enumerate(found, start=1)),
                     tuple(found),
                     under=under,
@@ -671,7 +688,7 @@ class Conversation:
             )
         item = found[0]
         if card is None:
-            return _UNREACHABLE
+            return t(_UNREACHABLE)
         if card is GONE:
             return self._gone(item)
         base: tuple[Item, ...] = ()
@@ -693,18 +710,18 @@ class Conversation:
         self, command: Command, questions: list[Question] | None, card: Card | None
     ) -> str:
         if command.number is not None and self._line(command.number) is None:
-            return f"I haven't read a number {command.number}. Say more, or pick one you heard."
+            return _unheard(command.number)
         if questions is None:
-            return _UNREACHABLE
+            return t(_UNREACHABLE)
         scope = self._question_scope(command)
         if scope is None and command.kind is Kind.ITS_QUESTIONS:
-            return _NO_QUESTION_TARGET
+            return t(_NO_QUESTION_TARGET)
         found, prefix = list(questions), ""
         if scope is not None:
             automata_in_it: frozenset[str] = frozenset()
             if scope.kind in _HOLDERS:
                 if card is None:
-                    return _UNREACHABLE
+                    return t(_UNREACHABLE)
                 if card is GONE:
                     return self._gone(scope)
                 automata_in_it = card.automata
@@ -716,24 +733,26 @@ class Conversation:
                 )
             ]
             if not found:
-                everywhere = speech.count(len(questions), "open question", "open questions")
-                return (
-                    f"datawatch links no open questions to the {scope.spoken()}. There "
-                    f"{'is' if len(questions) == 1 else 'are'} {everywhere} in all. "
-                    "Say all questions."
+                return tn(
+                    len(questions),
+                    "datawatch links no open questions to the {item}. There is {number} open "
+                    "question in all. Say all questions.",
+                    "datawatch links no open questions to the {item}. There are {number} open "
+                    "questions in all. Say all questions.",
+                    item=scope.spoken(),
                 )
-            prefix = f"For the {scope.spoken()}. "
+            prefix = t("For the {item}.", item=scope.spoken()) + " "
         self._lines, self._refs, self._details, self._under = None, (), (), None
         self._questions, self._at = ordered(found), 0
         self._reading_questions = bool(self._questions)
         if not self._questions:
-            return "There are no open questions."
+            return t("There are no open questions.")
         return prefix + self._read_current()
 
     def _close(self, text: str) -> Reply:
         if self._draft is not None:
             self._draft = None
-            text = f"{_NOT_SENT} {text}"
+            text = f"{t(_NOT_SENT)} {text}"
         if self._pending is not None:
             text = f"{actions.not_sent(self._pending.target.act)} {text}"
             self._pending = None
@@ -749,7 +768,7 @@ class Conversation:
         report: Report | None,
     ) -> Reply:
         if command.kind is Kind.EXIT:
-            return self._close(_CLOSING)
+            return self._close(t(_CLOSING))
         if command.kind is Kind.REPEAT:
             return Reply(self._last)
         if self._dictating:
@@ -772,7 +791,7 @@ class Conversation:
         if command.kind in _TOPICS:
             return self._say(self._start_report(report))
         if command.kind in _ABOUT_AUTOMATON or command.kind is Kind.PICK:
-            return self._say(_NO_AUTOMATON)
+            return self._say(t(_NO_AUTOMATON))
         if command.kind is Kind.MORE and self._lines is not None and not self._reading_questions:
             return self._say(self._next_lines())
         asked = self._about_questions(command)
@@ -780,11 +799,14 @@ class Conversation:
             return self._say(asked)
 
         if snapshot is None and command.kind in _NEEDS_DATA:
-            return self._say(_UNREACHABLE)
+            return self._say(t(_UNREACHABLE))
 
         notice = ""
         if snapshot is not None and self.focus and self.focus not in snapshot.projects:
-            notice = f"Project {self.focus} no longer exists, so the focus is cleared. "
+            gone = t(
+                "Project {project} no longer exists, so the focus is cleared.", project=self.focus
+            )
+            notice = f"{gone} "
             self.focus, self.path = None, ()
         if command.kind in (Kind.STATUS, Kind.LIST_PROJECTS, Kind.SET_NAME):
             self._reading_questions = False
@@ -813,10 +835,10 @@ class Conversation:
     def _detail(self, command: Command) -> Reply:
         number = command.number or 0
         if not 1 <= number <= min(self._lines_read, len(self._details)):
-            return self._say(f"I haven't read a number {number}. Say more, or pick one you heard.")
+            return self._say(_unheard(number))
         item = self._line(number)
         if command.kind in _ABOUT_AUTOMATON:
-            return self._say(_SESSIONS_ONLY)
+            return self._say(t(_SESSIONS_ONLY))
         self._selected = item
         return self._say(self._details[number - 1])
 
@@ -826,7 +848,7 @@ class Conversation:
         if automaton is None:
             if command.kind is Kind.ABOUT and report is not None:
                 return self._say(self._start_report(report))
-            return self._say(_UNREACHABLE)
+            return self._say(t(_UNREACHABLE))
         self._choose_item(Item("automaton", automaton.id, automaton.title))
         self._reading_questions = False
         if command.kind is Kind.WHY:
@@ -842,7 +864,7 @@ class Conversation:
 
     def _start_report(self, report: Report | None) -> str:
         if report is None:
-            return _UNREACHABLE
+            return t(_UNREACHABLE)
         self._reading_questions = False
         self._lines, self._lines_read = report.items or None, 0
         self._refs, self._details = report.refs, report.details
@@ -856,10 +878,10 @@ class Conversation:
         assert self._lines is not None
         page = self._lines[self._lines_read : self._lines_read + PAGE_SIZE]
         if not page:
-            return "That is the end of the list."
+            return t("That is the end of the list.")
         self._lines_read += len(page)
-        more = " Say more." if self._lines_read < len(self._lines) else " That is all."
-        return " ".join(page) + more
+        more = t("Say more.") if self._lines_read < len(self._lines) else t("That is all.")
+        return f"{' '.join(page)} {more}"
 
     def _about_questions(self, command: Command) -> str | None:
         """The reply to a command about the question being read, or None for any other."""
@@ -877,13 +899,13 @@ class Conversation:
                 return self._choose(command.number or 0)
             case Kind.OWN_WORDS:
                 if current is None:
-                    return _NO_QUESTION
+                    return t(_NO_QUESTION)
                 if command.text is None:
                     self._dictating = True
-                    return "Go ahead. Say your answer, or cancel."
+                    return t(_GO_AHEAD)
                 return self._drafted(Draft(current, quote=command.text))
             case Kind.CONFIRM | Kind.CANCEL:
-                return "There is no answer waiting."
+                return t("There is no answer waiting.")
             case _:
                 return None
 
@@ -892,20 +914,20 @@ class Conversation:
 
     def _next_question(self) -> str:
         if not self._questions:
-            return _NO_QUESTION
+            return t(_NO_QUESTION)
         self._reading_questions = True
         if self._at + 1 >= len(self._questions):
             self._at = len(self._questions)
-            return "That is the last question."
+            return t("That is the last question.")
         self._at += 1
         return self._read_current()
 
     def _choose(self, number: int) -> str:
         current = self.current_question
         if current is None:
-            return _NO_QUESTION
+            return t(_NO_QUESTION)
         if not 1 <= number <= len(current.options):
-            return f"There is no option {number}."
+            return t("There is no option {number}.", number=number)
         quote = self._draft.quote if self._draft is not None else None
         return self._drafted(Draft(current, current.options[number - 1], quote))
 
@@ -918,7 +940,7 @@ class Conversation:
         option = self._draft.option if self._draft is not None else None
         if command.kind in (Kind.CANCEL, Kind.GO_BACK):
             self._draft = None
-            return self._say("Cancelled. Nothing was sent.")
+            return self._say(t(actions.CANCELLED))
         current = self.current_question
         assert current is not None, "dictation only starts on a question"
         quote = command.text if command.kind is Kind.OWN_WORDS and command.text else words
@@ -932,16 +954,16 @@ class Conversation:
                 return Reply("", send=draft)
             case Kind.CANCEL | Kind.GO_BACK:
                 self._draft = None
-                return self._say("Cancelled. Nothing was sent.")
+                return self._say(t(actions.CANCELLED))
             case Kind.CHOOSE | Kind.NUMBER:
                 return self._say(self._choose(command.number or 0))
             case Kind.OWN_WORDS:
                 if command.text is None:
                     self._dictating = True
-                    return self._say("Go ahead. Say your answer, or cancel.")
+                    return self._say(t(_GO_AHEAD))
                 return self._say(self._drafted(Draft(draft.question, draft.option, command.text)))
             case _:
-                return Reply(_WAITING)
+                return Reply(t(_WAITING))
 
     def _begin(self, act: Act, words: str | None) -> str:
         """Start an action. Where it goes is settled before any words are asked for."""
@@ -954,7 +976,9 @@ class Conversation:
         elif act is not Act.SESSION and self.focus is None:
             problem = actions.NEEDS_PROJECT
         if problem is not None:
-            return f"{problem} I did not keep your words." if words else problem
+            if not words:
+                return t(problem)
+            return f"{t(problem)} {t('I did not keep your words.')}"
         target = (
             Target(act, session=session)
             if act is Act.SESSION
@@ -973,7 +997,7 @@ class Conversation:
         """The whole turn is the words for the action, unless it cancels."""
         if command.kind in (Kind.CANCEL, Kind.GO_BACK):
             self._wording = None
-            return self._say(actions.CANCELLED)
+            return self._say(t(actions.CANCELLED))
         return self._say(self._pend(Action(target, words.strip())))
 
     def _confirming_action(self, action: Action, command: Command) -> Reply:
@@ -984,7 +1008,7 @@ class Conversation:
             return Reply("", act=action)
         if command.kind in (Kind.CANCEL, Kind.GO_BACK):
             self._pending = None
-            return self._say(actions.CANCELLED)
+            return self._say(t(actions.CANCELLED))
         if _ACT_OF.get(command.kind) is act:
             # Saying it again replaces the words, for the same place.
             if command.text is None:
@@ -1014,51 +1038,57 @@ class Conversation:
             case Kind.UNSET:
                 self.focus, self.path, self._selected = None, (), None
                 self._choosing = False
-                return _CLEARED
+                return t(_CLEARED)
             case Kind.HELP:
-                return _HELP
+                return t(_HELP)
             case _:
-                return _NOT_UNDERSTOOD
+                return t(_NOT_UNDERSTOOD)
 
     def _start_list(self, snapshot: Snapshot) -> str:
         if not snapshot.projects:
             self._listed = None
-            return "There are no projects."
+            return t("There are no projects.")
         self._listed, self._heard_count, self._choosing = alphabetical(snapshot.projects), 0, False
-        total = speech.count(len(self._listed), "project", "projects")
+        total = tn(len(self._listed), "{number} project", "{number} projects")
         return f"{total}. {self._next_page()}"
 
     def _next_page(self) -> str:
         if self._listed is None:
-            return _NO_LIST
+            return t(_NO_LIST)
         start = self._heard_count
         page = self._listed[start : start + PAGE_SIZE]
         if not page:
-            return "That is the end of the list."
+            return t("That is the end of the list.")
         self._heard_count += len(page)
         text = " ".join(f"{start + i}, {name}." for i, name in enumerate(page, start=1))
         more = self._heard_count < len(self._listed)
         if self._choosing:
-            return f"{text} Say more, or which number?" if more else f"{text} Which number?"
-        if more:
-            return f"{text} Say more, or set and a number or name."
-        return f"{text} That is the end of the list."
+            ask = t("Say more, or which number?") if more else t("Which number?")
+        elif more:
+            ask = t("Say more, or set and a number or name.")
+        else:
+            ask = t("That is the end of the list.")
+        return f"{text} {ask}"
 
     def _set_number(self, number: int) -> str:
         if self._listed is None:
-            return _NO_LIST
+            return t(_NO_LIST)
         if not 1 <= number <= self._heard_count:
-            return f"I haven't read a number {number}. Say more, or pick a number you heard."
+            return t(
+                "I haven't read a number {number}. Say more, or pick a number you heard.",
+                number=number,
+            )
         return self._set(self._listed[number - 1])
 
     def _set_name(self, spoken: str, snapshot: Snapshot) -> str:
         matches = match_names(spoken, alphabetical(snapshot.projects))
         if not matches:
-            return f"I couldn't find a project matching {spoken}. Say list projects."
+            return t("I couldn't find a project matching {name}. Say list projects.", name=spoken)
         if len(matches) == 1:
             return self._set(matches[0])
         self._listed, self._heard_count, self._choosing = matches, 0, True
-        return f"I found {len(matches)} matches. {self._next_page()}"
+        found = t("I found {number} matches.", number=len(matches))
+        return f"{found} {self._next_page()}"
 
     def _set(self, project: str) -> str:
         self.focus, self.path, self._selected = project, (), None

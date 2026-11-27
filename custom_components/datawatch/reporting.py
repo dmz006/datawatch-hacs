@@ -8,11 +8,12 @@ from dataclasses import replace
 from homeassistant.util import dt as dt_util
 
 from .api import DatawatchClient
-from .voice import automata, custom, reports, speech, work
+from .voice import actions, automata, custom, reports, speech, work
 from .voice.automata import Automaton
 from .voice.conversation import Topic
 from .voice.custom import CustomReport
 from .voice.items import Item
+from .voice.language import t, tn
 from .voice.names import match_names
 from .voice.order import Order
 from .voice.reports import Overview, Report
@@ -88,7 +89,7 @@ async def build(
         case Topic.OVERVIEW if project is not None:
             return reports.overview(await client.overview(project))
         case Topic.OVERVIEW:
-            return Report("Set a project first: say list projects, or set and a project name.")
+            return Report(t(actions.NEEDS_PROJECT))
         case Topic.NEXT if project is not None:
             return reports.next_in(await client.overview(project))
         case Topic.NEXT:
@@ -131,8 +132,11 @@ async def find(client: DatawatchClient, spoken: str) -> tuple[Automaton | None, 
         return await read_automaton(client, found[0][0]), Report("")
     if not found:
         return None, Report(
-            f"I couldn't find {spoken} among the automata that need attention, are running, "
-            "are on hold or finished recently."
+            t(
+                "I couldn't find {name} among the automata that need attention, are running, "
+                "are on hold or finished recently.",
+                name=spoken,
+            )
         )
     return None, automata.choices(spoken, found)
 
@@ -158,19 +162,21 @@ async def run(client: DatawatchClient, report: CustomReport, project: str | None
         snapshot = await client.snapshot(project)
         project = snapshot.focus
         if "status" in report.items:
-            parts["status"] = speech.status(snapshot, project).removesuffix(
-                " Say more detail for more."
-            )
+            said = speech.status(snapshot, project)
+            parts["status"] = said.removesuffix(f" {speech.more_hint()}")
         if "detail" in report.items:
             parts["detail"] = speech.detail(snapshot, project)
         if "questions" in report.items:
-            total = speech.count(snapshot.questions.total, "open question", "open questions")
-            parts["questions"] = f"{total}, across all projects."
+            parts["questions"] = tn(
+                snapshot.questions.total,
+                "{number} open question, across all projects.",
+                "{number} open questions, across all projects.",
+            )
     wanted = [item for item in report.items if item in _ITEM_TOPICS]
     built = await asyncio.gather(*(build(client, _ITEM_TOPICS[i], project) for i in wanted))
     for item, result in zip(wanted, built, strict=True):
         # The hint about numbers only makes sense when the list follows.
-        text = result.summary.replace(" For a full reason say why and its number.", "")
+        text = result.summary.replace(f" {reports.hold_hint()}", "")
         if item in _WITH_LINES:
             text = " ".join((text, *result.items[:3]))
         parts[item] = text

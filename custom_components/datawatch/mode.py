@@ -45,7 +45,9 @@ from .reporting import build, find, read_automaton, run
 from .voice.actions import Action
 from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.custom import CustomReport
+from .voice.grammar import Language
 from .voice.items import GONE, Card, Item, restored, stored
+from .voice.language import N_, for_tag, speaking, t
 from .voice.order import Order, chosen
 from .voice.phrases import Kind, parse
 from .voice.questions import Draft
@@ -65,18 +67,22 @@ IDLE_WAIT = 10.0
 
 _SATELLITE = "assist_satellite"
 _NEEDED = AssistSatelliteEntityFeature.ANNOUNCE | AssistSatelliteEntityFeature.START_CONVERSATION
-_CLOSING = "Closing datawatch."
-_CERTIFICATE = f"The datawatch certificate has changed. Check it in Home Assistant. {_CLOSING}"
-_REFUSED = f"datawatch refused access. Check the token in Home Assistant. {_CLOSING}"
-_FAULT = f"Something went wrong in datawatch mode. {_CLOSING}"
-_SENT = "Answer sent. Say next question."
-_ALREADY_CLOSED = "That question was already answered or withdrawn. Nothing was sent."
-_SECRET = "datawatch refused that answer because it looks like it holds a secret. Nothing was sent."
-_NOT_ACCEPTED = "datawatch refused that answer. Nothing was sent."
-_NOT_CHECKED = "I can't reach datawatch, so nothing was sent. Say my answer or option again."
-_UNSURE = "I don't know whether the answer was sent. Say questions to check."
-_NO_ASSISTANT = "Your assistant didn't answer. Try again, or say stop."
-_SILENT_ASSISTANT = "Your assistant had nothing to say."
+_CLOSING = N_("Closing datawatch.")
+_CERTIFICATE = N_(
+    "The datawatch certificate has changed. Check it in Home Assistant. Closing datawatch."
+)
+_REFUSED = N_("datawatch refused access. Check the token in Home Assistant. Closing datawatch.")
+_FAULT = N_("Something went wrong in datawatch mode. Closing datawatch.")
+_SENT = N_("Answer sent. Say next question.")
+_ALREADY_CLOSED = N_("That question was already answered or withdrawn. Nothing was sent.")
+_SECRET = N_(
+    "datawatch refused that answer because it looks like it holds a secret. Nothing was sent."
+)
+_NOT_ACCEPTED = N_("datawatch refused that answer. Nothing was sent.")
+_NOT_CHECKED = N_("I can't reach datawatch, so nothing was sent. Say my answer or option again.")
+_UNSURE = N_("I don't know whether the answer was sent. Say questions to check.")
+_NO_ASSISTANT = N_("Your assistant didn't answer. Try again, or say stop.")
+_SILENT_ASSISTANT = N_("Your assistant had nothing to say.")
 _SETTING = (Kind.SET_THIS, Kind.SET_NUMBER, Kind.SET_NAME)
 
 
@@ -132,12 +138,20 @@ class DatawatchMode:
 
     async def async_entry_phrase(self, satellite_id: str | None) -> str:
         """An entry phrase was heard. An empty reply means nothing is spoken here."""
+        with speaking(self._language()):
+            return self._entered(satellite_id)
+
+    def _language(self) -> Language:
+        """The voice language: Home Assistant's, or English where voice does not have it."""
+        return for_tag(self._hass.config.language)
+
+    def _entered(self, satellite_id: str | None) -> str:
         if satellite_id is None:
-            return "Datawatch mode works from a voice device."
+            return t("Datawatch mode works from a voice device.")
         state = self._hass.states.get(satellite_id)
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0) if state else 0
         if features & _NEEDED != _NEEDED:
-            return "This voice device can't hold a datawatch conversation."
+            return t("This voice device can't hold a datawatch conversation.")
         if satellite_id not in self._active:
             self._active.add(satellite_id)
             # Not started eagerly: this request has to finish before the mode speaks.
@@ -147,15 +161,19 @@ class DatawatchMode:
         return ""
 
     async def _visit(self, satellite_id: str) -> None:
+        with speaking(self._language()):
+            await self._visit_in_language(satellite_id)
+
+    async def _visit_in_language(self, satellite_id: str) -> None:
         try:
             await self._wait_until_idle(satellite_id)
             await self._converse(satellite_id)
         except HomeAssistantError, TimeoutError:
             _LOGGER.warning("The voice device could not continue datawatch mode", exc_info=True)
-            await self._announce(satellite_id, _CLOSING)
+            await self._announce(satellite_id, t(_CLOSING))
         except Exception:
             _LOGGER.exception("datawatch mode failed")
-            await self._announce(satellite_id, _FAULT)
+            await self._announce(satellite_id, t(_FAULT))
         finally:
             self._active.discard(satellite_id)
 
@@ -266,7 +284,9 @@ class DatawatchMode:
                 try:
                     report = await read_children(client, *children)
                 except DatawatchMissingError:
-                    report = Report(f"datawatch no longer has the {children[0].spoken()}.")
+                    report = Report(
+                        t("datawatch no longer has the {item}.", item=children[0].spoken())
+                    )
             elif needs is Needs.FIND_ITEM:
                 search = conversation.wanted_item_search(heard)
                 assert search is not None, "an item was named"
@@ -294,9 +314,12 @@ class DatawatchMode:
                         conversation.focus, conversation.path = None, ()
                         await self._focus.async_set(None)
                         report = await build(client, topic, None, order=conversation.order)
+                        notice = t(
+                            "Project {project} no longer exists, so the focus is cleared.",
+                            project=gone,
+                        )
                         report = Report(
-                            f"Project {gone} no longer exists, so the focus is cleared. "
-                            f"{report.summary}",
+                            f"{notice} {report.summary}",
                             report.items,
                         )
                 if report is None:
@@ -308,9 +331,9 @@ class DatawatchMode:
                         conversation.order,
                     )
         except DatawatchCertificateError:
-            return Reply(_CERTIFICATE, ends=True)
+            return Reply(t(_CERTIFICATE), ends=True)
         except DatawatchAuthError:
-            return Reply(_REFUSED, ends=True)
+            return Reply(t(_REFUSED), ends=True)
         except DatawatchError:
             _LOGGER.warning("datawatch could not be read", exc_info=True)
         reply = conversation.hear(heard, snapshot, questions, report, automaton, composed, card)
@@ -338,34 +361,34 @@ class DatawatchMode:
                 raise
             except DatawatchError:
                 _LOGGER.warning("datawatch could not be read before answering", exc_info=True)
-                return conversation.sent(_NOT_CHECKED)
+                return conversation.sent(t(_NOT_CHECKED))
             if not still_open:
-                return conversation.sent(_ALREADY_CLOSED)
+                return conversation.sent(t(_ALREADY_CLOSED))
             await client.answer(draft.question.id, option, draft.quote)
         except DatawatchCertificateError:
-            return Reply(_CERTIFICATE, ends=True)
+            return Reply(t(_CERTIFICATE), ends=True)
         except DatawatchAuthError:
-            return Reply(_REFUSED, ends=True)
+            return Reply(t(_REFUSED), ends=True)
         except DatawatchClosedError:
-            return conversation.sent(_ALREADY_CLOSED)
+            return conversation.sent(t(_ALREADY_CLOSED))
         except DatawatchSecretError:
-            return conversation.sent(_SECRET)
+            return conversation.sent(t(_SECRET))
         except DatawatchRefusedError:
             _LOGGER.warning("datawatch refused an answer", exc_info=True)
-            return conversation.sent(_NOT_ACCEPTED)
+            return conversation.sent(t(_NOT_ACCEPTED))
         except DatawatchError:
             _LOGGER.warning("An answer may not have reached datawatch", exc_info=True)
-            return conversation.sent(_UNSURE)
-        return conversation.sent(_SENT)
+            return conversation.sent(t(_UNSURE))
+        return conversation.sent(t(_SENT))
 
     async def _act(self, conversation: Conversation, action: Action) -> Reply:
         """Carry out an action the user has just confirmed, and say what happened."""
         try:
             outcome = await perform(self._entry.runtime_data, action, SESSION_SEND)
         except DatawatchCertificateError:
-            return Reply(_CERTIFICATE, ends=True)
+            return Reply(t(_CERTIFICATE), ends=True)
         except DatawatchAuthError:
-            return Reply(_REFUSED, ends=True)
+            return Reply(t(_REFUSED), ends=True)
         return conversation.sent(outcome)
 
     async def _talk(self, assistant: str, words: str, chat: str | None) -> tuple[str, str | None]:
@@ -381,13 +404,13 @@ class DatawatchMode:
             response: Any = (result or {})["response"]
             if response.get("response_type") == "error":
                 _LOGGER.warning("The AI assistant reported an error: %s", response)
-                return _NO_ASSISTANT, chat
+                return t(_NO_ASSISTANT), chat
             speech = response.get("speech", {}).get("plain", {}).get("speech", "")
         except Exception:
             _LOGGER.warning("The AI assistant could not be asked", exc_info=True)
-            return _NO_ASSISTANT, chat
+            return t(_NO_ASSISTANT), chat
         following = (result or {}).get("conversation_id")
-        return str(speech).strip() or _SILENT_ASSISTANT, str(following) if following else chat
+        return str(speech).strip() or t(_SILENT_ASSISTANT), str(following) if following else chat
 
     async def _announce(self, satellite_id: str, text: str) -> None:
         """Say text without listening. A device that cannot is only logged."""

@@ -1,4 +1,4 @@
-"""Which language datawatch mode listens for.
+"""Which language datawatch mode listens for and speaks.
 
 A language is data in voice/lang/: nothing else changes to add one. English is the only
 one so far, and is used wherever a language has no voice.
@@ -31,9 +31,28 @@ def for_tag(tag: str | None) -> Language:
 
 @contextmanager
 def speaking(language: Language) -> Iterator[None]:
-    """Listen in language inside this block."""
+    """Listen and speak in language inside this block."""
     token = _current.set(language)
     try:
         yield
     finally:
         _current.reset(token)
+
+
+def t(english: str, /, **values: object) -> str:
+    """english in the current language, with its {names} filled in.
+
+    Pass whole sentences: a language may order the words differently.
+    """
+    text = current().texts.get(english, english)
+    return text.format(**values) if values else text
+
+
+def tn(number: int, one: str, many: str, /, **values: object) -> str:
+    """The singular or plural sentence for number, which both may show as {number}."""
+    return t(one if current().singular(number) else many, number=number, **values)
+
+
+def N_(english: str) -> str:
+    """Mark a sentence that is looked up later, with t(), when it is said."""
+    return english

@@ -11,8 +11,7 @@ from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from enum import StrEnum
 
-# Which lists the choice is about, as said aloud.
-APPLIES = "sessions, automations and running work"
+from .language import N_, t
 
 
 class Order(StrEnum):
@@ -20,10 +19,6 @@ class Order(StrEnum):
 
     NAME = "name"
     RECENT = "recent"
-
-
-_SAID = {Order.NAME: "by name", Order.RECENT: "most recent first"}
-_OTHER = {Order.NAME: "most recent first", Order.RECENT: "sort by name"}
 
 
 def chosen(value: object) -> Order:
@@ -53,14 +48,34 @@ def arrange[Row](
     return sorted(by_name, key=lambda row: _when(time(row)), reverse=True)
 
 
+# Each sentence is whole: a language may not be able to build it from parts.
+_CHANGED = {
+    Order.NAME: N_(
+        "Order: by name, for sessions, automations and running work. Say the list again to "
+        "hear it that way. Say most recent first to switch."
+    ),
+    Order.RECENT: N_(
+        "Order: most recent first, for sessions, automations and running work. Say the list "
+        "again to hear it that way. Say sort by name to switch."
+    ),
+}
+_CURRENT = {
+    Order.NAME: N_(
+        "Sessions, automations and running work are listed by name. Say most recent first "
+        "to switch."
+    ),
+    Order.RECENT: N_(
+        "Sessions, automations and running work are listed most recent first. Say sort by "
+        "name to switch."
+    ),
+}
+
+
 def changed(order: Order) -> str:
     """What to say after the user changes the order."""
-    return (
-        f"Order: {_SAID[order]}, for {APPLIES}. Say the list again to hear it that way. "
-        f"Say {_OTHER[order]} to switch."
-    )
+    return t(_CHANGED[order])
 
 
 def current(order: Order) -> str:
     """What to say when the user asks what the order is."""
-    return f"{APPLIES.capitalize()} are listed {_SAID[order]}. Say {_OTHER[order]} to switch."
+    return t(_CURRENT[order])

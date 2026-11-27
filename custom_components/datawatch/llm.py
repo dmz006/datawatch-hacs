@@ -316,7 +316,7 @@ class AutomatonTool(_DatawatchTool):
             return {"summary": report.summary, "matches": list(report.items[:REPORT_LINES])}
         listing = automata.tasks(found)
         return {
-            "summary": automata.summary(found).removesuffix(" Say why, or tasks."),
+            "summary": automata.summary(found).removesuffix(f" {automata.what_next()}"),
             "why": automata.why(found),
             "delivered": automata.results(found),
             "tasks": list(listing.items[:REPORT_LINES]),

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .items import Item
+from .language import N_, t
 
 # The longest name given to something made from spoken words.
 TITLE_LIMIT = 80
@@ -19,25 +20,35 @@ class Act(Enum):
     SESSION = "session"
 
 
-# What sends each one. They differ so that confirming one thing can never send another.
-CONFIRM_WORDS = {
-    Act.AUTOMATON: "confirm automation",
-    Act.BUG: "confirm bug",
-    Act.SESSION: "confirm send",
-}
-_NOUN = {Act.AUTOMATON: "automation", Act.BUG: "bug", Act.SESSION: "message"}
+# Whole sentences for each action. Each names its own confirming words, which differ so
+# that confirming one thing can never send another.
 _ASK = {
-    Act.AUTOMATON: "Go ahead. Say what the automation should do, or cancel.",
-    Act.BUG: "Go ahead. Describe the bug, or cancel.",
-    Act.SESSION: "Go ahead. Say what to send, or cancel.",
+    Act.AUTOMATON: N_("Go ahead. Say what the automation should do, or cancel."),
+    Act.BUG: N_("Go ahead. Describe the bug, or cancel."),
+    Act.SESSION: N_("Go ahead. Say what to send, or cancel."),
 }
-SESSION_SEND_OFF = (
+_CONFIRM_TO_SEND = {
+    Act.AUTOMATON: N_("Say confirm automation to send it, or cancel."),
+    Act.BUG: N_("Say confirm bug to send it, or cancel."),
+    Act.SESSION: N_("Say confirm send to send it, or cancel."),
+}
+_WAITING = {
+    Act.AUTOMATON: N_("Not sent yet. Say confirm automation, or cancel."),
+    Act.BUG: N_("Not sent yet. Say confirm bug, or cancel."),
+    Act.SESSION: N_("Not sent yet. Say confirm send, or cancel."),
+}
+_NOT_SENT = {
+    Act.AUTOMATON: N_("Your automation was not sent."),
+    Act.BUG: N_("Your bug was not sent."),
+    Act.SESSION: N_("Your message was not sent."),
+}
+SESSION_SEND_OFF = N_(
     "Sending to a session is not turned on yet. It is waiting for datawatch's access "
     "controls. Nothing was sent."
 )
-NEEDS_PROJECT = "Set a project first: say list projects, or set and a project name."
-NEEDS_SESSION = "Choose a session first: say sessions, then its number."
-CANCELLED = "Cancelled. Nothing was sent."
+NEEDS_PROJECT = N_("Set a project first: say list projects, or set and a project name.")
+NEEDS_SESSION = N_("Choose a session first: say sessions, then its number.")
+CANCELLED = N_("Cancelled. Nothing was sent.")
 
 
 @dataclass(frozen=True)
@@ -52,10 +63,10 @@ class Target:
         """'a new draft automaton in project oak'."""
         if self.act is Act.SESSION:
             assert self.session is not None
-            return f"a message to the {self.session.spoken()}"
+            return t("a message to the {item}", item=self.session.spoken())
         if self.act is Act.BUG:
-            return f"a bug for project {self.project}"
-        return f"a new draft automaton in project {self.project}"
+            return t("a bug for project {project}", project=self.project)
+        return t("a new draft automaton in project {project}", project=self.project)
 
 
 @dataclass(frozen=True)
@@ -68,7 +79,7 @@ class Action:
 
 def ask(act: Act) -> str:
     """What to say before listening for the words."""
-    return _ASK[act]
+    return t(_ASK[act])
 
 
 def _sentence(text: str) -> str:
@@ -78,21 +89,22 @@ def _sentence(text: str) -> str:
 
 def read_back(action: Action) -> str:
     """Exactly what will be sent, where, and how to send or drop it."""
-    where = action.target.spoken()
-    return (
-        f"Not sent yet. This is {where}. Your words: {_sentence(action.words)} "
-        f"Say {CONFIRM_WORDS[action.target.act]} to send it, or cancel."
+    start = t(
+        "Not sent yet. This is {target}. Your words: {words}",
+        target=action.target.spoken(),
+        words=_sentence(action.words),
     )
+    return f"{start} {t(_CONFIRM_TO_SEND[action.target.act])}"
 
 
 def waiting(act: Act) -> str:
     """The reply to anything else while an action waits."""
-    return f"Not sent yet. Say {CONFIRM_WORDS[act]}, or cancel."
+    return t(_WAITING[act])
 
 
 def not_sent(act: Act) -> str:
     """Said when the user leaves with an action waiting."""
-    return f"Your {_NOUN[act]} was not sent."
+    return t(_NOT_SENT[act])
 
 
 def title_of(words: str) -> str:

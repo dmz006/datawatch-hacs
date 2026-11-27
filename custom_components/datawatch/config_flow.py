@@ -44,7 +44,7 @@ from .const import (
     SUBENTRY_REPORT,
 )
 from .voice.custom import ITEMS, spoken_form
-from .voice.language import current
+from .voice.language import current, for_tag, speaking
 from .voice.order import Order
 from .voice.phrases import Kind, parse
 
@@ -211,7 +211,10 @@ class ReportSubentryFlow(ConfigSubentryFlow):
         if user_input is not None:
             name = " ".join(str(user_input["name"]).split())
             items = [item for item in ITEMS if item in user_input[CONF_ITEMS]]
-            if error := self._name_problem(name, current.subentry_id if current else None):
+            # Checked against the words voice will listen for here.
+            with speaking(for_tag(self.hass.config.language)):
+                error = self._name_problem(name, current.subentry_id if current else None)
+            if error:
                 errors["name"] = error
             elif not items:
                 errors[CONF_ITEMS] = "no_items"

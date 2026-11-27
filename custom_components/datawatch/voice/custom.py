@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .grammar import normalise
-from .language import current
+from .language import current, t, tn
 
 # What a report can hold, in the order it is read.
 ITEMS = (
@@ -49,15 +49,22 @@ def match(heard: str, reports: Sequence[CustomReport]) -> CustomReport | None:
 def listing(reports: Sequence[CustomReport]) -> str:
     """The names of the reports."""
     if not reports:
-        return "You have no reports yet. Add one on the datawatch page in Home Assistant."
-    names = ", ".join(report.name for report in reports)
-    count = "1 report" if len(reports) == 1 else f"{len(reports)} reports"
-    return f"You have {count}: {names}. Say a name."
+        return t("You have no reports yet. Add one on the datawatch page in Home Assistant.")
+    names = t(", ").join(report.name for report in reports)
+    return tn(
+        len(reports),
+        "You have {number} report: {names}. Say a name.",
+        "You have {number} reports: {names}. Say a name.",
+        names=names,
+    )
 
 
 def compose(name: str, parts: Mapping[str, str], items: Sequence[str]) -> str:
     """The spoken report: each chosen part, in the standard order."""
     chosen = [parts[item] for item in ITEMS if item in items and parts.get(item)]
     if not chosen:
-        return f"{name} has nothing in it. Change it on the datawatch page in Home Assistant."
+        return t(
+            "{name} has nothing in it. Change it on the datawatch page in Home Assistant.",
+            name=name,
+        )
     return f"{name}. {' '.join(chosen)}"

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from .language import t
+
 # How much of a question is read back before an answer is sent. It was read in full earlier.
 _REMINDER = 160
 
@@ -61,37 +63,39 @@ def _sentence(text: str) -> str:
     return text if text.endswith((".", "?", "!")) else f"{text}."
 
 
-def _asker(question: Question) -> str:
-    return "from the supervisor" if question.asker_kind == "supervisor" else "from datawatch"
-
-
 def spoken(question: Question, number: int, total: int) -> str:
     """The whole question, its options and the asker's recommendation."""
-    parts = [f"Question {number} of {total}, {_asker(question)}."]
+    opening = (
+        t("Question {number} of {total}, from the supervisor.", number=number, total=total)
+        if question.asker_kind == "supervisor"
+        else t("Question {number} of {total}, from datawatch.", number=number, total=total)
+    )
+    parts = [opening]
     if question.blocking:
-        parts.append("It is blocking work.")
+        parts.append(t("It is blocking work."))
     parts.append(_sentence(question.text))
     parts += [
-        _sentence(f"Option {n}: {option.label}")
+        _sentence(t("Option {number}: {label}", number=n, label=option.label))
         for n, option in enumerate(question.options, start=1)
     ]
     recommended = question.number_of(question.recommended)
     if recommended is not None:
-        parts.append(f"The asker recommends option {recommended}.")
-    parts.append("Say option and a number, my answer, more detail, or next question.")
+        parts.append(t("The asker recommends option {number}.", number=recommended))
+    parts.append(t("Say option and a number, my answer, more detail, or next question."))
     return " ".join(parts)
 
 
 def explained(question: Question) -> str:
     """What each option costs or gives, and why the asker recommends one."""
     parts = [
-        _sentence(f"Option {n}: {option.tradeoffs}")
+        _sentence(t("Option {number}: {label}", number=n, label=option.tradeoffs))
         for n, option in enumerate(question.options, start=1)
         if option.tradeoffs
     ]
     if question.rationale:
-        parts.append(_sentence(f"Why the asker recommends it: {question.rationale}"))
-    return " ".join(parts) or "This question has no more detail."
+        why = t("Why the asker recommends it: {reason}", reason=question.rationale)
+        parts.append(_sentence(why))
+    return " ".join(parts) or t("This question has no more detail.")
 
 
 def _reminder(text: str) -> str:
@@ -104,13 +108,14 @@ def _reminder(text: str) -> str:
 def read_back(draft: Draft) -> str:
     """Exactly what will be sent, and how to send or drop it."""
     parts = [
-        "Not sent yet.",
-        _sentence(f"The question begins: {_reminder(draft.question.text)}"),
+        t("Not sent yet."),
+        _sentence(t("The question begins: {words}", words=_reminder(draft.question.text))),
     ]
     if draft.option is not None:
         number = draft.question.number_of(draft.option.id)
-        parts.append(_sentence(f"Your choice: option {number}, {draft.option.label}"))
+        choice = t("Your choice: option {number}, {label}", number=number, label=draft.option.label)
+        parts.append(_sentence(choice))
     if draft.quote is not None:
-        parts.append(_sentence(f"Your words: {draft.quote}"))
-    parts.append("Say confirm answer to send it, or cancel.")
+        parts.append(_sentence(t("Your words: {words}", words=draft.quote)))
+    parts.append(t("Say confirm answer to send it, or cancel."))
     return " ".join(parts)

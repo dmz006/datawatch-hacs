@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from custom_components.datawatch.voice import custom, language
+from custom_components.datawatch.voice.conversation import Conversation
 from custom_components.datawatch.voice.lang import en
 from custom_components.datawatch.voice.names import match_names
 from custom_components.datawatch.voice.phrases import Command, Kind, parse
@@ -84,3 +85,101 @@ def test_the_parser_holds_no_english_words() -> None:
         and re.search(r"[a-z]{3}", node.value)
     ]
     assert words == []
+
+
+# Everything that words what is said. The AI tools use it too, and are always English.
+SPOKEN = [VOICE / f"{name}.py" for name in (
+    "actions", "automata", "conversation", "custom", "items", "order", "questions",
+    "reports", "speech", "work",
+)] + [VOICE.parent / f"{name}.py" for name in ("mode", "doing", "cards", "reporting")]  # fmt: skip
+# Calls whose text is looked up in the language, and calls whose text is never spoken.
+_LOOKED_UP = ("t", "tn", "N_")
+_UNSPOKEN = ("_LOGGER.", "re.", "DatawatchError")
+
+
+def _texts(tree: ast.AST) -> list[str]:
+    """The English that translators see: the text arguments of t, tn and N_."""
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and ast.unparse(node.func) in _LOOKED_UP:
+            wanted = node.args[1:3] if ast.unparse(node.func) == "tn" else node.args[:1]
+            found += [a.value for a in wanted if isinstance(a, ast.Constant)]
+    return [text for text in found if isinstance(text, str)]
+
+
+def spoken_texts() -> list[str]:
+    """Every sentence a language has to translate."""
+    return sorted({text for path in SPOKEN for text in _texts(ast.parse(path.read_text()))})
+
+
+# Two words, or a word ending a sentence, is something said. One bare word is a code.
+_SAID = r"[A-Za-z]{2,}[,.:]? [A-Za-z]|[A-Za-z]{2,}[.?!]( |$)|^ ?[A-Z][a-z]+ "
+
+
+# Never said: a bug id's start, a tag's start, a storage key and a background task's name.
+_CODES = ("voice-", "automaton:", ".focus", " voice")
+
+
+def _loose_english(tree: ast.AST) -> list[str]:
+    """Words that would be said without being looked up."""
+    skipped: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            if ast.get_docstring(node) and isinstance(node.body[0], ast.Expr):
+                skipped.add(id(node.body[0].value))
+        elif isinstance(node, ast.Call):
+            name = ast.unparse(node.func)
+            if name in _LOOKED_UP:
+                text_args = node.args[1:3] if name == "tn" else node.args[:1]
+                skipped |= {id(a) for a in text_args}
+            elif name.startswith(_UNSPOKEN):
+                skipped |= {id(part) for part in ast.walk(node)}
+        elif isinstance(node, ast.Assert) and node.msg:
+            skipped |= {id(part) for part in ast.walk(node.msg)}
+    # Inside an f-string, even one word is something said.
+    inside = {
+        id(part)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.JoinedStr)
+        for part in node.values
+    }
+    return [
+        f"{node.lineno}: {node.value!r}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in skipped
+        and node.value not in _CODES
+        and re.search(r"[A-Za-z]{2}" if id(node) in inside else _SAID, node.value)
+    ]
+
+
+def test_nothing_is_said_without_being_looked_up() -> None:
+    loose = {
+        path.name: found
+        for path in SPOKEN
+        if (found := _loose_english(ast.parse(path.read_text())))
+    }
+    assert loose == {}
+
+
+def test_every_language_translates_every_sentence() -> None:
+    sentences = spoken_texts()
+    for found in language.LANGUAGES.values():
+        if found is en.LANGUAGE:
+            continue
+        assert sorted(found.texts) == sentences, found.code
+        for english, translated in found.texts.items():
+            assert (
+                re.findall(r"\{\w+\}", translated).sort() == re.findall(r"\{\w+\}", english).sort()
+            )
+            assert set(re.findall(r"\{\w+\}", translated)) == set(re.findall(r"\{\w+\}", english))
+
+
+def test_another_language_changes_what_is_said() -> None:
+    marked = replace(en.LANGUAGE, code="xx", texts={s: f"«{s}»" for s in spoken_texts()})
+    conversation = Conversation()
+    with language.speaking(marked):
+        assert conversation.enter().text == "«Datawatch activated.»"
+        assert conversation.hear("help", None).text.startswith("«You can say: ")
+    assert Conversation().enter().text == "Datawatch activated."

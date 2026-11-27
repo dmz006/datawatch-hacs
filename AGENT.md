@@ -85,6 +85,8 @@ recommendation and why.
   spoken commands in English while voice is English only. The cards' words are in the
   `TEXT` table in `frontend/datawatch-cards.js`, never in the drawing code.
 - Words listened for belong in a language's file in `voice/lang/`, never in `phrases.py`.
+  Anything said aloud goes through `t()` or `tn()` as a whole sentence, never built from
+  word fragments.
 - Keep the diagrams in `docs/how-it-works.md` matching the code.
 - All settings are in Home Assistant's setup screens; no YAML-only options.
 

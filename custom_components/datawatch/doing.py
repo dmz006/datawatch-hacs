@@ -20,21 +20,22 @@ from .api import (
     DatawatchRefusedError,
 )
 from .voice.actions import SESSION_SEND_OFF, Act, Action, title_of
+from .voice.language import N_, t
 from .voice.reports import words
 
 _LOGGER = logging.getLogger(__name__)
 
-NOT_CHECKED = "I can't reach datawatch, so nothing was sent. Say it again."
-UNSURE = "I don't know whether it was sent. Check datawatch before saying it again."
-REFUSED = "datawatch did not accept it. Nothing was sent."
-_SESSION_REFUSED = (
+NOT_CHECKED = N_("I can't reach datawatch, so nothing was sent. Say it again.")
+UNSURE = N_("I don't know whether it was sent. Check datawatch before saying it again.")
+REFUSED = N_("datawatch did not accept it. Nothing was sent.")
+_SESSION_REFUSED = N_(
     "datawatch did not accept it, so nothing was sent. The session may be showing a prompt "
     "to answer in datawatch."
 )
 _BUG_ROUTES = {
-    "tiny_fix": " datawatch made a one-task draft for it.",
-    "open_batch": " datawatch added it to an open draft bug group.",
-    "new_batch": " datawatch made a new draft bug group for it.",
+    "tiny_fix": N_("datawatch made a one-task draft for it."),
+    "open_batch": N_("datawatch added it to an open draft bug group."),
+    "new_batch": N_("datawatch made a new draft bug group for it."),
 }
 
 
@@ -48,9 +49,11 @@ async def _directory(client: DatawatchClient, project: str) -> str:
     except DatawatchCertificateError, DatawatchAuthError:
         raise
     except DatawatchError as error:
-        raise _Stopped(NOT_CHECKED) from error
+        raise _Stopped(t(NOT_CHECKED)) from error
     if project not in directories:
-        raise _Stopped(f"datawatch no longer has the project {project}. Nothing was sent.")
+        raise _Stopped(
+            t("datawatch no longer has the project {project}. Nothing was sent.", project=project)
+        )
     return directories[project]
 
 
@@ -58,20 +61,25 @@ async def _automaton(client: DatawatchClient, action: Action) -> str:
     project = action.target.project
     directory = await _directory(client, project)
     if not directory:
-        raise _Stopped(f"datawatch gives no folder for project {project}. Nothing was sent.")
+        raise _Stopped(
+            t("datawatch gives no folder for project {project}. Nothing was sent.", project=project)
+        )
     made = await client.create_automaton(action.words, directory)
     title = title_of(action.words)
     try:
         await client.name_automaton(made, title)
     except DatawatchError:
         _LOGGER.warning("A new automaton could not be named", exc_info=True)
-        return (
-            f"Added a draft automaton to project {project}, but I could not name it, so it "
-            "may show as untitled. Do not add it again."
+        return t(
+            "Added a draft automaton to project {project}, but I could not name it, so it "
+            "may show as untitled. Do not add it again.",
+            project=project,
         )
-    return (
-        f"Added a draft automaton to project {project}, named {title}. I did not ask "
-        "datawatch to plan or start it."
+    return t(
+        "Added a draft automaton to project {project}, named {title}. I did not ask "
+        "datawatch to plan or start it.",
+        project=project,
+        title=title,
     )
 
 
@@ -82,8 +90,13 @@ async def _bug(client: DatawatchClient, action: Action) -> str:
     try:
         route = await client.report_bug(ident, title_of(action.words), action.words, project)
     except DatawatchBugsOffError:
-        return f"datawatch's bug intake is turned off for project {project}. Nothing was sent."
-    return f"Bug reported for project {project}.{_BUG_ROUTES.get(route, '')}"
+        return t(
+            "datawatch's bug intake is turned off for project {project}. Nothing was sent.",
+            project=project,
+        )
+    reported = t("Bug reported for project {project}.", project=project)
+    became = _BUG_ROUTES.get(route)
+    return f"{reported} {t(became)}" if became else reported
 
 
 async def _session(client: DatawatchClient, action: Action) -> str:
@@ -94,18 +107,21 @@ async def _session(client: DatawatchClient, action: Action) -> str:
     except DatawatchCertificateError, DatawatchAuthError:
         raise
     except DatawatchError as error:
-        raise _Stopped(NOT_CHECKED) from error
+        raise _Stopped(t(NOT_CHECKED)) from error
     if found is None:
-        raise _Stopped("datawatch no longer has that session. Nothing was sent.")
+        raise _Stopped(t("datawatch no longer has that session. Nothing was sent."))
     if found.state != "waiting_input":
         raise _Stopped(
-            f"That session is {words(found.state)} now, not waiting for input. Nothing was sent."
+            t(
+                "That session is {state} now, not waiting for input. Nothing was sent.",
+                state=words(found.state),
+            )
         )
     try:
         await client.send_to_session(target.id, action.words)
     except DatawatchRefusedError:
-        return _SESSION_REFUSED
-    return f"Sent to the {target.spoken()}."
+        return t(_SESSION_REFUSED)
+    return t("Sent to the {item}.", item=target.spoken())
 
 
 async def perform(client: DatawatchClient, action: Action, session_send: bool) -> str:
@@ -119,7 +135,7 @@ async def perform(client: DatawatchClient, action: Action, session_send: bool) -
             case Act.SESSION:
                 # Checked here as well as in the conversation.
                 if not session_send:
-                    return SESSION_SEND_OFF
+                    return t(SESSION_SEND_OFF)
                 return await _session(client, action)
     except _Stopped as stopped:
         return str(stopped)
@@ -127,7 +143,7 @@ async def perform(client: DatawatchClient, action: Action, session_send: bool) -
         raise
     except DatawatchRefusedError:
         _LOGGER.warning("datawatch refused an action", exc_info=True)
-        return REFUSED
+        return t(REFUSED)
     except DatawatchError:
         _LOGGER.warning("An action may not have reached datawatch", exc_info=True)
-        return UNSURE
+        return t(UNSURE)

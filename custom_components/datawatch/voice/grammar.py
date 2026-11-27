@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,10 @@ class Language:
 
     code: str
     grammar: Grammar
+    # What is said, keyed by the English sentence. English needs none.
+    texts: Mapping[str, str] = field(default_factory=dict)
+    # Whether a number takes the singular.
+    singular: Callable[[int], bool] = lambda number: number == 1
 
 
 def normalise(heard: str, apostrophes: str = "'\N{RIGHT SINGLE QUOTATION MARK}") -> str:

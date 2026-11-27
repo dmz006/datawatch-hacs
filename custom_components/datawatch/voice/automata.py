@@ -6,9 +6,10 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from .items import Decision, Item
-from .reports import Report, words
-from .speech import count, join
+from .items import Decision, Item, shorten
+from .language import t, tn
+from .reports import Report, counted, words
+from .speech import join
 from .work import Delivery, delivery
 
 # The most of one reason that is read out.
@@ -44,7 +45,7 @@ class Automaton:
 
 def task_status(status: str) -> str:
     """datawatch leaves the status empty until a task is first queued."""
-    return words(status) if status else "not started"
+    return words(status) if status else t("not started")
 
 
 def _clean(text: str) -> str:
@@ -52,32 +53,42 @@ def _clean(text: str) -> str:
 
 
 def _reason(text: str) -> str:
-    text = _clean(text)
-    if len(text) <= _REASON:
-        return f"{text}."
-    return f"{text[:_REASON].rsplit(' ', 1)[0]}, and more. See datawatch for the rest."
+    return shorten(_clean(text), _REASON)
 
 
 def progress(automaton: Automaton) -> str:
     """How many tasks are done, and what the rest are doing."""
     if not automaton.tasks:
-        return "It has no tasks."
+        return t("It has no tasks.")
     counts = Counter(task.status for task in automaton.tasks)
     done = counts.pop("completed", 0)
-    text = f"{done} of {count(len(automaton.tasks), 'task', 'tasks')} completed."
+    text = tn(
+        len(automaton.tasks),
+        "{done} of {number} task completed.",
+        "{done} of {number} tasks completed.",
+        done=done,
+    )
     if counts:
-        rest = [f"{number} {task_status(status)}" for status, number in counts.most_common()]
-        text += f" The rest: {join(rest)}."
+        rest = [
+            counted(number, status) if status else t("{number} not started", number=number)
+            for status, number in counts.most_common()
+        ]
+        text += " " + t("The rest: {parts}.", parts=join(rest))
     return text
+
+
+def what_next() -> str:
+    """What a summary ends with."""
+    return t("Say why, or tasks.")
 
 
 def summary(automaton: Automaton) -> str:
     """What it is, where it belongs and how far it has got."""
-    where = f" Project {automaton.project}." if automaton.project else ""
-    return (
-        f"{_clean(automaton.title)}: {words(automaton.status)}.{where} {progress(automaton)} "
-        "Say why, or tasks."
-    )
+    parts = [f"{_clean(automaton.title)}: {words(automaton.status)}."]
+    if automaton.project:
+        parts.append(t("Project {project}.", project=automaton.project))
+    parts += [progress(automaton), what_next()]
+    return " ".join(parts)
 
 
 def results(automaton: Automaton) -> str:
@@ -90,33 +101,48 @@ def results(automaton: Automaton) -> str:
 
 def why(automaton: Automaton) -> str:
     """What datawatch says about why it is not moving. Never guesses."""
-    parts = [f"{_clean(automaton.title)} is {words(automaton.status)}."]
+    parts = [t("{title} is {state}.", title=_clean(automaton.title), state=words(automaton.status))]
     if automaton.hold:
-        parts.append(f"It is on hold: {_reason(automaton.hold)}")
+        parts.append(t("It is on hold: {reason}", reason=_reason(automaton.hold)))
     if automaton.reason:
-        parts.append(f"datawatch says: {_reason(automaton.reason)}")
+        parts.append(t("datawatch says: {reason}", reason=_reason(automaton.reason)))
     stuck = [task for task in automaton.tasks if task.status in _STUCK]
     if stuck:
         first = stuck[0]
-        needs = "task is" if len(stuck) == 1 else "tasks are"
         parts.append(
-            f"{len(stuck)} {needs} stuck. First: {_clean(first.title)}, "
-            f"{task_status(first.status)}."
+            tn(
+                len(stuck),
+                "{number} task is stuck. First: {title}, {state}.",
+                "{number} tasks are stuck. First: {title}, {state}.",
+                title=_clean(first.title),
+                state=task_status(first.status),
+            )
         )
     waiting = next((task for task in automaton.tasks if task.reason), None)
     if waiting is not None and not automaton.reason:
-        parts.append(f"For the task {_clean(waiting.title)}: {_reason(waiting.reason)}")
+        parts.append(
+            t(
+                "For the task {title}: {reason}",
+                title=_clean(waiting.title),
+                reason=_reason(waiting.reason),
+            )
+        )
     if len(parts) == 1:
-        parts.append("datawatch gives no reason.")
+        parts.append(t("datawatch gives no reason."))
     return " ".join(parts)
 
 
 def tasks(automaton: Automaton) -> Report:
     """Its tasks in order."""
     if not automaton.tasks:
-        return Report(f"{_clean(automaton.title)} has no tasks.")
+        return Report(t("{title} has no tasks.", title=_clean(automaton.title)))
     lines = tuple(
-        f"Task {number}, {_clean(task.title)}: {task_status(task.status)}."
+        t(
+            "Task {number}, {title}: {state}.",
+            number=number,
+            title=_clean(task.title),
+            state=task_status(task.status),
+        )
         for number, task in enumerate(automaton.tasks, start=1)
     )
     under = Item("automaton", automaton.id, automaton.title)
@@ -131,17 +157,18 @@ def tasks(automaton: Automaton) -> Report:
 
 def task_detail(task: Task, automaton_title: str) -> str:
     """One task: its status, which automaton it is in, and any recorded reason."""
-    text = (
-        f"Task {_clean(task.title)}: {task_status(task.status)}. In the automaton "
-        f"{_clean(automaton_title)}."
-    )
-    return f"{text} datawatch says: {_reason(task.reason)}" if task.reason else text
+    state = task_status(task.status)
+    first = t("Task {title}: {state}.", title=_clean(task.title), state=state)
+    text = f"{first} {t('In the automaton {title}.', title=_clean(automaton_title))}"
+    if not task.reason:
+        return text
+    return f"{text} {t('datawatch says: {reason}', reason=_reason(task.reason))}"
 
 
 def choices(spoken: str, found: Sequence[tuple[str, str]]) -> Report:
     """Several automata fit a spoken name: (id, title) pairs to choose between."""
     return Report(
-        f"I found {len(found)} matching {spoken}. Say a number.",
+        t("I found {number} matching {name}. Say a number.", number=len(found), name=spoken),
         tuple(f"{n}, {_clean(title)}." for n, (_, title) in enumerate(found, start=1)),
         tuple(Item("automaton", ident, title) for ident, title in found),
     )

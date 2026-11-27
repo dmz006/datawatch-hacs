@@ -11,9 +11,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from .speech import count, join
+from .language import N_, t, tn
+from .speech import join
 
 KINDS = ("plan", "automation", "automaton", "task", "session")
+_SPOKEN = {
+    "plan": N_("plan {title}"),
+    "automation": N_("automation {title}"),
+    "automaton": N_("automaton {title}"),
+    "task": N_("task {title}"),
+    "session": N_("session {title}"),
+}
 
 
 @dataclass(frozen=True)
@@ -30,7 +38,7 @@ class Item:
 
     def spoken(self) -> str:
         """'the automaton Paint the fence'."""
-        return f"{self.kind} {clean(self.title)}"
+        return t(_SPOKEN[self.kind], title=clean(self.title))
 
 
 @dataclass(frozen=True)
@@ -79,7 +87,7 @@ class Decision:
 
 def clean(text: str) -> str:
     """Tidy a title or note for saying."""
-    return " ".join(text.split()).rstrip(".") or "untitled"
+    return " ".join(text.split()).rstrip(".") or t("untitled")
 
 
 def shorten(text: str, limit: int) -> str:
@@ -87,14 +95,14 @@ def shorten(text: str, limit: int) -> str:
     text = " ".join(text.split()).rstrip(".")
     if len(text) <= limit:
         return f"{text}."
-    return f"{text[:limit].rsplit(' ', 1)[0]}, and more. See datawatch for the rest."
+    return t("{start}, and more. See datawatch for the rest.", start=text[:limit].rsplit(" ", 1)[0])
 
 
 def describe(project: str | None, path: Sequence[Item]) -> str:
     """'project oak, automaton Paint the fence'. Empty with no focus."""
-    parts = [f"project {project}"] if project else []
+    parts = [t("project {project}", project=project)] if project else []
     parts += [item.spoken() for item in path]
-    return ", ".join(parts)
+    return t(", ").join(parts)
 
 
 def stored(path: Sequence[Item]) -> list[dict[str, str]]:
@@ -118,27 +126,38 @@ def restored(saved: Any) -> tuple[Item, ...]:
 
 
 def _latest(decision: Decision) -> str:
-    text = decision.kind.replace("_", " ")
+    # datawatch's own word for what happened: translated where a language lists it.
+    text = t(decision.kind.replace("_", " "))
     if decision.actor:
-        text += f", by {decision.actor}"
+        text = t("{what}, by {actor}", what=text, actor=decision.actor)
     return f"{text}: {shorten(decision.note, 200)}" if decision.note else f"{text}."
 
 
 def history(title: str, decisions: Sequence[Decision]) -> str:
     """The last few things recorded, newest first."""
     if not decisions:
-        return f"datawatch has no history for {clean(title)}."
+        return t("datawatch has no history for {title}.", title=clean(title))
     recent = list(reversed(decisions))[:3]
     lines = [f"{number}, {_latest(d)}" for number, d in enumerate(recent, start=1)]
-    total = count(len(decisions), "entry", "entries")
-    return f"{clean(title)} has {total}. The latest: {' '.join(lines)}"
+    return tn(
+        len(decisions),
+        "{title} has {number} entry. The latest: {lines}",
+        "{title} has {number} entries. The latest: {lines}",
+        title=clean(title),
+        lines=" ".join(lines),
+    )
 
 
 def member_summary(statuses: Sequence[str]) -> str:
     """'5 members: 2 completed and 3 running'. Only the total if any status is unknown."""
-    total = count(len(statuses), "member", "members")
+    total = tn(len(statuses), "{number} member", "{number} members")
     if not statuses or not all(statuses):
         return total
     counts = Counter(statuses)
-    parts = join([f"{n} {status.replace('_', ' ')}" for status, n in counts.most_common()])
+    parts = join(
+        [
+            t("{number} {state}", number=n, state=t(status.replace("_", " ")))
+            for status, n in counts.most_common()
+        ]
+    )
     return f"{total}: {parts}"
