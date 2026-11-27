@@ -20,7 +20,7 @@ from urllib.parse import quote, urlsplit
 
 import aiohttp
 
-from .gantt import AUTOMATA, HOURS, STATUSES
+from .charts import LANE_HOURS
 from .voice.automata import Automaton, Task
 from .voice.items import Decision
 from .voice.model import Snapshot, Tally
@@ -733,19 +733,26 @@ class DatawatchClient:
             raise DatawatchError("unknown dashboard data set")
         return _table(await self._get(path))
 
-    async def live_work(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        """What the lanes ran, and the unfinished automata with their tasks."""
-        lanes = _table(await self._get("autonomous/lane-utilization", {"window": f"{HOURS}h"}))
-        query = {"status": STATUSES, "full": "true", "limit": str(AUTOMATA)}
-        listed = _table(await self._get("autonomous/prds", query))
-        rows = listed.get("prds")
-        if not isinstance(lanes.get("lanes"), list) or not isinstance(rows, list):
-            raise DatawatchError("unexpected live work reply")
-        # Tasks that datawatch counts but does not send would look like nothing running.
-        for row in rows:
-            if isinstance(row, dict) and row.get("task_count") and "stories" not in row:
-                raise DatawatchError("datawatch sent automata without their tasks")
-        return lanes, listed
+    async def project_timeline(self, project: str) -> dict[str, Any]:
+        """The automata of one project, with when their tasks ran."""
+        reply = _table(
+            await self._get("autonomous/timeline", {"project": project}, timeout=SLOW_TIMEOUT)
+        )
+        if not isinstance(reply.get("projects"), list):
+            raise DatawatchError("unexpected timeline reply")
+        return reply
+
+    async def automation_records(self) -> list[dict[str, Any]]:
+        """Every automation as datawatch sends it, with its members."""
+        return _rows(await self._get("automations", timeout=SLOW_TIMEOUT), "name", "status")
+
+    async def lane_activity(self) -> dict[str, Any]:
+        """How busy each lane was over the last hours, in steps."""
+        query = {"window": f"{LANE_HOURS}h"}
+        reply = _table(await self._get("autonomous/lane-utilization", query))
+        if not isinstance(reply.get("lanes"), list):
+            raise DatawatchError("unexpected lane reply")
+        return reply
 
     async def delivery(self, automaton_id: str) -> Delivery | None:
         """datawatch's record of what an automaton changed, or None if it has none."""

@@ -226,8 +226,8 @@ unavailable.
 | `GET /api/sessions?view=summary&status=…` | Counts of waiting, running and failed sessions; filtered by project when you have a focus |
 | `GET /api/dashboard/series/lane-utilization` | Every 5 minutes: lanes and their hourly use |
 | `GET /api/dashboard/console`, `lane-pulse`, `series/defects-per-day`, `series/review-backlog`, `series/throughput-forecast` | Every 5 minutes, only while a sensor that shows it is enabled |
-| `GET /api/autonomous/lane-utilization?window=6h` | Every 5 minutes, only while the live work sensor is enabled: what each lane ran |
-| `GET /api/autonomous/prds?status=running,blocked,planning&full=true` | The same: the unfinished automata (20 at most) with their tasks. Only titles, states and times are kept |
+| `GET /api/autonomous/lane-utilization?window=6h` | The lane activity card, while on screen |
+| `GET /api/autonomous/timeline?project=…`, `GET /api/automations`, `GET /api/projects` | The Gantt card, while on screen and when you change project or range. Only names, titles, states and times are passed on |
 | `GET /api/alerts` | Unread alerts. Only titles, levels, times and session links are kept |
 | `GET /api/autonomous/held` | Items on hold |
 | `GET /api/autonomous/triage` | Failed and blocked automata |

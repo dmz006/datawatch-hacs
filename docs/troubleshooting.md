@@ -140,18 +140,21 @@ minute, and the dashboard data every 5 minutes.
 - **No history:** history starts when you enable the sensor. The `data` attribute is never
   saved in history.
 
-## The datawatch Gantt card is missing, empty or old
+## A datawatch dashboard card is missing, empty or old
 
 - **Not in "Add card":** reload the browser page (close and reopen the mobile app) after
   installing or updating, and after restarting Home Assistant. Home Assistant's **Safe
   mode** does not load it.
-- **"... was not found":** enable the sensor **Dashboard data: live work**.
-- **No task bars:** no task of running, blocked or planning work ran in the last 6 hours.
-  A paused datawatch shows this.
+- **"Restart Home Assistant, then reload this page.":** the card is newer than the running
+  integration.
 - **"datawatch cannot be read right now.":** check datawatch is running, and the Home
-  Assistant log.
-- **The time looks old:** the card shows the time its data goes up to. It updates every 5
-  minutes.
+  Assistant log. If data was already shown, it stays, with the time it was read.
+- **The Gantt is short or empty:** choose a longer range, or another project. Rows are shown
+  twenty at a time.
+- **A row looks open although everything in it is done:** it has cancelled automata, which
+  do not count as done.
+- **Lane lines are hidden behind each other:** tap a lane's name.
+- **The old live-work card:** it becomes the project Gantt. The old sensor is removed.
 
 ## A list is not in the order I chose
 

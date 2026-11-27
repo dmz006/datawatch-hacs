@@ -4,7 +4,7 @@ Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, wha
 why something is stuck, what your sessions are doing and what is next, hear its questions and
 answer them, hear its alerts, add an automation or report a bug, by voice and without
 touching a screen. It can also bring datawatch's numbers into Home Assistant for your own
-dashboards, with a live Gantt card of its own.
+dashboards, with its own cards: a project Gantt and a lane activity chart.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
@@ -19,8 +19,8 @@ Home Assistant voice device.
 > Focus and "go back" have been tried against a real datawatch with a pretend voice device,
 > **not yet by voice**. Adding an automaton and reporting a bug have been tested only against
 > a pretend datawatch. Alerts and the dashboard data sensors have been tried against a real
-> datawatch from a test copy of Home Assistant; alerts **not yet by voice**. The Gantt card
-> has been tested in a headless Chrome, **not yet inside a Home Assistant dashboard**.
+> datawatch from a test copy of Home Assistant; alerts **not yet by voice**. The two dashboard
+> cards have been tested in a headless Chrome, **not yet inside a Home Assistant dashboard**.
 
 ## How it works
 
@@ -420,7 +420,6 @@ after a short reload. They are read every **5 minutes**.
 | `dashboard_data_bugs` | Bugs taken in, last 14 days | Bugs per day. datawatch's "fixed" counts bugs it made a one-task fix for, not finished fixes |
 | `dashboard_data_review_backlog` | Automata waiting for a decision | Their titles and how long they have waited (50 at most) |
 | `dashboard_data_forecast` | Automata finished per day | The forecast over the last 30 days |
-| `dashboard_data_live_work` | Task bars in the last 6 hours | What the [Gantt card](#the-gantt-card-live-work) draws |
 
 **The `data` attribute is not saved in history.** It is current data only, in the shape
 datawatch sends it, which can change with datawatch versions. The one free-text note in the
@@ -447,33 +446,6 @@ newest forecast point is more than a day old (by UTC date); the older points are
 `data`. A lane sensor is unknown when datawatch reports nothing for that lane. A lane is
 added when datawatch first reports it.
 
-### The Gantt card (live work)
-
-The integration comes with its own dashboard card. It shows **the last 6 hours**: a row for
-each datawatch lane, then the tasks of work that is **running, blocked or being planned**.
-It updates every **5 minutes**.
-
-1. Enable the sensor **Dashboard data: live work** (it starts disabled, like the others).
-2. Reload the page in your browser. In the mobile app, close it and open it again.
-3. In a dashboard, choose **Add card**, search for **datawatch Gantt**, and add it.
-
-You do not need an add-on or to write YAML. If you prefer YAML:
-
-```yaml
-type: custom:datawatch-gantt-card
-title: datawatch live work   # optional
-```
-
-- A bar's label gives its state in words, and pointing at it, or moving to it with the
-  keyboard, gives its times. A bar with a dark right edge was still running.
-- A lane with nothing in the 6 hours says **idle**. When datawatch is paused, there may be
-  no task bars at all.
-- Work that **finished** (completed, cancelled or archived) is not listed under tasks.
-- It reads at most **20** unfinished automata and says how many more there are. This follows
-  the rules of datawatch's own Gantt card.
-- datawatch sends whole records for this, with task instructions and history; they can be
-  large (about 1 MB with six automata). **Only titles, states and times are kept.**
-
 **A graph over time** with Home Assistant's own card. In a dashboard, add a card, choose
 **Manual**, and paste this, after enabling the sensor in it:
 
@@ -486,9 +458,69 @@ entities:
   - sensor.datawatch_weekly_usage_pace_line
 ```
 
-Apart from the Gantt card, drawing the lists in `data` (for example a chart of bugs per day)
-needs a card that can read attributes; Home Assistant's history cards cannot. datawatch's large work map and timeline
-are not included.
+Drawing the lists in `data` (for example a chart of bugs per day) needs a card that can read
+attributes; Home Assistant's history cards cannot. datawatch's large work map is not
+included.
+
+## datawatch's dashboard cards
+
+The integration comes with two cards of its own. You need **no add-on, no YAML and no
+sensor**. They are laid out for a phone as well as a wide screen, read datawatch only while
+they are on screen, and update every **5 minutes**.
+
+**To add one:** reload the page in your browser (in the mobile app, close it and open it
+again). Then, in a dashboard, choose **Add card** and search for **datawatch**.
+
+### datawatch Gantt (project)
+
+One project's **automations and automata over time**, with counts.
+
+- **Choose** the project and the range (**7, 30, 90 days or All**) on the card. Your browser
+  remembers both.
+- **Each row is an automation:** how many of its automata are done, how many are in each
+  other state, and datawatch's own word for the automation. **Tap a row** to see its
+  automata, with their states and dates.
+- **Which rows:** every automation that holds any of the project's automata, including
+  automations that datawatch files under no project. Only this project's automata are
+  counted in a row. An automaton in more than one automation counts in each row. The rest are
+  in a row named **Automata in no automation**.
+- **Done:** when every automaton in a row is completed or archived, its bar is green and it
+  says **done**, even if datawatch still calls the automation something else, which is
+  shown beside it.
+- **Bars:** solid from when the first task started to when the latest task finished. A
+  **dashed** line means it is still open. Running work is drawn the same way: a bar is solid
+  only as far as finished work. An automaton with no started task has no bar.
+- **Order:** rows with unfinished automata first, then others datawatch has open, then the
+  rest; each most recently worked on first.
+- A range never hides open rows; it hides finished ones older than it, and says how many.
+  Twenty rows are shown at first. A row lists 100 automata at most; its counts cover all.
+
+### datawatch lane activity
+
+**One line for each datawatch lane**, overlapping: how busy it was over the **last 6 hours**,
+in 15-minute steps.
+
+- The lines differ by pattern as well as colour. Lines can lie on top of each other: **tap a
+  lane's name** to pick it out.
+- Under the chart, each lane's latest and average share. Lanes that were idle the whole time
+  are named, not drawn.
+
+In YAML, if you prefer (both settings of the first are optional):
+
+```yaml
+type: custom:datawatch-gantt-card
+project: oak        # the project shown first
+title: My Gantt
+```
+
+```yaml
+type: custom:datawatch-lanes-card
+```
+
+**Any signed-in Home Assistant user can use these cards' data**, so they can see your
+project, automation, automaton and lane names. datawatch sends large records for the Gantt
+(about 3 MB for a project with 900 automata); only names, titles, states and times are passed
+to the page.
 
 ## Use your AI assistant (optional)
 

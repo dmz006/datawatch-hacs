@@ -67,58 +67,71 @@ def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, An
 
 
 SECRET_SPEC = "made-up instructions that a chart must never carry"
-NEVER = "0001-01-01T00:00:00Z"
 
 
-def made_up_live_work(now: datetime) -> tuple[dict[str, Any], dict[str, Any]]:
+def made_up_chart_data(
+    now: datetime,
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    """A project's timeline, datawatch's automations, and lane activity."""
+
     def ago(**gap: float) -> str:
         return (now - timedelta(**gap)).isoformat()
 
-    def task(title: str, status: str, started: str, completed: str = NEVER) -> dict[str, Any]:
+    def automaton(
+        ident: str, title: str, status: str, start: str | None, done: str | None = None
+    ) -> dict[str, Any]:
         return {
+            "id": ident,
             "title": title,
             "status": status,
-            "started_at": started,
-            "completed_at": completed,
+            "start": start,
+            "end": done if status in ("completed", "archived") else None,
+            "stages": [{"members": [{"end": done, "spec": SECRET_SPEC}]}],
             "spec": SECRET_SPEC,
-            "history": [SECRET_SPEC],
         }
 
+    entries = [
+        automaton("a1", "Paint", "running", ago(days=3), ago(days=1)),
+        automaton("a2", "Sand", "completed", ago(days=5), ago(days=4)),
+        automaton("a3", "Old posts", "archived", ago(days=60), ago(days=50)),
+        automaton("a4", "Old rails", "completed", ago(days=70), ago(days=65)),
+        automaton("a5", "Gate", "draft", None),
+        automaton("a6", "Stray", "blocked", ago(days=2)),
+        automaton("a7", "Long gone stray", "completed", ago(days=90), ago(days=89)),
+    ]
+    timeline = {"projects": [{"project": "x", "automata": entries}]}
+
+    def automation(ident: str, name: str, status: str, *members: str) -> dict[str, Any]:
+        return {
+            "id": ident,
+            "name": name,
+            "status": status,
+            "project": "oak" if ident == "m1" else "",
+            "members": [{"prd_id": member} for member in members],
+            "decisions": [{"note": SECRET_SPEC}],
+        }
+
+    automations = [
+        automation("m1", "Made-up fence", "draft", "a1", "a2", "a2", "elsewhere"),
+        automation("m2", "Finished long ago", "draft", "a3", "a4"),
+        automation("m3", "Not started", "blocked", "a5"),
+        automation("m4", "Another project's", "running", "elsewhere"),
+    ]
+    steps = [
+        {"end": ago(minutes=15), "busy_share": 0.5},
+        {"end": ago(minutes=0), "busy_share": 1.2},
+        {"end": "soon", "busy_share": 1},
+        {"end": ago(minutes=0), "busy_share": None},
+    ]
     lanes = {
+        "window_start": ago(hours=6),
         "window_end": now.isoformat(),
         "lanes": [
-            {
-                "id": "red",
-                "runs": [
-                    {"title": "Made-up long run", "start": ago(days=3), "end": ago(hours=3)},
-                    {"title": "Made-up open run", "start": ago(hours=1), "end": ""},
-                    {"title": "Too old", "start": ago(hours=20), "end": ago(hours=9)},
-                ],
-            },
-            {"id": "blue", "runs": []},
+            {"id": "red", "busy_share": 0.625, "buckets": steps},
+            {"id": "blue", "busy_share": 0, "buckets": []},
         ],
     }
-    tasks = [
-        task("Paint", "in_progress", ago(hours=2)),
-        task("Sand", "completed", ago(hours=5), ago(hours=4)),
-        task("Long ago", "completed", ago(hours=30), ago(hours=29)),
-        task("Not started", "pending", NEVER),
-        task("Stopped without an end", "failed", ago(hours=1)),
-    ]
-    listed = {
-        "total": 3,
-        "prds": [
-            {
-                "title": "Made-up fence",
-                "status": "running",
-                "spec": SECRET_SPEC,
-                "task_count": len(tasks),
-                "stories": [{"tasks": tasks}],
-            },
-            {"title": "Quiet one", "status": "blocked", "task_count": 0, "stories": []},
-        ],
-    }
-    return lanes, listed
+    return timeline, automations, lanes
 
 
 def made_up_dashboards() -> dict[str, Any]:
@@ -235,7 +248,9 @@ class Fake:
         self.bug_route = "new_batch"
         self.input_status = 200
         self.dashboards: dict[str, Any] = made_up_dashboards()
-        self.live_lanes, self.live_listed = made_up_live_work(datetime.now(UTC))
+        self.timeline, self.chart_automations, self.lane_activity = made_up_chart_data(
+            datetime.now(UTC)
+        )
         # Alerts, newest first. A body can be raw terminal text and must never be heard.
         self.alerts: list[dict[str, Any]] = [
             made_up_alert("n1", "Made-up build finished", session="host-1111"),
@@ -458,9 +473,9 @@ class Fake:
         if request.path == "/api/autonomous/held":
             return web.json_response({"held": self.held, "total": self.held_total, "expired": 0})
         if request.path == "/api/autonomous/lane-utilization":
-            return web.json_response(self.live_lanes)
-        if request.path == "/api/autonomous/prds" and query.get("full") == "true":
-            return web.json_response(self.live_listed)
+            return web.json_response(self.lane_activity)
+        if request.path == "/api/autonomous/timeline":
+            return web.json_response(self.timeline)
         if request.path == "/api/autonomous/prds":
             source = self.finished if query.get("status") == "completed" else self.running
             rows = source if query.get("project") in (None, "oak") else []

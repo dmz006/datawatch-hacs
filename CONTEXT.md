@@ -21,7 +21,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
 | `custom_components/datawatch/dashboard.py` | Optional dashboard data sensors: what each reads and when it is unknown |
-| `custom_components/datawatch/gantt.py`, `frontend.py`, `frontend/` | The Gantt card: its data, how it is offered, and the card script. Titles are only ever set as text, never as markup |
+| `custom_components/datawatch/charts.py`, `chart_api.py`, `frontend.py`, `frontend/` | The two dashboard cards: their data, the read-only commands they use, how they are offered, and the card script. Names and titles are only ever set as text, never as markup |
 | `custom_components/datawatch/doing.py` | Carries out one confirmed action and words the outcome |
 | `custom_components/datawatch/voice/actions.py` | What an action is, its confirming words and read-back |
 | `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |
@@ -77,10 +77,15 @@ lists three at a time, "repeat" and "help", and faults said out loud.
   terminal text, which can hold secrets and misleading instructions. The same goes for an
   alert's body: use titles only.
 - **Dashboard sensors start disabled.** Numbers are states, so they keep history; data sets
-  are the unrecorded `data` attribute. Unknown beats zero or old values. Ready-made cards
-  are this integration's own and update every 5 minutes: the live-work Gantt card, and later
-  a Kanban board, which waits for datawatch 10.0. `tests/test_gantt_card.py` runs the card
-  in a headless Chrome, and is skipped where there is none.
+  are the unrecorded `data` attribute. Unknown beats zero or old values. 
+- **Ready-made cards** are this integration's own, designed for a phone first, and update
+  every 5 minutes. The Gantt is one project's automations and automata over time with counts;
+  lane activity is a separate chart of overlapping lines. A Kanban board is planned for when
+  datawatch 10.0 is out. `tests/test_cards_browser.py` runs the cards in a headless Chrome,
+  and is skipped where there is none. Before building or changing a chart, check what real
+  data would show in it.
+- The cards' data is open to any signed-in Home Assistant user. Tighten this when access
+  controls are tightened.
 - The completed list is ordered by last update, not finish time. Do not call it newest.
 - Never list every automaton without a status filter: it took many seconds on a large
   datawatch. datawatch has no title search, so name search covers attention, running and held.

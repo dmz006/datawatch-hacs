@@ -6,11 +6,13 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN, CONF_URL, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import DatawatchClient
+from .chart_api import async_register_chart_api
 from .const import CONF_FINGERPRINT, COUNTS, DASHBOARD, DISCUSSING, DOMAIN, FOCUS
 from .coordinator import CountsCoordinator
 from .dashboard import DashboardCoordinator
@@ -20,6 +22,8 @@ from .mode import DatawatchMode, SharedFocus
 
 _LOGGER = logging.getLogger(__name__)
 _PHRASE_ISSUE = "voice_phrase_unavailable"
+# 0.10.0's live-work sensor: the cards now ask for their data themselves.
+_RETIRED_SENSORS = ("data_live_work",)
 _PLATFORMS = (Platform.BINARY_SENSOR, Platform.SENSOR)
 
 type DatawatchConfigEntry = ConfigEntry[DatawatchClient]
@@ -57,7 +61,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
     else:
         ir.async_delete_issue(hass, DOMAIN, _PHRASE_ISSUE)
 
+    async_register_chart_api(hass)
     await async_offer_cards(hass)
+    _remove_retired_sensors(hass, entry)
     counts = CountsCoordinator(hass, entry, entry.runtime_data)
     hass.data[COUNTS] = counts
     dashboard = DashboardCoordinator(hass, entry, entry.runtime_data)
@@ -69,6 +75,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
         hass, dashboard.async_refresh(), f"{DOMAIN} first dashboard read"
     )
     return True
+
+
+@callback
+def _remove_retired_sensors(hass: HomeAssistant, entry: DatawatchConfigEntry) -> None:
+    """Take away sensors an earlier version made and this one no longer has."""
+    registry = er.async_get(hass)
+    for key in _RETIRED_SENSORS:
+        found = registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}")
+        if found:
+            registry.async_remove(found)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) -> bool:

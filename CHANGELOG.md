@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **A project Gantt:** "datawatch Gantt (project)" shows one project's automations and
+  their automata over time, with done and state counts. Choose the project and 7, 30, 90 days
+  or all; tap a row to open it. It replaces the live-work card, and a card you already added
+  becomes this one.
+- **A lane activity chart:** "datawatch lane activity" draws one line for each lane over the
+  last 6 hours. Tap a name to pick it out.
+- Both are laid out for a phone, need no sensor, and update every 5 minutes.
+- **Removed:** the sensor "Dashboard data: live work". The cards ask for their data
+  themselves. Any signed-in Home Assistant user can use that data.
 - **Choose the order of lists:** sessions, automations and running work are listed by name,
   or most recent first. Say "most recent first" or "sort by name", ask "list order", or
   change it in the integration's settings. Your AI assistant's lists follow it.

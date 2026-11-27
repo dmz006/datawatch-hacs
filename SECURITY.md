@@ -18,11 +18,15 @@ Only the newest release, on Home Assistant 2026.11 or later.
   answer.
 - Sending input to a session is in the code but switched off, and is checked in two places.
 - AI assistants get tools that only read. None can make a change.
-- The dashboard card is a script this integration serves to your Home Assistant pages. It
-  loads nothing from elsewhere, and puts titles on the page only as plain text. For its
-  data, datawatch sends whole automaton records, including task instructions and history;
-  only titles, states and times are kept. The script's address needs no sign-in, like other
-  Home Assistant card files; it contains no data.
+- The dashboard cards are a script this integration serves to your Home Assistant pages. It
+  loads nothing from elsewhere, and puts names and titles on the page only as plain text. The
+  script's address needs no sign-in, like other Home Assistant card files; it contains no
+  data.
+- The cards ask for their data over Home Assistant's signed-in connection, with two
+  read-only commands. **Any signed-in Home Assistant user can use them**, whether or not a
+  card is on their dashboard, and so see project, automation, automaton and lane names.
+  datawatch sends more than that (for example decisions and task records); only names,
+  titles, states and times are passed on.
 - Optional dashboard sensors, off by default, put datawatch's dashboard data (numbers,
   titles, lane and repository names, links) into an entity attribute that is not saved in
   history. datawatch's one free-text release note is removed. Anyone who can see the entity
@@ -34,7 +38,8 @@ Only the newest release, on Home Assistant 2026.11 or later.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
 - It does not follow redirects, so a token is not forwarded elsewhere.
 - A saved token is never sent to a different address.
-- The dashboard sensors hold counts only, no titles or question text.
+- The count sensors, which are on from the start, hold counts only, no titles or question
+  text.
 
 ## What it does not protect against
 
