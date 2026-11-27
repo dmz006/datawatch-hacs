@@ -140,6 +140,43 @@ async function run() {
   lanes.remove();
   out.stopped = lanes._timer === undefined;
 
+  // Each card speaks the language of the person looking at it.
+  const shape = (node) => Object.entries(node).map(([key, value]) =>
+    typeof value === "object" ? [key, shape(value)] : [key, typeof value]);
+  out.shapes = Object.fromEntries(Object.entries(TEXT).map(([k, v]) => [k, shape(v)]));
+  const english = hass.locale;
+  out.languages = {};
+  for (const language of ["de", "es", "fr", "ja-JP", "nl"]) {
+    hass.locale = { language };
+    localStorage.clear();
+    answer = () => Promise.resolve(GANTT);
+    const spoken = mount("datawatch-gantt-card", 360, {});
+    await tick();
+    all(spoken, "button.head")[0].click();
+    const found = { gantt: text(spoken),
+      choices: all(spoken, ".choice").map((b) => b.textContent),
+      overflow: spoken.shadowRoot.querySelector(".body").scrollWidth };
+    answer = () => Promise.reject({ code: "unreachable" });
+    await spoken._load();
+    found.problem = spoken.shadowRoot.querySelector(".problem").textContent;
+    answer = () => Promise.resolve(LANES);
+    const drawnLanes = mount("datawatch-lanes-card", 360, {});
+    await tick();
+    found.lanes = text(drawnLanes);
+    found.chart = drawnLanes.shadowRoot.querySelector("svg[role=img]").getAttribute("aria-label");
+    out.languages[language] = found;
+  }
+  // A change of language redraws a card that is already showing.
+  hass.locale = english;
+  answer = () => Promise.resolve(GANTT);
+  const changing = mount("datawatch-gantt-card", 360, {});
+  await tick();
+  changing.hass = { ...hass, locale: { language: "de" } };
+  out.redrawn = text(changing);
+  Object.defineProperty(navigator, "language", { value: "fr-FR", configurable: true });
+  out.pickerFrench = window.customCards.map((c) => [c.name, c.description]);
+  Object.defineProperty(navigator, "language", { value: "en-US", configurable: true });
+
   out.listed = window.customCards.map((c) => c.type);
   await new Promise((done) => setTimeout(done, 300));
   out.taken = window.taken ?? null;
@@ -274,6 +311,54 @@ def test_the_lane_chart_draws_a_line_per_busy_lane_and_names_the_idle(
     assert "Idle the whole time: blue." in shown["lanesText"]
     assert shown["picked"] == ["1", "0.15"] and shown["pressedKey"] == "true"
     assert shown["stopped"] is True
+
+
+def test_every_language_has_every_card_text(shown: dict[str, Any]) -> None:
+    shapes = shown["shapes"]
+    assert sorted(shapes) == ["de", "en", "es", "fr", "ja"]
+    # English shows datawatch's own status words; every translation covers the same ones.
+    statuses = {language: dict(shape)["statuses"] for language, shape in shapes.items()}
+    assert statuses.pop("en") == [] and statuses["de"]
+    for language, shape in shapes.items():
+        assert [part for part in shape if part[0] != "statuses"] == [
+            part for part in shapes["en"] if part[0] != "statuses"
+        ], language
+    assert all(found == statuses["de"] for found in statuses.values())
+
+
+@pytest.mark.parametrize(
+    ("language", "gantt", "all_choice", "problem", "lanes"),
+    [
+        ("de", "1 von 2 fertig", "Alle", "datawatch kann gerade nicht gelesen werden.", "Lane"),
+        ("es", "1 de 2 hechos", "Todo", "No se puede leer datawatch ahora.", "carril"),
+        ("fr", "1 sur 2 terminés", "Tout", "Impossible de lire datawatch pour le moment.", "voie"),
+        ("ja-JP", "2 件中 1 件完了", "すべて", "現在 datawatch を読み取れません。", "レーン"),
+        ("nl", "1 of 2 done", "All", "datawatch cannot be read right now.", "lane"),
+    ],
+)
+def test_the_cards_follow_the_viewers_language(
+    shown: dict[str, Any], language: str, gantt: str, all_choice: str, problem: str, lanes: str
+) -> None:
+    found = shown["languages"][language]
+    assert gantt in found["gantt"]
+    assert found["choices"][-1] == all_choice
+    assert problem in found["problem"]
+    assert lanes in found["lanes"] and found["chart"]
+    assert found["overflow"] <= 360
+    # datawatch's names are data and are never translated.
+    assert HOSTILE in found["gantt"] and HOSTILE in found["lanes"]
+    # Server-side English never reaches a translated card.
+    if language != "nl":
+        assert "Automata in no automation" not in found["gantt"]
+        assert "running" not in found["gantt"]
+
+
+def test_a_change_of_language_redraws_the_card(shown: dict[str, Any]) -> None:
+    assert "1 von 2 fertig" in shown["redrawn"]
+
+
+def test_the_card_picker_follows_the_language(shown: dict[str, Any]) -> None:
+    assert shown["pickerFrench"][0][0] == "Gantt datawatch (projet)"
 
 
 def test_both_cards_are_in_the_picker(shown: dict[str, Any]) -> None:

@@ -82,7 +82,8 @@ recommendation and why.
   shows text, in `translations/en.json`.
 - Screen text is translated into every language datawatch has (en, de, es, fr, ja): change
   all five together. Use datawatch's words, including for Automaton and Automation. Keep
-  spoken commands in English while voice is English only.
+  spoken commands in English while voice is English only. The cards' words are in the
+  `TEXT` table in `frontend/datawatch-cards.js`, never in the drawing code.
 - Keep the diagrams in `docs/how-it-works.md` matching the code.
 - All settings are in Home Assistant's setup screens; no YAML-only options.
 

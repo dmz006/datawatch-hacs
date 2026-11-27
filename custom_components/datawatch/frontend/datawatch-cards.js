@@ -79,8 +79,291 @@ const STYLE = `
   }
 `;
 
-function words(status) {
-  return String(status || "unknown").replace(/_/g, " ");
+/* Every word the cards show, in each language datawatch has. A language is added here and
+   nowhere else. datawatch's own names and titles are data: they are never translated. */
+const TEXT = {
+  en: {
+    badProject: "project must be the name of a datawatch project",
+    restart: "Restart Home Assistant, then reload this page.",
+    unreachable: "datawatch cannot be read right now.",
+    kept: (time) => `Showing what was read at ${time}.`,
+    loading: "Loading…",
+    listJoin: ", ",
+    statuses: {},
+    gantt: {
+      name: "datawatch Gantt (project)",
+      about: "A project's automations and automata over time, with counts.",
+      title: "datawatch Gantt",
+      project: "Project",
+      days: (days) => `${days} days`,
+      all: "All",
+      notStarted: "no tasks started yet",
+      span: (first, last) => `${first} to ${last}`,
+      progress: (done, total) => `${done} of ${total} done`,
+      count: (number, status) => `${number} ${status}`,
+      done: "done",
+      says: (status) => `datawatch: ${status}`,
+      unlisted: (number) => `${number} more are not listed.`,
+      noProjects: "datawatch has no projects.",
+      summary: (automations, automata, done, time) =>
+        `${automations} automations · ${automata} automata, ${done} done · as of ${time}`,
+      nothing: "Nothing to show for this project in this range.",
+      now: "now",
+      more: (left) => `Show more (${left} left)`,
+      older: (number) =>
+        `${number} ${number === 1 ? "automation is" : "automations are"} older than this range.`,
+      legend: "Solid bar: first start to latest finished task. Dashed: still open.",
+      loose: "Automata in no automation",
+    },
+    lanes: {
+      name: "datawatch lane activity",
+      about: "One line for each lane: how busy it was over the last 6 hours.",
+      title: "datawatch lane activity",
+      note: (time) => `How busy each lane was, last 6 hours, up to ${time}.`,
+      onAverage: (lane, percent) => `${lane} ${percent}% on average`,
+      chart: (summary) => `Lane activity. ${summary}.`,
+      noneBusy: "No lane was busy.",
+      latest: (percent) => `latest ${percent}%`,
+      average: (percent) => `average ${percent}%`,
+      overlap: "Lines can lie on top of each other. Tap a name to pick it out.",
+      idle: (names) => `Idle the whole time: ${names}.`,
+      none: "datawatch reported no lanes.",
+    },
+  },
+  de: {
+    badProject: "project muss der Name eines datawatch-Projekts sein",
+    restart: "Starte Home Assistant neu und lade dann diese Seite neu.",
+    unreachable: "datawatch kann gerade nicht gelesen werden.",
+    kept: (time) => `Angezeigt wird der Stand von ${time}.`,
+    loading: "Wird geladen …",
+    listJoin: ", ",
+    statuses: {
+      done: "fertig", completed: "abgeschlossen", archived: "archiviert", running: "läuft",
+      planning: "in Planung", blocked: "blockiert", failed: "fehlgeschlagen",
+      needs_review: "wartet auf Prüfung", revisions_asked: "Änderungen angefragt",
+      held: "angehalten", paused: "pausiert", draft: "Entwurf", active: "aktiv",
+      cancelled: "abgebrochen", approved: "genehmigt", unknown: "unbekannt",
+    },
+    gantt: {
+      name: "datawatch-Gantt (Projekt)",
+      about: "Die Automatisierungen und Automaten eines Projekts im Zeitverlauf, mit Zählern.",
+      title: "datawatch-Gantt",
+      project: "Projekt",
+      days: (days) => `${days} Tage`,
+      all: "Alle",
+      notStarted: "noch keine Aufgabe begonnen",
+      span: (first, last) => `${first} bis ${last}`,
+      progress: (done, total) => `${done} von ${total} fertig`,
+      count: (number, status) => `${number} × ${status}`,
+      done: "fertig",
+      says: (status) => `datawatch: ${status}`,
+      unlisted: (number) => `${number} weitere werden nicht aufgeführt.`,
+      noProjects: "datawatch hat keine Projekte.",
+      summary: (automations, automata, done, time) =>
+        `Automatisierungen: ${automations} · Automaten: ${automata}, fertig: ${done} · Stand ${time}`,
+      nothing: "Für dieses Projekt gibt es in diesem Zeitraum nichts anzuzeigen.",
+      now: "jetzt",
+      more: (left) => `Mehr anzeigen (noch ${left})`,
+      older: (number) => `Älter als dieser Zeitraum: ${number}.`,
+      legend: "Durchgehender Balken: vom ersten Start bis zur zuletzt fertigen Aufgabe. " +
+        "Gestrichelt: noch offen.",
+      loose: "Automaten ohne Automatisierung",
+    },
+    lanes: {
+      name: "datawatch-Lane-Aktivität",
+      about: "Eine Linie je Lane: wie ausgelastet sie in den letzten 6 Stunden war.",
+      title: "datawatch-Lane-Aktivität",
+      note: (time) => `Auslastung jeder Lane in den letzten 6 Stunden, bis ${time}.`,
+      onAverage: (lane, percent) => `${lane} im Mittel ${percent} %`,
+      chart: (summary) => `Lane-Aktivität. ${summary}.`,
+      noneBusy: "Keine Lane war ausgelastet.",
+      latest: (percent) => `zuletzt ${percent} %`,
+      average: (percent) => `Mittel ${percent} %`,
+      overlap: "Linien können übereinander liegen. Tippe auf einen Namen, um ihn hervorzuheben.",
+      idle: (names) => `Die ganze Zeit untätig: ${names}.`,
+      none: "datawatch hat keine Lanes gemeldet.",
+    },
+  },
+  es: {
+    badProject: "project debe ser el nombre de un proyecto de datawatch",
+    restart: "Reinicia Home Assistant y vuelve a cargar esta página.",
+    unreachable: "No se puede leer datawatch ahora.",
+    kept: (time) => `Se muestra lo leído a las ${time}.`,
+    loading: "Cargando…",
+    listJoin: ", ",
+    statuses: {
+      done: "hecho", completed: "completado", archived: "archivado", running: "ejecutando",
+      planning: "planificando", blocked: "bloqueado", failed: "fallido",
+      needs_review: "pendiente de revisión", revisions_asked: "cambios solicitados",
+      held: "en espera", paused: "en pausa", draft: "borrador", active: "activo",
+      cancelled: "cancelado", approved: "aprobado", unknown: "desconocido",
+    },
+    gantt: {
+      name: "Gantt de datawatch (proyecto)",
+      about: "Las automatizaciones y los autómatas de un proyecto en el tiempo, con recuentos.",
+      title: "Gantt de datawatch",
+      project: "Proyecto",
+      days: (days) => `${days} días`,
+      all: "Todo",
+      notStarted: "ninguna tarea iniciada",
+      span: (first, last) => `del ${first} al ${last}`,
+      progress: (done, total) => `${done} de ${total} hechos`,
+      count: (number, status) => `${status}: ${number}`,
+      done: "hecho",
+      says: (status) => `datawatch: ${status}`,
+      unlisted: (number) => `No se muestran ${number} más.`,
+      noProjects: "datawatch no tiene proyectos.",
+      summary: (automations, automata, done, time) =>
+        `Automatizaciones: ${automations} · autómatas: ${automata}, hechos: ${done} · a las ${time}`,
+      nothing: "No hay nada que mostrar de este proyecto en este periodo.",
+      now: "ahora",
+      more: (left) => `Mostrar más (quedan ${left})`,
+      older: (number) => `Automatizaciones anteriores a este periodo: ${number}.`,
+      legend: "Barra continua: del primer inicio a la última tarea terminada. " +
+        "Discontinua: sigue abierto.",
+      loose: "Autómatas sin automatización",
+    },
+    lanes: {
+      name: "Actividad de carriles de datawatch",
+      about: "Una línea por carril: lo ocupado que estuvo en las últimas 6 horas.",
+      title: "Actividad de carriles de datawatch",
+      note: (time) => `Ocupación de cada carril en las últimas 6 horas, hasta las ${time}.`,
+      onAverage: (lane, percent) => `${lane} ${percent} % de media`,
+      chart: (summary) => `Actividad de carriles. ${summary}.`,
+      noneBusy: "Ningún carril estuvo ocupado.",
+      latest: (percent) => `último ${percent} %`,
+      average: (percent) => `media ${percent} %`,
+      overlap: "Las líneas pueden superponerse. Toca un nombre para destacarlo.",
+      idle: (names) => `Inactivos todo el tiempo: ${names}.`,
+      none: "datawatch no informó de ningún carril.",
+    },
+  },
+  fr: {
+    badProject: "project doit être le nom d'un projet datawatch",
+    restart: "Redémarrez Home Assistant, puis rechargez cette page.",
+    unreachable: "Impossible de lire datawatch pour le moment.",
+    kept: (time) => `Affichage des données lues à ${time}.`,
+    loading: "Chargement…",
+    listJoin: ", ",
+    statuses: {
+      done: "terminé", completed: "terminé", archived: "archivé", running: "en cours",
+      planning: "planification", blocked: "bloqué", failed: "échoué",
+      needs_review: "en attente de révision", revisions_asked: "révisions demandées",
+      held: "en attente", paused: "en pause", draft: "brouillon", active: "actif",
+      cancelled: "annulé", approved: "approuvé", unknown: "inconnu",
+    },
+    gantt: {
+      name: "Gantt datawatch (projet)",
+      about: "Les automatisations et les automates d'un projet dans le temps, avec des totaux.",
+      title: "Gantt datawatch",
+      project: "Projet",
+      days: (days) => `${days} jours`,
+      all: "Tout",
+      notStarted: "aucune tâche commencée",
+      span: (first, last) => `du ${first} au ${last}`,
+      progress: (done, total) => `${done} sur ${total} terminés`,
+      count: (number, status) => `${status} : ${number}`,
+      done: "terminé",
+      says: (status) => `datawatch : ${status}`,
+      unlisted: (number) => `${number} de plus ne sont pas affichés.`,
+      noProjects: "datawatch n'a aucun projet.",
+      summary: (automations, automata, done, time) =>
+        `Automatisations : ${automations} · automates : ${automata}, terminés : ${done} · à ${time}`,
+      nothing: "Rien à afficher pour ce projet sur cette période.",
+      now: "maintenant",
+      more: (left) => `Afficher plus (${left} restants)`,
+      older: (number) => `Automatisations antérieures à cette période : ${number}.`,
+      legend: "Barre pleine : du premier début à la dernière tâche terminée. " +
+        "Pointillés : encore ouvert.",
+      loose: "Automates hors automatisation",
+    },
+    lanes: {
+      name: "Activité des voies datawatch",
+      about: "Une ligne par voie : son occupation sur les 6 dernières heures.",
+      title: "Activité des voies datawatch",
+      note: (time) => `Occupation de chaque voie sur les 6 dernières heures, jusqu'à ${time}.`,
+      onAverage: (lane, percent) => `${lane} ${percent} % en moyenne`,
+      chart: (summary) => `Activité des voies. ${summary}.`,
+      noneBusy: "Aucune voie n'a été occupée.",
+      latest: (percent) => `dernière valeur ${percent} %`,
+      average: (percent) => `moyenne ${percent} %`,
+      overlap: "Les lignes peuvent se superposer. Touchez un nom pour le mettre en évidence.",
+      idle: (names) => `Voies inactives sur toute la période : ${names}.`,
+      none: "datawatch n'a signalé aucune voie.",
+    },
+  },
+  ja: {
+    badProject: "project には datawatch のプロジェクト名を指定してください",
+    restart: "Home Assistant を再起動してから、このページを再読み込みしてください。",
+    unreachable: "現在 datawatch を読み取れません。",
+    kept: (time) => `${time} に読み取った内容を表示しています。`,
+    loading: "読み込み中…",
+    listJoin: "、",
+    statuses: {
+      done: "完了", completed: "完了", archived: "アーカイブ", running: "実行中",
+      planning: "計画中", blocked: "ブロック中", failed: "失敗",
+      needs_review: "レビュー待ち", revisions_asked: "修正依頼あり",
+      held: "保留中", paused: "一時停止", draft: "下書き", active: "有効",
+      cancelled: "キャンセル", approved: "承認済み", unknown: "不明",
+    },
+    gantt: {
+      name: "datawatch ガント (プロジェクト)",
+      about: "プロジェクトのオートメーションとオートマタの推移と件数を表示します。",
+      title: "datawatch ガント",
+      project: "プロジェクト",
+      days: (days) => `${days} 日間`,
+      all: "すべて",
+      notStarted: "開始したタスクはありません",
+      span: (first, last) => `${first} ～ ${last}`,
+      progress: (done, total) => `${total} 件中 ${done} 件完了`,
+      count: (number, status) => `${status} ${number} 件`,
+      done: "完了",
+      says: (status) => `datawatch: ${status}`,
+      unlisted: (number) => `ほかに ${number} 件あります (表示していません)。`,
+      noProjects: "datawatch にプロジェクトはありません。",
+      summary: (automations, automata, done, time) =>
+        `オートメーション ${automations} 件 · オートマタ ${automata} 件 (完了 ${done} 件) · ${time} 現在`,
+      nothing: "この期間にこのプロジェクトで表示するものはありません。",
+      now: "現在",
+      more: (left) => `さらに表示 (残り ${left} 件)`,
+      older: (number) => `この期間より古いオートメーション: ${number} 件`,
+      legend: "実線のバー: 最初の開始から最後に完了したタスクまで。破線: 未完了。",
+      loose: "オートメーションに属さないオートマタ",
+    },
+    lanes: {
+      name: "datawatch レーンの稼働状況",
+      about: "レーンごとに 1 本の線で、直近 6 時間の稼働状況を表示します。",
+      title: "datawatch レーンの稼働状況",
+      note: (time) => `直近 6 時間の各レーンの稼働状況 (${time} まで)。`,
+      onAverage: (lane, percent) => `${lane} 平均 ${percent}%`,
+      chart: (summary) => `レーンの稼働状況。${summary}。`,
+      noneBusy: "稼働したレーンはありません。",
+      latest: (percent) => `最新 ${percent}%`,
+      average: (percent) => `平均 ${percent}%`,
+      overlap: "線が重なることがあります。名前をタップすると強調表示されます。",
+      idle: (names) => `期間中ずっと待機: ${names}`,
+      none: "datawatch から報告されたレーンはありません。",
+    },
+  },
+};
+
+/* The language to show for a tag such as "de-CH". English where there is no translation. */
+function textFor(tag) {
+  const base = String(tag || "").toLowerCase().split(/[-_]/)[0];
+  return Object.hasOwn(TEXT, base) ? TEXT[base] : TEXT.en;
+}
+
+/* For what is needed before a card has been given Home Assistant: its language, as far as
+   the page knows it. */
+function pageText() {
+  const hass = document.querySelector("home-assistant")?.hass;
+  return textFor(hass?.locale?.language || hass?.language || navigator.language);
+}
+
+function words(status, text) {
+  const key = String(status || "unknown");
+  // A status without a translation is shown as datawatch writes it.
+  return Object.hasOwn(text.statuses, key) ? text.statuses[key] : key.replace(/_/g, " ");
 }
 
 function colour(status) {
@@ -130,8 +413,12 @@ class DatawatchCard extends HTMLElement {
 
   set hass(hass) {
     const first = !this._hass;
+    const before = this._words;
     this._hass = hass;
+    this._words = textFor(hass.locale?.language || hass.language);
     if (first && this._config) this._load();
+    // A card already showing is drawn again when the viewer changes language.
+    else if (!first && this._words !== before && this.shadowRoot) this._draw();
   }
 
   connectedCallback() {
@@ -159,10 +446,8 @@ class DatawatchCard extends HTMLElement {
     try {
       data = await this._hass.callWS(this._request());
     } catch (error) {
-      problem =
-        error?.code === "unknown_command"
-          ? "Restart Home Assistant, then reload this page."
-          : "datawatch cannot be read right now.";
+      // Which text, not the words: the language can change while it is shown.
+      problem = error?.code === "unknown_command" ? "restart" : "unreachable";
     }
     if (asked !== this._asked) return;
     this._loading = false;
@@ -194,12 +479,13 @@ class DatawatchCard extends HTMLElement {
     card.append(body);
     this.shadowRoot.replaceChildren(element("style", "", STYLE), card);
     if (this._problem) {
-      const kept = this._data ? ` Showing what was read at ${this._time(this._data.to)}.` : "";
-      const note = element("p", "note problem", this._problem + kept);
+      const said = [this._words[this._problem]];
+      if (this._data) said.push(this._words.kept(this._time(this._data.to)));
+      const note = element("p", "note problem", said.join(" "));
       note.setAttribute("role", "alert");
       body.append(note);
     }
-    if (!this._data && !this._problem) body.append(element("p", "note", "Loading…"));
+    if (!this._data && !this._problem) body.append(element("p", "note", this._words.loading));
     return body;
   }
 }
@@ -220,7 +506,7 @@ class DatawatchGanttCard extends DatawatchCard {
 
   _checked(config) {
     if (config.project !== undefined && typeof config.project !== "string") {
-      throw new Error("project must be the name of a datawatch project");
+      throw new Error(pageText().badProject);
     }
     // A card added with an earlier version may still name a sensor. It is not used.
     this._project = config.project || remembered("datawatch-gantt-project");
@@ -259,9 +545,10 @@ class DatawatchGanttCard extends DatawatchCard {
   }
 
   _controls(body) {
+    const text = this._words.gantt;
     const controls = element("div", "controls");
     const select = element("select");
-    select.setAttribute("aria-label", "Project");
+    select.setAttribute("aria-label", text.project);
     const current = this._data?.project || this._project;
     // Kept while another project or range is loading, so the menu stays usable.
     if (this._data?.projects) this._names = this._data.projects;
@@ -274,8 +561,8 @@ class DatawatchGanttCard extends DatawatchCard {
     }
     select.addEventListener("change", () => this._choose(select.value, this._days));
     if (names.length) controls.append(select);
-    for (const [days, label] of [[7, "7 days"], [30, "30 days"], [90, "90 days"], [0, "All"]]) {
-      const button = element("button", "choice", label);
+    for (const days of [7, 30, 90, 0]) {
+      const button = element("button", "choice", days ? text.days(days) : text.all);
       button.type = "button";
       button.setAttribute("aria-pressed", String(days === this._days));
       button.addEventListener("click", () => this._choose(current, days));
@@ -315,31 +602,35 @@ class DatawatchGanttCard extends DatawatchCard {
   }
 
   _dates(item) {
-    if (!item.start) return "no tasks started yet";
+    const text = this._words.gantt;
+    if (!item.start) return text.notStarted;
     const first = this._day(item.start);
     const last = this._day(item.last || item.start);
-    return first === last ? first : `${first} to ${last}`;
+    return first === last ? first : text.span(first, last);
   }
 
   _row(row, key) {
+    const said = this._words.gantt;
+    // datawatch does not name the automata outside any automation: the card does.
+    const name = key === "loose" ? said.loose : row.name;
     const item = element("div", "item");
     const head = element("button", "head");
     head.type = "button";
     const open = this._opened.has(key);
     head.setAttribute("aria-expanded", String(open));
     const text = element("div");
-    text.append(element("div", "name", `${open ? "▾" : "▸"} ${row.name}`));
-    const parts = [`${row.done} of ${row.total} done`];
+    text.append(element("div", "name", `${open ? "▾" : "▸"} ${name}`));
+    const parts = [said.progress(row.done, row.total)];
     for (const [status, count] of Object.entries(row.counts)) {
-      parts.push(`${count} ${words(status)}`);
+      parts.push(said.count(count, words(status, this._words)));
     }
+    const reported = row.state ? said.says(words(row.state, this._words)) : "";
     if (row.finished) {
       // Every automaton is done. datawatch's own word stays beside it.
-      parts.push(
-        row.state && row.state !== "completed" ? `done · datawatch: ${words(row.state)}` : "done"
-      );
+      parts.push(said.done);
+      if (row.state && row.state !== "completed") parts.push(reported);
     } else if (row.state) {
-      parts.push(`datawatch: ${words(row.state)}`);
+      parts.push(reported);
     }
     text.append(element("div", "meta", parts.join(" · ")));
     const line = element("div", "line");
@@ -361,41 +652,45 @@ class DatawatchGanttCard extends DatawatchCard {
         const label = element("div");
         label.append(
           element("div", "name", automaton.title),
-          element("div", "meta", `${words(automaton.status)} · ${this._dates(automaton)}`)
+          element(
+            "div",
+            "meta",
+            `${words(automaton.status, this._words)} · ${this._dates(automaton)}`
+          )
         );
         const inner = element("div", "line");
         inner.append(label, this._track(automaton, automaton.status));
         kid.append(inner);
         kids.append(kid);
       }
-      if (row.more > 0) kids.append(element("p", "note", `${row.more} more are not listed.`));
+      if (row.more > 0) kids.append(element("p", "note", said.unlisted(row.more)));
       item.append(kids);
     }
     return item;
   }
 
   _draw() {
-    const body = this._frame("datawatch Gantt");
+    const text = this._words.gantt;
+    const body = this._frame(text.title);
     this._controls(body);
     const data = this._data;
     if (!data) return;
     if (!data.project) {
-      body.append(element("p", "note", "datawatch has no projects."));
+      body.append(element("p", "note", text.noProjects));
       return;
     }
     body.append(
       element(
         "p",
         "note",
-        `${data.automations} automations · ${data.automata} automata, ${data.done} done · ` +
-          `as of ${this._time(data.to)}`
+        text.summary(data.automations, data.automata, data.done, this._time(data.to))
       )
     );
     // Keyed by datawatch's id, so an open row stays open when the order changes.
     const rows = data.rows.map((row, index) => [row, row.id || `row-${index}`]);
     const total = rows.length + (data.loose ? 1 : 0);
     if (!total) {
-      body.append(element("p", "note", "Nothing to show for this project in this range."));
+      body.append(element("p", "note", text.nothing));
     } else {
       const axis = element("div", "axis");
       axis.setAttribute("aria-hidden", "true");
@@ -404,13 +699,13 @@ class DatawatchGanttCard extends DatawatchCard {
       axis.append(
         element("span", "", this._day(from)),
         element("span", "", this._day(from + span / 2)),
-        element("span", "", "now")
+        element("span", "", text.now)
       );
       body.append(axis);
     }
     for (const [row, key] of rows.slice(0, this._shown)) body.append(this._row(row, key));
     if (rows.length > this._shown) {
-      const more = element("button", "more", `Show more (${rows.length - this._shown} left)`);
+      const more = element("button", "more", text.more(rows.length - this._shown));
       more.type = "button";
       more.addEventListener("click", () => {
         this._shown += PAGE;
@@ -420,13 +715,8 @@ class DatawatchGanttCard extends DatawatchCard {
     }
     // Always reachable, however long the list above is.
     if (data.loose) body.append(this._row(data.loose, "loose"));
-    if (data.hidden > 0) {
-      const them = data.hidden === 1 ? "automation is" : "automations are";
-      body.append(element("p", "note", `${data.hidden} ${them} older than this range.`));
-    }
-    body.append(
-      element("p", "note", "Solid bar: first start to latest finished task. Dashed: still open.")
-    );
+    if (data.hidden > 0) body.append(element("p", "note", text.older(data.hidden)));
+    body.append(element("p", "note", text.legend));
   }
 }
 
@@ -478,10 +768,11 @@ class DatawatchLanesCard extends DatawatchCard {
     const x = (value) => left + ((value - from) / (to - from)) * (width - left - right);
     const y = (percent) => top + (1 - percent / 100) * (height - top - bottom);
     const chart = drawn("svg", { viewBox: `0 0 ${width} ${height}`, height, role: "img" });
-    const summary = active.map(({ lane }) => `${lane.name} ${lane.average}% on average`);
+    const said = this._words.lanes;
+    const summary = active.map(({ lane }) => said.onAverage(lane.name, lane.average));
     chart.setAttribute(
       "aria-label",
-      active.length ? `Lane activity. ${summary.join(", ")}.` : "No lane was busy."
+      active.length ? said.chart(summary.join(this._words.listJoin)) : said.noneBusy
     );
     const text = { fill: "var(--secondary-text-color, #666)", "font-size": "11" };
     for (const percent of [0, 50, 100]) {
@@ -518,7 +809,8 @@ class DatawatchLanesCard extends DatawatchCard {
   }
 
   _draw() {
-    const body = this._frame("datawatch lane activity");
+    const said = this._words.lanes;
+    const body = this._frame(said.title);
     const data = this._data;
     if (!data) return;
     this._width = this.clientWidth;
@@ -528,7 +820,7 @@ class DatawatchLanesCard extends DatawatchCard {
       .filter(busy)
       .map((lane, index) => ({ lane, style: LINES[index % LINES.length] }));
     body.append(
-      element("p", "note", `How busy each lane was, last 6 hours, up to ${this._time(data.to)}.`),
+      element("p", "note", said.note(this._time(data.to))),
       this._chart(active, width)
     );
     const keys = element("div", "keys");
@@ -544,9 +836,11 @@ class DatawatchLanesCard extends DatawatchCard {
         })
       );
       const latest = lane.points.length ? lane.points[lane.points.length - 1][1] : null;
-      const now = latest === null ? "" : `latest ${Math.round(latest)}%, `;
-      const average = lane.average === null ? "" : `average ${Math.round(lane.average)}%`;
-      key.append(swatch, element("span", "", `${lane.name}: ${now}${average}`));
+      const figures = [];
+      if (latest !== null) figures.push(said.latest(Math.round(latest)));
+      if (lane.average !== null) figures.push(said.average(Math.round(lane.average)));
+      const shown = `${lane.name}: ${figures.join(this._words.listJoin)}`;
+      key.append(swatch, element("span", "", shown));
       key.addEventListener("click", () => {
         this._picked = this._picked === lane.name ? undefined : lane.name;
         this._draw();
@@ -555,35 +849,32 @@ class DatawatchLanesCard extends DatawatchCard {
     }
     body.append(keys);
     if (active.length > 1) {
-      body.append(element("p", "note", "Lines can lie on top of each other. Tap a name to pick it out."));
+      body.append(element("p", "note", said.overlap));
     }
     const idle = data.lanes.filter((lane) => !busy(lane)).map((lane) => lane.name);
-    if (idle.length) body.append(element("p", "note", `Idle the whole time: ${idle.join(", ")}.`));
-    if (!data.lanes.length) body.append(element("p", "note", "datawatch reported no lanes."));
+    if (idle.length) {
+      body.append(element("p", "note", said.idle(idle.join(this._words.listJoin))));
+    }
+    if (!data.lanes.length) body.append(element("p", "note", said.none));
   }
 }
 
-function offer(type, kind, name, description) {
+function offer(type, kind, card) {
   if (customElements.get(type)) return;
   customElements.define(type, kind);
   window.customCards = window.customCards || [];
   window.customCards.push({
     type,
-    name,
-    description,
+    // Read when the card picker is opened, so that it is in the viewer's language.
+    get name() {
+      return pageText()[card].name;
+    },
+    get description() {
+      return pageText()[card].about;
+    },
     documentationURL: "https://github.com/dmz006/datawatch-hacs#readme",
   });
 }
 
-offer(
-  "datawatch-gantt-card",
-  DatawatchGanttCard,
-  "datawatch Gantt (project)",
-  "A project's automations and automata over time, with counts."
-);
-offer(
-  "datawatch-lanes-card",
-  DatawatchLanesCard,
-  "datawatch lane activity",
-  "One line for each lane: how busy it was over the last 6 hours."
-);
+offer("datawatch-gantt-card", DatawatchGanttCard, "gantt");
+offer("datawatch-lanes-card", DatawatchLanesCard, "lanes");

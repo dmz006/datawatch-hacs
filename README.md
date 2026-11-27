@@ -79,8 +79,8 @@ The counts and the question are made up.
 | Part | Languages |
 |---|---|
 | Setup and settings screens, report choices and sensor names | English, German, Spanish, French and Japanese, following Home Assistant's language |
+| Dashboard cards and their names in **Add card** | The same five, following your own Home Assistant language |
 | Voice commands and spoken replies | English only |
-| Dashboard cards | English only |
 
 These are the languages datawatch has.
 
