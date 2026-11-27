@@ -12,8 +12,10 @@ from typing import Any
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 
-# Speech-to-text may write the name as two words.
-SENTENCES = ["(open|use) (datawatch|data watch)", "(datawatch|data watch)"]
+from .voice.language import LANGUAGES
+
+# Every language's ways of opening datawatch mode, so that any of them works.
+SENTENCES = [sentence for found in LANGUAGES.values() for sentence in found.grammar.entry_sentences]
 
 
 def async_listen(

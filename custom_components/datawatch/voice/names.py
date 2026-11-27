@@ -5,12 +5,14 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
+from .grammar import normalise
+
 _MINIMUM_PARTIAL = 3
 
 
 def _words(name: str) -> list[str]:
     split_camel = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", name)
-    return re.findall(r"[a-z0-9]+", split_camel.lower())
+    return normalise(split_camel, apostrophes="").split()
 
 
 def _is_partial(spoken: list[str], name: list[str]) -> bool:

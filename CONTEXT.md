@@ -19,6 +19,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | Path | Contents |
 |---|---|
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
+| `custom_components/datawatch/voice/language.py`, `grammar.py`, `lang/` | Which language voice uses, and each language's data. `lang/en.py` holds every word listened for |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
 | `custom_components/datawatch/dashboard.py` | Optional dashboard data sensors: what each reads and when it is unknown |
 | `custom_components/datawatch/charts.py`, `chart_api.py`, `frontend.py`, `frontend/` | The two dashboard cards: their data, the read-only commands they use, how they are offered, and the card script. Names and titles are only ever set as text, never as markup |

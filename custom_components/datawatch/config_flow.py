@@ -44,6 +44,7 @@ from .const import (
     SUBENTRY_REPORT,
 )
 from .voice.custom import ITEMS, spoken_form
+from .voice.language import current
 from .voice.order import Order
 from .voice.phrases import Kind, parse
 
@@ -249,7 +250,7 @@ class ReportSubentryFlow(ConfigSubentryFlow):
             return "no_name"
         if any(parse(said).kind is not Kind.UNKNOWN for said in (name, spoken)):
             return "name_is_a_command"
-        if spoken in ("datawatch", "data watch", "open datawatch", "use datawatch"):
+        if spoken in current().grammar.entry_names:
             return "name_is_a_command"
         for subentry in self._get_entry().subentries.values():
             if subentry.subentry_id != own_id and spoken_form(subentry.title) == spoken:

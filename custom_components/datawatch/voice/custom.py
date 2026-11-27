@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+
+from .grammar import normalise
+from .language import current
 
 # What a report can hold, in the order it is read.
 ITEMS = (
@@ -31,12 +33,11 @@ class CustomReport:
 
 def spoken_form(text: str) -> str:
     """A report name, or what was heard, reduced to the words that identify the report."""
-    text = text.lower().replace("'", "")
-    text = " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
-    text = text.removesuffix(" please").removeprefix("please ")
-    text = re.sub(r"^(?:give me|read|run|play)(?: me)?(?: my| the)? ", "", text)
-    text = re.sub(r"^(?:my|the) ", "", text)
-    return text.removesuffix(" report")
+    grammar = current().grammar
+    text = grammar.polite.sub("", normalise(text, grammar.apostrophes))
+    for filler in grammar.report_filler:
+        text = filler.sub("", text)
+    return text
 
 
 def match(heard: str, reports: Sequence[CustomReport]) -> CustomReport | None:

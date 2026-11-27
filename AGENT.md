@@ -84,6 +84,7 @@ recommendation and why.
   all five together. Use datawatch's words, including for Automaton and Automation. Keep
   spoken commands in English while voice is English only. The cards' words are in the
   `TEXT` table in `frontend/datawatch-cards.js`, never in the drawing code.
+- Words listened for belong in a language's file in `voice/lang/`, never in `phrases.py`.
 - Keep the diagrams in `docs/how-it-works.md` matching the code.
 - All settings are in Home Assistant's setup screens; no YAML-only options.
 
