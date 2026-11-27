@@ -4,13 +4,13 @@ Ask [datawatch](https://github.com/dmz006/datawatch) how your work is going, wha
 why something is stuck, what your sessions are doing and what is next, hear its questions and
 answer them, hear its alerts, add an automation or report a bug, by voice and without
 touching a screen. It can also bring datawatch's numbers into Home Assistant for your own
-dashboards.
+dashboards, with a live Gantt card of its own.
 
 datawatch is a program you run yourself. It starts AI coding assistants, watches them, plans
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.9.0).** It can change datawatch in three ways: **answer a question**,
+> **Early release (0.10.0).** It can change datawatch in three ways: **answer a question**,
 > **add a draft automaton** and **report a bug**. Each is sent only after you confirm it
 > aloud. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
@@ -19,7 +19,8 @@ Home Assistant voice device.
 > Focus and "go back" have been tried against a real datawatch with a pretend voice device,
 > **not yet by voice**. Adding an automaton and reporting a bug have been tested only against
 > a pretend datawatch. Alerts and the dashboard data sensors have been tried against a real
-> datawatch from a test copy of Home Assistant; alerts **not yet by voice**.
+> datawatch from a test copy of Home Assistant; alerts **not yet by voice**. The Gantt card
+> has been tested in a headless Chrome, **not yet inside a Home Assistant dashboard**.
 
 ## How it works
 

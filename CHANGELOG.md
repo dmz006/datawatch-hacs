@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (2026-11-26)
 
 - **A Gantt card for your dashboard:** "datawatch Gantt (live work)" in **Add card**. It
   shows what each lane ran in the last 6 hours, and the tasks of running, blocked and
