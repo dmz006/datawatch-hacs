@@ -21,6 +21,7 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
 | `custom_components/datawatch/dashboard.py` | Optional dashboard data sensors: what each reads and when it is unknown |
+| `custom_components/datawatch/gantt.py`, `frontend.py`, `frontend/` | The Gantt card: its data, how it is offered, and the card script. Titles are only ever set as text, never as markup |
 | `custom_components/datawatch/doing.py` | Carries out one confirmed action and words the outcome |
 | `custom_components/datawatch/voice/actions.py` | What an action is, its confirming words and read-back |
 | `custom_components/datawatch/reporting.py` | Reads and words a work report, for voice and AI alike |
@@ -73,9 +74,10 @@ lists three at a time, "repeat" and "help", and faults said out loud.
   terminal text, which can hold secrets and misleading instructions. The same goes for an
   alert's body: use titles only.
 - **Dashboard sensors start disabled.** Numbers are states, so they keep history; data sets
-  are the unrecorded `data` attribute. Unknown beats zero or old values. The maintainer's
-  plan has ready-made cards that update every 5 minutes: a Gantt chart, and later a
-  Kanban board, which waits for datawatch 10.0.
+  are the unrecorded `data` attribute. Unknown beats zero or old values. Ready-made cards
+  are this integration's own and update every 5 minutes: the live-work Gantt card, and later
+  a Kanban board, which waits for datawatch 10.0. `tests/test_gantt_card.py` runs the card
+  in a headless Chrome, and is skipped where there is none.
 - The completed list is ordered by last update, not finish time. Do not call it newest.
 - Never list every automaton without a status filter: it took many seconds on a large
   datawatch. datawatch has no title search, so name search covers attention, running and held.

@@ -15,6 +15,7 @@ from .const import CONF_FINGERPRINT, COUNTS, DASHBOARD, DISCUSSING, DOMAIN, FOCU
 from .coordinator import CountsCoordinator
 from .dashboard import DashboardCoordinator
 from .entry_phrase import async_listen
+from .frontend import async_offer_cards, withdraw_cards
 from .mode import DatawatchMode, SharedFocus
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) ->
     else:
         ir.async_delete_issue(hass, DOMAIN, _PHRASE_ISSUE)
 
+    await async_offer_cards(hass)
     counts = CountsCoordinator(hass, entry, entry.runtime_data)
     hass.data[COUNTS] = counts
     dashboard = DashboardCoordinator(hass, entry, entry.runtime_data)
@@ -76,5 +78,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) -
 
 async def async_remove_entry(hass: HomeAssistant, entry: DatawatchConfigEntry) -> None:
     """Leave nothing behind."""
+    withdraw_cards(hass)
     ir.async_delete_issue(hass, DOMAIN, _PHRASE_ISSUE)
     await SharedFocus(hass).async_remove()

@@ -24,6 +24,7 @@ VALUES = {
     "dashboard_data_bugs": "6",
     "dashboard_data_review_backlog": "3",
     "dashboard_data_forecast": "2.5",
+    "dashboard_data_live_work": "2",
     "weekly_usage_used": "40",
     "weekly_usage_pace_line": "55.5",
     "weekly_usage_used_per_24_hours": "12.2",

@@ -1,6 +1,10 @@
 {
   "domain": "datawatch",
   "name": "datawatch",
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ],
   "codeowners": [
     "@dmz006"
   ],

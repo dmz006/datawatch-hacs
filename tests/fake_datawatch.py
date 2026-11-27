@@ -6,7 +6,7 @@ import asyncio
 import ssl
 import subprocess
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +64,61 @@ def made_up_plan(title: str, state: str, done: int = 0, total: int = 0) -> dict[
 
 def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, Any]:
     return {"name": name, "status": status, "members": [{}] * members}
+
+
+SECRET_SPEC = "made-up instructions that a chart must never carry"
+NEVER = "0001-01-01T00:00:00Z"
+
+
+def made_up_live_work(now: datetime) -> tuple[dict[str, Any], dict[str, Any]]:
+    def ago(**gap: float) -> str:
+        return (now - timedelta(**gap)).isoformat()
+
+    def task(title: str, status: str, started: str, completed: str = NEVER) -> dict[str, Any]:
+        return {
+            "title": title,
+            "status": status,
+            "started_at": started,
+            "completed_at": completed,
+            "spec": SECRET_SPEC,
+            "history": [SECRET_SPEC],
+        }
+
+    lanes = {
+        "window_end": now.isoformat(),
+        "lanes": [
+            {
+                "id": "red",
+                "runs": [
+                    {"title": "Made-up long run", "start": ago(days=3), "end": ago(hours=3)},
+                    {"title": "Made-up open run", "start": ago(hours=1), "end": ""},
+                    {"title": "Too old", "start": ago(hours=20), "end": ago(hours=9)},
+                ],
+            },
+            {"id": "blue", "runs": []},
+        ],
+    }
+    tasks = [
+        task("Paint", "in_progress", ago(hours=2)),
+        task("Sand", "completed", ago(hours=5), ago(hours=4)),
+        task("Long ago", "completed", ago(hours=30), ago(hours=29)),
+        task("Not started", "pending", NEVER),
+        task("Stopped without an end", "failed", ago(hours=1)),
+    ]
+    listed = {
+        "total": 3,
+        "prds": [
+            {
+                "title": "Made-up fence",
+                "status": "running",
+                "spec": SECRET_SPEC,
+                "task_count": len(tasks),
+                "stories": [{"tasks": tasks}],
+            },
+            {"title": "Quiet one", "status": "blocked", "task_count": 0, "stories": []},
+        ],
+    }
+    return lanes, listed
 
 
 def made_up_dashboards() -> dict[str, Any]:
@@ -180,6 +235,7 @@ class Fake:
         self.bug_route = "new_batch"
         self.input_status = 200
         self.dashboards: dict[str, Any] = made_up_dashboards()
+        self.live_lanes, self.live_listed = made_up_live_work(datetime.now(UTC))
         # Alerts, newest first. A body can be raw terminal text and must never be heard.
         self.alerts: list[dict[str, Any]] = [
             made_up_alert("n1", "Made-up build finished", session="host-1111"),
@@ -401,6 +457,10 @@ class Fake:
             return web.json_response({"content": "words " * 2000})
         if request.path == "/api/autonomous/held":
             return web.json_response({"held": self.held, "total": self.held_total, "expired": 0})
+        if request.path == "/api/autonomous/lane-utilization":
+            return web.json_response(self.live_lanes)
+        if request.path == "/api/autonomous/prds" and query.get("full") == "true":
+            return web.json_response(self.live_listed)
         if request.path == "/api/autonomous/prds":
             source = self.finished if query.get("status") == "completed" else self.running
             rows = source if query.get("project") in (None, "oak") else []

@@ -17,6 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from . import gantt
 from .api import DASHBOARDS, DatawatchClient, DatawatchError
 from .const import DOMAIN
 
@@ -24,6 +25,8 @@ _LOGGER = logging.getLogger(__name__)
 INTERVAL = timedelta(minutes=5)
 # Always read, to find the lanes there are sensors for. It is small and quick.
 LANES = "lane_use"
+# The Gantt card's data, which is put together here from two of datawatch's replies.
+LIVE_WORK = "live_work"
 # A forecast point older than this many days is not current.
 _FORECAST_FRESH_DAYS = 1
 
@@ -42,18 +45,25 @@ class DashboardCoordinator(DataUpdateCoordinator[Datasets]):
 
     @override
     async def _async_update_data(self) -> Datasets:
-        wanted = {LANES} | {name for name in self.async_contexts() if name in DASHBOARDS}
+        known = {*DASHBOARDS, LIVE_WORK}
+        wanted = {LANES} | {name for name in self.async_contexts() if name in known}
         found: Datasets = {}
         problem = ""
         # One at a time, to go easy on datawatch. One failing does not hide the others.
         for name in sorted(wanted):
             try:
-                found[name] = await self._client.dashboard(name)
+                found[name] = await self._read(name)
             except DatawatchError as error:
                 found[name], problem = None, str(error)
         if all(data is None for data in found.values()):
             raise UpdateFailed(problem)
         return found
+
+    async def _read(self, name: str) -> dict[str, Any]:
+        if name == LIVE_WORK:
+            lanes, listed = await self._client.live_work()
+            return gantt.build(lanes, listed, datetime.now(UTC))
+        return await self._client.dashboard(name)
 
 
 def _number(value: object) -> float | None:
@@ -175,6 +185,7 @@ DATA_SENSORS = (
     Number("data_bugs", "defects_per_day", _field("total_found")),
     Number("data_review", "review_backlog", _field("plan_count")),
     Number("data_forecast", "throughput_forecast", _forecast("throughput_per_day")),
+    Number("data_live_work", LIVE_WORK, _field("task_count")),
 )
 NUMBERS = (
     Number("usage_used", "lane_pulse", _usage("points"), "%"),

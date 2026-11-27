@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **A Gantt card for your dashboard:** "datawatch Gantt (live work)" in **Add card**. It
+  shows what each lane ran in the last 6 hours, and the tasks of running, blocked and
+  planning work. It needs the new sensor **Dashboard data: live work**, which starts
+  disabled, and updates every 5 minutes. No add-on or YAML needed.
+
 ## 0.9.0 (2026-11-26)
 
 - **Data for your own cards:** optional sensors, off until you enable them, read every 5

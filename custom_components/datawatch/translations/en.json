@@ -180,6 +180,9 @@
       },
       "lane_busy": {
         "name": "Lane {lane} busy, last full hour"
+      },
+      "data_live_work": {
+        "name": "Dashboard data: live work"
       }
     },
     "binary_sensor": {

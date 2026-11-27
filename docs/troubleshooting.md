@@ -140,6 +140,19 @@ minute, and the dashboard data every 5 minutes.
 - **No history:** history starts when you enable the sensor. The `data` attribute is never
   saved in history.
 
+## The datawatch Gantt card is missing, empty or old
+
+- **Not in "Add card":** reload the browser page (close and reopen the mobile app) after
+  installing or updating, and after restarting Home Assistant. Home Assistant's **Safe
+  mode** does not load it.
+- **"... was not found":** enable the sensor **Dashboard data: live work**.
+- **No task bars:** no task of running, blocked or planning work ran in the last 6 hours.
+  A paused datawatch shows this.
+- **"datawatch cannot be read right now.":** check datawatch is running, and the Home
+  Assistant log.
+- **The time looks old:** the card shows the time its data goes up to. It updates every 5
+  minutes.
+
 ## My report is not recognised
 
 Say "reports" to hear the exact names. Speech-to-text has to write the name as you typed it,
