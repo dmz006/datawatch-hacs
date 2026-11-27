@@ -80,6 +80,9 @@ recommendation and why.
 - Write for people, in plain words.
 - Every voice command and setting is documented in `README.md`, and where Home Assistant
   shows text, in `translations/en.json`.
+- Screen text is translated into every language datawatch has (en, de, es, fr, ja): change
+  all five together. Use datawatch's words, including for Automaton and Automation. Keep
+  spoken commands in English while voice is English only.
 - Keep the diagrams in `docs/how-it-works.md` matching the code.
 - All settings are in Home Assistant's setup screens; no YAML-only options.
 

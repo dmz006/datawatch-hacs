@@ -74,6 +74,16 @@ The counts and the question are made up.
 - **An assistant with speech-to-text and text-to-speech** set up for that device. It works
   whether the assistant is Home Assistant's own or an AI model.
 
+## Languages
+
+| Part | Languages |
+|---|---|
+| Setup and settings screens, report choices and sensor names | English, German, Spanish, French and Japanese, following Home Assistant's language |
+| Voice commands and spoken replies | English only |
+| Dashboard cards | English only |
+
+These are the languages datawatch has.
+
 ## Install
 
 1. In Home Assistant, open the **Marketplace** and add `dmz006/datawatch-hacs` as a custom
@@ -359,7 +369,9 @@ name cannot be words datawatch mode already uses, such as "status".
 ## Dashboard sensors
 
 datawatch adds a **datawatch** service with these entities, for dashboards and your own
-automations:
+automations. The IDs below are the English ones. If Home Assistant is set to German, Spanish
+or French, newly added sensors get IDs made from the translated names, such as
+`sensor.datawatch_offene_fragen`. Sensors you already have keep their IDs.
 
 | Entity | Shows |
 |---|---|

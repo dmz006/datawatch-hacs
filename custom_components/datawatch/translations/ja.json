@@ -1,0 +1,201 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "datawatch に接続",
+        "description": "datawatch サーバーのアドレスを入力してください。次の画面に証明書が表示されるので確認してください。承認するまで、トークンを含め何も送信されません。",
+        "data": {
+          "url": "サーバーアドレス",
+          "token": "トークン"
+        },
+        "data_description": {
+          "url": "https:// で始まります。必要な場合はポートも指定してください。",
+          "token": "datawatch がトークンを使わない場合は空欄にしてください。"
+        }
+      },
+      "reconfigure": {
+        "title": "datawatch の接続を変更",
+        "description": "アドレスまたはトークンを変更します。証明書をもう一度確認します。",
+        "data": {
+          "url": "サーバーアドレス",
+          "token": "トークン"
+        },
+        "data_description": {
+          "url": "https:// で始まります。必要な場合はポートも指定してください。",
+          "token": "同じアドレスで保存済みの datawatch トークンを使い続ける場合は空欄にしてください。保存済みのトークンが別のアドレスに引き継がれることはありません。"
+        }
+      },
+      "certificate": {
+        "title": "証明書の確認",
+        "description": "{url} のサーバーは、次の SHA-256 フィンガープリントを持つ証明書を提示しました:\n\n`{fingerprint}`\n\ndatawatch サーバー本体にある証明書と比較してください。サーバー上で、証明書ファイルを指定して `openssl x509 -in CERTIFICATE_FILE -noout -fingerprint -sha256` を実行します。\n\n一致する場合にのみ「送信」を選択してください。以後は、この証明書だけが受け付けられます。"
+      }
+    },
+    "error": {
+      "invalid_url": "https:// のアドレスのみを入力してください。ポートは指定できますが、パスは含めないでください。",
+      "cannot_connect": "そのアドレスの datawatch を読み取れませんでした。",
+      "invalid_auth": "datawatch がアクセスを拒否しました。トークンを確認してください。",
+      "certificate_changed": "承認する前に証明書が変わりました。アドレスを確認して、もう一度お試しください。"
+    },
+    "abort": {
+      "single_instance_allowed": "datawatch は設定済みです。現在対応しているサーバーは 1 台のみです。",
+      "reconfigure_successful": "datawatch の接続を更新しました。"
+    }
+  },
+  "issues": {
+    "voice_phrase_unavailable": {
+      "title": "datawatch の音声フレーズが機能していません",
+      "description": "datawatch は \"open datawatch\" を Home Assistant に登録できなかったため、この言葉を言っても datawatch モードは始まりません。Home Assistant のアップグレードで仕組みが変わった可能性があります。datawatch の更新を確認してください。詳細は Home Assistant のログにあります。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "datawatch の設定",
+        "description": "AI アシスタント: datawatch で使うアシスタントを選ぶか、空欄のままにして AI をオフにします。\n\n選択している間:\n- デバイスを操作できるすべてのアシスタントが、datawatch の状態、プロジェクト、未解決の質問、ドキュメントを読めます。アシスタント自体の指示は変更されません。\n- datawatch モードでは、コマンド以外の発話は選択したアシスタントに渡されます。そのアシスタントは引き続き家を操作できます。\n- datawatch のテキストは AI モデルに送信されます。これは他の人やプログラムが書いたもので、モデルを誤った方向に導こうとする可能性があります。アシスタントが重要なものを操作できないことを確認してください。\n\nどのアシスタントも、質問への回答、オートマトンの追加、バグの報告、セッションへの送信はできません。これらには常にあなた自身の声による確認が必要です。",
+        "data": {
+          "assistant": "AI アシスタント",
+          "list_order": "セッション、オートメーション、実行中の作業の並び順"
+        },
+        "data_description": {
+          "list_order": "datawatch モードでは、英語で \"sort by name\" または \"most recent first\" と言うこともできます。プロジェクトは常に名前順です。プラン、タスク、プランやオートメーションの中身は datawatch の順序のままです。"
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "report": {
+      "initiate_flow": {
+        "user": "レポートを追加",
+        "reconfigure": "レポートを変更"
+      },
+      "entry_type": "読み上げレポート",
+      "step": {
+        "user": {
+          "title": "読み上げレポートを追加",
+          "data": {
+            "name": "レポート名",
+            "items": "内容"
+          },
+          "data_description": {
+            "name": "datawatch モードで話す言葉です。例: Daily report",
+            "items": "表示の順に読み上げます。プロジェクトにフォーカスしている場合、ほとんどの項目はそのプロジェクトが対象になります。"
+          }
+        },
+        "reconfigure": {
+          "title": "読み上げレポートを変更",
+          "data": {
+            "name": "レポート名",
+            "items": "内容"
+          },
+          "data_description": {
+            "name": "datawatch モードで話す言葉です。例: Daily report",
+            "items": "表示の順に読み上げます。プロジェクトにフォーカスしている場合、ほとんどの項目はそのプロジェクトが対象になります。"
+          }
+        }
+      },
+      "error": {
+        "no_name": "声に出して言える名前を付けてください。",
+        "name_is_a_command": "その言葉は datawatch モードですでに使われています。別の名前を選んでください。",
+        "name_taken": "同じ名前のレポートがすでにあります。",
+        "no_items": "1 つ以上選択してください。"
+      },
+      "abort": {
+        "reconfigure_successful": "レポートを更新しました。"
+      }
+    }
+  },
+  "selector": {
+    "report_items": {
+      "options": {
+        "status": "状態: 一時停止、質問、入力待ちと実行中のセッション",
+        "detail": "詳細: 停滞しているオートマタ、保留項目、失敗したセッション",
+        "attention": "対応が必要な件数",
+        "questions": "未解決の質問の数",
+        "next": "次の作業",
+        "plans": "プランの件数",
+        "running": "実行中のオートマタの数",
+        "held": "保留中の件数",
+        "sessions": "セッションの件数",
+        "automations": "オートメーションの件数"
+      }
+    },
+    "list_order": {
+      "options": {
+        "name": "名前順 (A から Z)",
+        "recent": "新しい順"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_questions": {
+        "name": "未解決の質問"
+      },
+      "needs_attention": {
+        "name": "対応が必要なオートマタ"
+      },
+      "sessions_waiting": {
+        "name": "入力待ちのセッション"
+      },
+      "sessions_running": {
+        "name": "実行中のセッション"
+      },
+      "sessions_failed": {
+        "name": "失敗したセッション"
+      },
+      "automata_stuck": {
+        "name": "失敗またはブロック中のオートマタ"
+      },
+      "held_items": {
+        "name": "保留中の項目"
+      },
+      "data_overview": {
+        "name": "ダッシュボードデータ: 概要"
+      },
+      "data_lane_activity": {
+        "name": "ダッシュボードデータ: レーンの稼働状況"
+      },
+      "data_lane_use": {
+        "name": "ダッシュボードデータ: レーン使用率"
+      },
+      "data_bugs": {
+        "name": "ダッシュボードデータ: バグ"
+      },
+      "data_review": {
+        "name": "ダッシュボードデータ: レビュー待ち"
+      },
+      "data_forecast": {
+        "name": "ダッシュボードデータ: 予測"
+      },
+      "usage_used": {
+        "name": "週間使用量"
+      },
+      "usage_pace": {
+        "name": "週間使用量のペースライン"
+      },
+      "usage_last_day": {
+        "name": "24 時間あたりの週間使用量"
+      },
+      "review_held_questions": {
+        "name": "判断待ちの保留された質問"
+      },
+      "review_oldest": {
+        "name": "判断待ちの最長時間"
+      },
+      "forecast_low": {
+        "name": "完了までの予測日数 (下限)"
+      },
+      "forecast_high": {
+        "name": "完了までの予測日数 (上限)"
+      },
+      "lane_busy": {
+        "name": "レーン {lane} の稼働率 (直近の 1 時間)"
+      }
+    },
+    "binary_sensor": {
+      "new_work_paused": {
+        "name": "新規作業の一時停止"
+      }
+    }
+  }
+}

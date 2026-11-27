@@ -1,0 +1,201 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit datawatch verbinden",
+        "description": "Gib die Adresse deines datawatch-Servers ein. Auf der nächsten Seite wird sein Zertifikat zur Prüfung angezeigt. Bevor du es bestätigst, wird nichts gesendet, auch kein Token.",
+        "data": {
+          "url": "Serveradresse",
+          "token": "Token"
+        },
+        "data_description": {
+          "url": "Beginnt mit https://, bei Bedarf mit Port.",
+          "token": "Leer lassen, wenn dein datawatch kein Token verwendet."
+        }
+      },
+      "reconfigure": {
+        "title": "datawatch-Verbindung ändern",
+        "description": "Ändere die Adresse oder das Token. Du prüfst das Zertifikat erneut.",
+        "data": {
+          "url": "Serveradresse",
+          "token": "Token"
+        },
+        "data_description": {
+          "url": "Beginnt mit https://, bei Bedarf mit Port.",
+          "token": "Leer lassen, um das gespeicherte Token für dieselbe Adresse zu behalten. Ein gespeichertes Token wird nie auf eine andere Adresse übertragen."
+        }
+      },
+      "certificate": {
+        "title": "Zertifikat prüfen",
+        "description": "Der Server unter {url} hat ein Zertifikat mit diesem SHA-256-Fingerabdruck vorgelegt:\n\n`{fingerprint}`\n\nVergleiche ihn mit dem Zertifikat auf deinem datawatch-Server selbst. Führe dort mit deiner Zertifikatsdatei `openssl x509 -in CERTIFICATE_FILE -noout -fingerprint -sha256` aus.\n\nWähle nur dann „Absenden“, wenn beide übereinstimmen. Ab dann wird nur noch dieses Zertifikat akzeptiert."
+      }
+    },
+    "error": {
+      "invalid_url": "Gib nur eine https://-Adresse ein, optional mit Port und ohne Pfad.",
+      "cannot_connect": "datawatch konnte unter dieser Adresse nicht gelesen werden.",
+      "invalid_auth": "datawatch hat den Zugriff verweigert. Prüfe das Token.",
+      "certificate_changed": "Das Zertifikat hat sich geändert, bevor du es bestätigt hast. Prüfe die Adresse und versuche es erneut."
+    },
+    "abort": {
+      "single_instance_allowed": "datawatch ist bereits eingerichtet. Derzeit wird nur ein Server unterstützt.",
+      "reconfigure_successful": "Die datawatch-Verbindung wurde aktualisiert."
+    }
+  },
+  "issues": {
+    "voice_phrase_unavailable": {
+      "title": "Der datawatch-Sprachbefehl funktioniert nicht",
+      "description": "datawatch konnte \"open datawatch\" nicht bei Home Assistant registrieren, daher startet dieser Satz den datawatch-Modus nicht. Möglicherweise hat ein Home-Assistant-Update die Funktionsweise geändert. Prüfe, ob es ein datawatch-Update gibt. Details stehen im Home-Assistant-Protokoll."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "datawatch-Einstellungen",
+        "description": "KI-Assistent: Wähle einen für datawatch aus oder lass das Feld leer, damit die KI ausgeschaltet bleibt.\n\nSolange einer ausgewählt ist:\n- Jeder Assistent mit Gerätesteuerung kann datawatch-Status, Projekte, offene Fragen und die Dokumentation lesen. Seine eigenen Anweisungen werden nicht geändert.\n- Im datawatch-Modus geht alles, was kein Befehl ist, an den ausgewählten Assistenten, der weiterhin dein Zuhause steuern kann.\n- datawatch-Text wird an dein KI-Modell gesendet. Er stammt von anderen Personen und Programmen und könnte versuchen, es in die Irre zu führen. Stelle daher sicher, dass deine Assistenten nichts Sensibles steuern können.\n\nKein Assistent kann eine Frage beantworten, einen Automaten hinzufügen, einen Fehler melden oder etwas an eine Sitzung senden. Dafür ist immer deine eigene gesprochene Bestätigung nötig.",
+        "data": {
+          "assistant": "KI-Assistent",
+          "list_order": "Reihenfolge von Sitzungen, Automatisierungen und laufenden Arbeiten"
+        },
+        "data_description": {
+          "list_order": "Du kannst im datawatch-Modus auch auf Englisch \"sort by name\" oder \"most recent first\" sagen. Projekte sind immer nach Namen sortiert; Pläne, Aufgaben sowie der Inhalt eines Plans oder einer Automatisierung behalten die Reihenfolge von datawatch."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "report": {
+      "initiate_flow": {
+        "user": "Bericht hinzufügen",
+        "reconfigure": "Bericht ändern"
+      },
+      "entry_type": "Gesprochener Bericht",
+      "step": {
+        "user": {
+          "title": "Gesprochenen Bericht hinzufügen",
+          "data": {
+            "name": "Name des Berichts",
+            "items": "Inhalt"
+          },
+          "data_description": {
+            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Daily report.",
+            "items": "Wird in der angezeigten Reihenfolge vorgelesen. Bei einem Projektfokus beziehen sich die meisten Teile auf dieses Projekt."
+          }
+        },
+        "reconfigure": {
+          "title": "Gesprochenen Bericht ändern",
+          "data": {
+            "name": "Name des Berichts",
+            "items": "Inhalt"
+          },
+          "data_description": {
+            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Daily report.",
+            "items": "Wird in der angezeigten Reihenfolge vorgelesen. Bei einem Projektfokus beziehen sich die meisten Teile auf dieses Projekt."
+          }
+        }
+      },
+      "error": {
+        "no_name": "Gib dem Bericht einen Namen, den du aussprechen kannst.",
+        "name_is_a_command": "Der datawatch-Modus verwendet diese Wörter bereits. Wähle einen anderen Namen.",
+        "name_taken": "Ein anderer Bericht heißt bereits so.",
+        "no_items": "Wähle mindestens einen Eintrag."
+      },
+      "abort": {
+        "reconfigure_successful": "Der Bericht wurde aktualisiert."
+      }
+    }
+  },
+  "selector": {
+    "report_items": {
+      "options": {
+        "status": "Status: Pause, Fragen, wartende und laufende Sitzungen",
+        "detail": "Weitere Details: feststeckende Automaten, angehaltene Elemente, fehlgeschlagene Sitzungen",
+        "attention": "Wie viel deine Aufmerksamkeit braucht",
+        "questions": "Anzahl offener Fragen",
+        "next": "Was als Nächstes kommt",
+        "plans": "Anzahl der Pläne",
+        "running": "Wie viele Automaten laufen",
+        "held": "Wie viel angehalten ist",
+        "sessions": "Anzahl der Sitzungen",
+        "automations": "Anzahl der Automatisierungen"
+      }
+    },
+    "list_order": {
+      "options": {
+        "name": "Nach Namen (A bis Z)",
+        "recent": "Neueste zuerst"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_questions": {
+        "name": "Offene Fragen"
+      },
+      "needs_attention": {
+        "name": "Automaten, die Aufmerksamkeit brauchen"
+      },
+      "sessions_waiting": {
+        "name": "Sitzungen, die auf Eingabe warten"
+      },
+      "sessions_running": {
+        "name": "Laufende Sitzungen"
+      },
+      "sessions_failed": {
+        "name": "Fehlgeschlagene Sitzungen"
+      },
+      "automata_stuck": {
+        "name": "Fehlgeschlagene oder blockierte Automaten"
+      },
+      "held_items": {
+        "name": "Angehaltene Elemente"
+      },
+      "data_overview": {
+        "name": "Dashboard-Daten: Übersicht"
+      },
+      "data_lane_activity": {
+        "name": "Dashboard-Daten: Lane-Aktivität"
+      },
+      "data_lane_use": {
+        "name": "Dashboard-Daten: Lane-Auslastung"
+      },
+      "data_bugs": {
+        "name": "Dashboard-Daten: Fehler"
+      },
+      "data_review": {
+        "name": "Dashboard-Daten: Prüfrückstand"
+      },
+      "data_forecast": {
+        "name": "Dashboard-Daten: Prognose"
+      },
+      "usage_used": {
+        "name": "Wöchentliche Nutzung verbraucht"
+      },
+      "usage_pace": {
+        "name": "Tempolinie der wöchentlichen Nutzung"
+      },
+      "usage_last_day": {
+        "name": "Wöchentliche Nutzung pro 24 Stunden"
+      },
+      "review_held_questions": {
+        "name": "Zurückgehaltene Fragen, die auf eine Entscheidung warten"
+      },
+      "review_oldest": {
+        "name": "Längste Wartezeit auf eine Entscheidung"
+      },
+      "forecast_low": {
+        "name": "Prognose: Tage bis zum Abschluss, untere Schätzung"
+      },
+      "forecast_high": {
+        "name": "Prognose: Tage bis zum Abschluss, obere Schätzung"
+      },
+      "lane_busy": {
+        "name": "Lane {lane} ausgelastet, letzte volle Stunde"
+      }
+    },
+    "binary_sensor": {
+      "new_work_paused": {
+        "name": "Neue Arbeit pausiert"
+      }
+    }
+  }
+}

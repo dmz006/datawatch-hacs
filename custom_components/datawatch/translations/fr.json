@@ -1,0 +1,201 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Se connecter à datawatch",
+        "description": "Saisissez l'adresse de votre serveur datawatch. L'écran suivant affiche son certificat pour que vous le vérifiiez. Rien n'est envoyé, pas même un jeton, avant votre approbation.",
+        "data": {
+          "url": "Adresse du serveur",
+          "token": "Jeton"
+        },
+        "data_description": {
+          "url": "Commence par https://, avec le port si nécessaire.",
+          "token": "Laissez vide si votre datawatch n'utilise pas de jeton."
+        }
+      },
+      "reconfigure": {
+        "title": "Modifier la connexion à datawatch",
+        "description": "Modifiez l'adresse ou le jeton. Vous vérifierez de nouveau le certificat.",
+        "data": {
+          "url": "Adresse du serveur",
+          "token": "Jeton"
+        },
+        "data_description": {
+          "url": "Commence par https://, avec le port si nécessaire.",
+          "token": "Laissez vide pour conserver le jeton enregistré pour la même adresse. Un jeton enregistré n'est jamais reporté sur une autre adresse."
+        }
+      },
+      "certificate": {
+        "title": "Vérifier le certificat",
+        "description": "Le serveur à l'adresse {url} a présenté un certificat avec cette empreinte SHA-256 :\n\n`{fingerprint}`\n\nComparez-la avec le certificat sur votre serveur datawatch lui-même. Sur celui-ci, exécutez `openssl x509 -in CERTIFICATE_FILE -noout -fingerprint -sha256` avec votre fichier de certificat.\n\nNe sélectionnez Valider que si elles correspondent. Ensuite, seul ce certificat sera accepté."
+      }
+    },
+    "error": {
+      "invalid_url": "Saisissez uniquement une adresse https://, avec un port facultatif et sans chemin.",
+      "cannot_connect": "Impossible de lire datawatch à cette adresse.",
+      "invalid_auth": "datawatch a refusé l'accès. Vérifiez le jeton.",
+      "certificate_changed": "Le certificat a changé avant votre approbation. Vérifiez l'adresse et réessayez."
+    },
+    "abort": {
+      "single_instance_allowed": "datawatch est déjà configuré. Un seul serveur est pris en charge pour le moment.",
+      "reconfigure_successful": "La connexion à datawatch a été mise à jour."
+    }
+  },
+  "issues": {
+    "voice_phrase_unavailable": {
+      "title": "La phrase vocale datawatch ne fonctionne pas",
+      "description": "datawatch n'a pas pu enregistrer \"open datawatch\" auprès de Home Assistant ; prononcer cette phrase ne lancera donc pas le mode datawatch. Une mise à niveau de Home Assistant a peut-être modifié ce fonctionnement. Recherchez une mise à jour de datawatch. Les détails figurent dans le journal de Home Assistant."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Paramètres de datawatch",
+        "description": "Assistant IA : choisissez-en un à utiliser avec datawatch, ou laissez vide pour que l'IA reste désactivée.\n\nTant qu'un assistant est choisi :\n- Tout assistant pouvant contrôler des appareils peut lire l'état de datawatch, les projets, les questions ouvertes et la documentation. Ses propres instructions ne sont pas modifiées.\n- En mode datawatch, ce qui n'est pas une commande est transmis à l'assistant choisi, qui garde le contrôle de votre maison.\n- Le texte de datawatch est envoyé à votre modèle d'IA. Il est écrit par d'autres personnes et programmes et pourrait chercher à l'induire en erreur : vérifiez que vos assistants ne peuvent rien contrôler de sensible.\n\nAucun assistant ne peut répondre à une question, ajouter un automate, signaler un bug ni envoyer quelque chose à une session. Ces actions exigent toujours votre propre confirmation orale.",
+        "data": {
+          "assistant": "Assistant IA",
+          "list_order": "Ordre des sessions, des automatisations et des travaux en cours"
+        },
+        "data_description": {
+          "list_order": "En mode datawatch, vous pouvez aussi dire en anglais \"sort by name\" ou \"most recent first\". Les projets sont toujours classés par nom ; les plans, les tâches et le contenu d'un plan ou d'une automatisation gardent l'ordre de datawatch."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "report": {
+      "initiate_flow": {
+        "user": "Ajouter un rapport",
+        "reconfigure": "Modifier le rapport"
+      },
+      "entry_type": "Rapport vocal",
+      "step": {
+        "user": {
+          "title": "Ajouter un rapport vocal",
+          "data": {
+            "name": "Nom du rapport",
+            "items": "Contenu"
+          },
+          "data_description": {
+            "name": "Ce que vous direz en mode datawatch, par exemple Daily report.",
+            "items": "Lu dans l'ordre affiché. Avec le focus sur un projet, la plupart des parties portent sur ce projet."
+          }
+        },
+        "reconfigure": {
+          "title": "Modifier un rapport vocal",
+          "data": {
+            "name": "Nom du rapport",
+            "items": "Contenu"
+          },
+          "data_description": {
+            "name": "Ce que vous direz en mode datawatch, par exemple Daily report.",
+            "items": "Lu dans l'ordre affiché. Avec le focus sur un projet, la plupart des parties portent sur ce projet."
+          }
+        }
+      },
+      "error": {
+        "no_name": "Donnez au rapport un nom que vous pouvez prononcer.",
+        "name_is_a_command": "Le mode datawatch utilise déjà ces mots. Choisissez un autre nom.",
+        "name_taken": "Un autre rapport porte déjà ce nom.",
+        "no_items": "Choisissez au moins un élément."
+      },
+      "abort": {
+        "reconfigure_successful": "Le rapport a été mis à jour."
+      }
+    }
+  },
+  "selector": {
+    "report_items": {
+      "options": {
+        "status": "Statut : pause, questions, sessions en attente et en cours",
+        "detail": "Plus de détails : automates bloqués, éléments retenus, sessions échouées",
+        "attention": "Ce qui demande votre attention",
+        "questions": "Nombre de questions ouvertes",
+        "next": "La suite",
+        "plans": "Nombre de plans",
+        "running": "Nombre d'automates en cours",
+        "held": "Nombre d'éléments en attente",
+        "sessions": "Nombre de sessions",
+        "automations": "Nombre d'automatisations"
+      }
+    },
+    "list_order": {
+      "options": {
+        "name": "Par nom (de A à Z)",
+        "recent": "Les plus récents d'abord"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_questions": {
+        "name": "Questions ouvertes"
+      },
+      "needs_attention": {
+        "name": "Automates à traiter"
+      },
+      "sessions_waiting": {
+        "name": "Sessions en attente de saisie"
+      },
+      "sessions_running": {
+        "name": "Sessions en cours"
+      },
+      "sessions_failed": {
+        "name": "Sessions échouées"
+      },
+      "automata_stuck": {
+        "name": "Automates échoués ou bloqués"
+      },
+      "held_items": {
+        "name": "Éléments en attente"
+      },
+      "data_overview": {
+        "name": "Données du tableau de bord : aperçu"
+      },
+      "data_lane_activity": {
+        "name": "Données du tableau de bord : activité des voies"
+      },
+      "data_lane_use": {
+        "name": "Données du tableau de bord : utilisation des voies"
+      },
+      "data_bugs": {
+        "name": "Données du tableau de bord : bugs"
+      },
+      "data_review": {
+        "name": "Données du tableau de bord : file de revue"
+      },
+      "data_forecast": {
+        "name": "Données du tableau de bord : prévision"
+      },
+      "usage_used": {
+        "name": "Consommation hebdomadaire utilisée"
+      },
+      "usage_pace": {
+        "name": "Ligne de rythme de la consommation hebdomadaire"
+      },
+      "usage_last_day": {
+        "name": "Consommation hebdomadaire par 24 heures"
+      },
+      "review_held_questions": {
+        "name": "Questions retenues en attente de décision"
+      },
+      "review_oldest": {
+        "name": "Plus longue attente d'une décision"
+      },
+      "forecast_low": {
+        "name": "Prévision en jours avant la fin, estimation basse"
+      },
+      "forecast_high": {
+        "name": "Prévision en jours avant la fin, estimation haute"
+      },
+      "lane_busy": {
+        "name": "Voie {lane} occupée, dernière heure complète"
+      }
+    },
+    "binary_sensor": {
+      "new_work_paused": {
+        "name": "Nouveaux travaux en pause"
+      }
+    }
+  }
+}
