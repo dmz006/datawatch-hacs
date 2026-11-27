@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.1 (2026-11-26)
 
 - **A voice testing guide** ([docs/testing.md](docs/testing.md)): a checklist of every
   feature, with examples, so you can try it all.
