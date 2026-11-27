@@ -44,7 +44,7 @@
   "issues": {
     "voice_phrase_unavailable": {
       "title": "La frase de voz de datawatch no funciona",
-      "description": "datawatch no pudo registrar \"open datawatch\" en Home Assistant, así que decirlo no iniciará el modo datawatch. Puede que una actualización de Home Assistant haya cambiado su funcionamiento. Busca una actualización de datawatch. El registro de Home Assistant tiene los detalles."
+      "description": "datawatch no pudo registrar \"abre datawatch\" en Home Assistant, así que decirlo no iniciará el modo datawatch. Puede que una actualización de Home Assistant haya cambiado su funcionamiento. Busca una actualización de datawatch. El registro de Home Assistant tiene los detalles."
     }
   },
   "options": {
@@ -57,7 +57,7 @@
           "list_order": "Orden de sesiones, automatizaciones y trabajo en ejecución"
         },
         "data_description": {
-          "list_order": "En el modo datawatch también puedes decir en inglés \"sort by name\" o \"most recent first\". Los proyectos siempre van por nombre; los planes, las tareas y el contenido de un plan o una automatización mantienen el orden de datawatch."
+          "list_order": "En el modo datawatch también puedes decir \"ordenar por nombre\" o \"más recientes primero\". Los proyectos siempre van por nombre; los planes, las tareas y el contenido de un plan o una automatización mantienen el orden de datawatch."
         }
       }
     }
@@ -77,7 +77,7 @@
             "items": "Contenido"
           },
           "data_description": {
-            "name": "Lo que dirás en el modo datawatch, por ejemplo Daily report.",
+            "name": "Lo que dirás en el modo datawatch, por ejemplo Informe diario.",
             "items": "Se lee en el orden mostrado. Con el foco en un proyecto, la mayoría de las partes se refieren a ese proyecto."
           }
         },
@@ -88,7 +88,7 @@
             "items": "Contenido"
           },
           "data_description": {
-            "name": "Lo que dirás en el modo datawatch, por ejemplo Daily report.",
+            "name": "Lo que dirás en el modo datawatch, por ejemplo Informe diario.",
             "items": "Se lee en el orden mostrado. Con el foco en un proyecto, la mayoría de las partes se refieren a ese proyecto."
           }
         }

@@ -44,7 +44,7 @@
   "issues": {
     "voice_phrase_unavailable": {
       "title": "Der datawatch-Sprachbefehl funktioniert nicht",
-      "description": "datawatch konnte \"open datawatch\" nicht bei Home Assistant registrieren, daher startet dieser Satz den datawatch-Modus nicht. Möglicherweise hat ein Home-Assistant-Update die Funktionsweise geändert. Prüfe, ob es ein datawatch-Update gibt. Details stehen im Home-Assistant-Protokoll."
+      "description": "datawatch konnte \"öffne datawatch\" nicht bei Home Assistant registrieren, daher startet dieser Satz den datawatch-Modus nicht. Möglicherweise hat ein Home-Assistant-Update die Funktionsweise geändert. Prüfe, ob es ein datawatch-Update gibt. Details stehen im Home-Assistant-Protokoll."
     }
   },
   "options": {
@@ -57,7 +57,7 @@
           "list_order": "Reihenfolge von Sitzungen, Automatisierungen und laufenden Arbeiten"
         },
         "data_description": {
-          "list_order": "Du kannst im datawatch-Modus auch auf Englisch \"sort by name\" oder \"most recent first\" sagen. Projekte sind immer nach Namen sortiert; Pläne, Aufgaben sowie der Inhalt eines Plans oder einer Automatisierung behalten die Reihenfolge von datawatch."
+          "list_order": "Du kannst im datawatch-Modus auch \"nach Namen sortieren\" oder \"neueste zuerst\" sagen. Projekte sind immer nach Namen sortiert; Pläne, Aufgaben sowie der Inhalt eines Plans oder einer Automatisierung behalten die Reihenfolge von datawatch."
         }
       }
     }
@@ -77,7 +77,7 @@
             "items": "Inhalt"
           },
           "data_description": {
-            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Daily report.",
+            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Tagesbericht.",
             "items": "Wird in der angezeigten Reihenfolge vorgelesen. Bei einem Projektfokus beziehen sich die meisten Teile auf dieses Projekt."
           }
         },
@@ -88,7 +88,7 @@
             "items": "Inhalt"
           },
           "data_description": {
-            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Daily report.",
+            "name": "Was du im datawatch-Modus sagen wirst, zum Beispiel Tagesbericht.",
             "items": "Wird in der angezeigten Reihenfolge vorgelesen. Bei einem Projektfokus beziehen sich die meisten Teile auf dieses Projekt."
           }
         }

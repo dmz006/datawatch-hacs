@@ -44,7 +44,7 @@
   "issues": {
     "voice_phrase_unavailable": {
       "title": "datawatch の音声フレーズが機能していません",
-      "description": "datawatch は \"open datawatch\" を Home Assistant に登録できなかったため、この言葉を言っても datawatch モードは始まりません。Home Assistant のアップグレードで仕組みが変わった可能性があります。datawatch の更新を確認してください。詳細は Home Assistant のログにあります。"
+      "description": "datawatch は \"datawatchを開いて\" を Home Assistant に登録できなかったため、この言葉を言っても datawatch モードは始まりません。Home Assistant のアップグレードで仕組みが変わった可能性があります。datawatch の更新を確認してください。詳細は Home Assistant のログにあります。"
     }
   },
   "options": {
@@ -57,7 +57,7 @@
           "list_order": "セッション、オートメーション、実行中の作業の並び順"
         },
         "data_description": {
-          "list_order": "datawatch モードでは、英語で \"sort by name\" または \"most recent first\" と言うこともできます。プロジェクトは常に名前順です。プラン、タスク、プランやオートメーションの中身は datawatch の順序のままです。"
+          "list_order": "datawatch モードでは、\"名前順\" または \"新しい順\" と言うこともできます。プロジェクトは常に名前順です。プラン、タスク、プランやオートメーションの中身は datawatch の順序のままです。"
         }
       }
     }
@@ -77,7 +77,7 @@
             "items": "内容"
           },
           "data_description": {
-            "name": "datawatch モードで話す言葉です。例: Daily report",
+            "name": "datawatch モードで話す言葉です。例: 日次レポート",
             "items": "表示の順に読み上げます。プロジェクトにフォーカスしている場合、ほとんどの項目はそのプロジェクトが対象になります。"
           }
         },
@@ -88,7 +88,7 @@
             "items": "内容"
           },
           "data_description": {
-            "name": "datawatch モードで話す言葉です。例: Daily report",
+            "name": "datawatch モードで話す言葉です。例: 日次レポート",
             "items": "表示の順に読み上げます。プロジェクトにフォーカスしている場合、ほとんどの項目はそのプロジェクトが対象になります。"
           }
         }

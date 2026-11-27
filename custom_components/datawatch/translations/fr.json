@@ -44,7 +44,7 @@
   "issues": {
     "voice_phrase_unavailable": {
       "title": "La phrase vocale datawatch ne fonctionne pas",
-      "description": "datawatch n'a pas pu enregistrer \"open datawatch\" auprès de Home Assistant ; prononcer cette phrase ne lancera donc pas le mode datawatch. Une mise à niveau de Home Assistant a peut-être modifié ce fonctionnement. Recherchez une mise à jour de datawatch. Les détails figurent dans le journal de Home Assistant."
+      "description": "datawatch n'a pas pu enregistrer \"ouvre datawatch\" auprès de Home Assistant ; prononcer cette phrase ne lancera donc pas le mode datawatch. Une mise à niveau de Home Assistant a peut-être modifié ce fonctionnement. Recherchez une mise à jour de datawatch. Les détails figurent dans le journal de Home Assistant."
     }
   },
   "options": {
@@ -57,7 +57,7 @@
           "list_order": "Ordre des sessions, des automatisations et des travaux en cours"
         },
         "data_description": {
-          "list_order": "En mode datawatch, vous pouvez aussi dire en anglais \"sort by name\" ou \"most recent first\". Les projets sont toujours classés par nom ; les plans, les tâches et le contenu d'un plan ou d'une automatisation gardent l'ordre de datawatch."
+          "list_order": "En mode datawatch, vous pouvez aussi dire \"trier par nom\" ou \"les plus récents d'abord\". Les projets sont toujours classés par nom ; les plans, les tâches et le contenu d'un plan ou d'une automatisation gardent l'ordre de datawatch."
         }
       }
     }
@@ -77,7 +77,7 @@
             "items": "Contenu"
           },
           "data_description": {
-            "name": "Ce que vous direz en mode datawatch, par exemple Daily report.",
+            "name": "Ce que vous direz en mode datawatch, par exemple Rapport quotidien.",
             "items": "Lu dans l'ordre affiché. Avec le focus sur un projet, la plupart des parties portent sur ce projet."
           }
         },
@@ -88,7 +88,7 @@
             "items": "Contenu"
           },
           "data_description": {
-            "name": "Ce que vous direz en mode datawatch, par exemple Daily report.",
+            "name": "Ce que vous direz en mode datawatch, par exemple Rapport quotidien.",
             "items": "Lu dans l'ordre affiché. Avec le focus sur un projet, la plupart des parties portent sur ce projet."
           }
         }

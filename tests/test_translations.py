@@ -13,12 +13,20 @@ from fake_datawatch import Fake, serve
 from ha_harness import add_datawatch, running_hass
 from homeassistant.setup import async_setup_component
 
+from custom_components.datawatch.voice.language import LANGUAGES as LANGUAGES_SPOKEN
+
 FOLDER = Path(__file__).resolve().parents[1] / "custom_components" / "datawatch" / "translations"
 # datawatch's own languages. Add one here when datawatch adds one.
 LANGUAGES = ("en", "de", "es", "fr", "ja")
 TRANSLATED = LANGUAGES[1:]
-# Voice is English only, so these must appear in every language exactly as said.
-SPOKEN = ('"open datawatch"', '"sort by name"', '"most recent first"')
+# What screens tell the user to say. Each language quotes the words its own voice listens for.
+SPOKEN = ("open", "ORDER_NAME", "ORDER_RECENT")
+
+
+def _to_say(language: str, wanted: str) -> str:
+    grammar = LANGUAGES_SPOKEN[language].grammar
+    said = grammar.entry_examples[0] if wanted == "open" else grammar.phrases[wanted][0]
+    return f'"{said}"'
 
 
 def _strings(node: Any, path: str = "") -> dict[str, str]:
@@ -51,12 +59,13 @@ def test_every_english_text_is_translated(language: str) -> None:
 
 
 @pytest.mark.parametrize("language", TRANSLATED)
-def test_placeholders_code_and_spoken_words_are_unchanged(language: str) -> None:
+def test_placeholders_and_code_are_unchanged_and_spoken_words_are_its_own(language: str) -> None:
     english, other = _load("en"), _load(language)
     for key, text in english.items():
         assert _fixed(other[key]) == _fixed(text), key
-        for words in SPOKEN:
-            assert other[key].count(words) == text.count(words), f"{key}: {words}"
+        for wanted in SPOKEN:
+            quoted = other[key].casefold().count(_to_say(language, wanted).casefold())
+            assert quoted == text.count(_to_say("en", wanted)), f"{key}: {wanted}"
 
 
 @pytest.mark.parametrize("language", TRANSLATED)
