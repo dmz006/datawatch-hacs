@@ -41,7 +41,8 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 
 from custom_components.datawatch import mode
-from custom_components.datawatch.const import DOMAIN
+from custom_components.datawatch.const import CONF_ASSISTANT, DOMAIN
+from custom_components.datawatch.voice.language import current
 
 Certificate = tuple[Path, Path, str]
 CLOSING = "Closing datawatch."
@@ -123,10 +124,12 @@ def voice_test(
     serve(certificate, inner, fake)
 
 
-async def say(hass: HomeAssistant, words: str, satellite_id: str | None) -> str:
+async def say(
+    hass: HomeAssistant, words: str, satellite_id: str | None, language: str = "en"
+) -> str:
     """What Home Assistant does with recognised speech. Returns the spoken reply."""
     result = await conversation.async_converse(
-        hass, words, None, Context(), language="en", satellite_id=satellite_id
+        hass, words, None, Context(), language=language, satellite_id=satellite_id
     )
     return str(result.response.speech.get("plain", {}).get("speech", ""))
 
@@ -490,5 +493,101 @@ def test_background_talk_cannot_hold_the_mode_open(
         assert len(satellite.asked) == 5
         assert satellite.announced == ["I didn't understand three times. " + CLOSING]
         assert fake.seen == []
+
+    voice_test(certificate, tmp_path, body)
+
+
+async def visit_in(
+    hass: HomeAssistant, satellite: FakeSatellite, language: str, opening: str, *script: str
+) -> None:
+    """A visit through a voice assistant set to language."""
+    satellite.script = list(script)
+    satellite.asked.clear()
+    satellite.announced.clear()
+    assert await say(hass, opening, satellite.entity_id, language) == ""
+    async with asyncio.timeout(10):
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+
+@pytest.mark.parametrize(
+    ("language", "opening", "leave", "activated", "closing"),
+    [
+        ("de", "Öffne datawatch.", "Stopp.", "Datawatch ist aktiv.", "datawatch wird geschlossen."),
+        ("es", "Abre datawatch.", "Salir.", "Datawatch activado.", "Cerrando datawatch."),
+        ("fr", "Ouvre datawatch.", "Stop.", "Datawatch activé.", "Fermeture de datawatch."),
+        (
+            "ja",
+            "datawatchを開いて。",
+            "終了。",
+            "datawatchを開始しました。",
+            "datawatchを終了します。",
+        ),
+        (
+            "ja-JP",
+            "データウォッチを開いて",
+            "終了",
+            "datawatchを開始しました。",
+            "datawatchを終了します。",
+        ),
+        ("de", "datawatch", "beenden", "Datawatch ist aktiv.", "datawatch wird geschlossen."),
+        ("nl", "open datawatch", "stop", "Datawatch activated.", CLOSING),
+    ],
+)
+def test_voice_speaks_the_language_of_the_assistant_that_heard(
+    certificate: Certificate,
+    tmp_path: Path,
+    language: str,
+    opening: str,
+    leave: str,
+    activated: str,
+    closing: str,
+) -> None:
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        # Home Assistant itself is set to another language: the assistant's is what counts.
+        assert hass.config.language == "en"
+        await visit_in(hass, satellite, language, opening, leave)
+        assert satellite.asked == [activated]
+        assert satellite.announced == [closing]
+
+    voice_test(certificate, tmp_path, body)
+
+
+def test_a_japanese_visit_speaks_japanese_punctuation(
+    certificate: Certificate, tmp_path: Path
+) -> None:
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        await visit_in(hass, satellite, "ja", "datawatch", "プロジェクト一覧", "終了")
+        listed = satellite.asked[1]
+        assert listed.startswith("プロジェクト"), listed
+        assert ". " not in listed and ", " not in listed, listed
+        assert "1、" in listed, listed
+
+    voice_test(certificate, tmp_path, body)
+
+
+def test_other_talk_reaches_the_ai_in_the_voice_language_and_its_tools_stay_english(
+    certificate: Certificate, tmp_path: Path
+) -> None:
+    spoken: list[tuple[str, str]] = []
+
+    class Listening(FakeAiAssistant):
+        async def async_process(
+            self, user_input: conversation.ConversationInput
+        ) -> conversation.ConversationResult:
+            # Where a tool the assistant calls would run, and word its reply.
+            spoken.append((user_input.language, current().code))
+            return await super().async_process(user_input)
+
+    async def body(hass: HomeAssistant, satellite: FakeSatellite, fake: Fake) -> None:
+        assistant = Listening()
+        await hass.data[CONVERSATION_COMPONENT].async_add_entities([assistant])
+        (entry,) = hass.config_entries.async_entries(DOMAIN)
+        hass.config_entries.async_update_entry(entry, options={CONF_ASSISTANT: assistant.entity_id})
+        await hass.async_block_till_done()
+        await visit_in(hass, satellite, "de", "datawatch", "erzähl einen Witz", "stopp")
+        assert assistant.asked == ["erzähl einen Witz"]
+        assert spoken == [("de", "en")]
+        assert satellite.asked[1] == "The AI answered."
+        assert satellite.announced == ["datawatch wird geschlossen."]
 
     voice_test(certificate, tmp_path, body)

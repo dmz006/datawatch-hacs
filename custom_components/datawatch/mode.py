@@ -45,9 +45,8 @@ from .reporting import build, find, read_automaton, run
 from .voice.actions import Action
 from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.custom import CustomReport
-from .voice.grammar import Language
 from .voice.items import GONE, Card, Item, restored, stored
-from .voice.language import N_, for_tag, speaking, t
+from .voice.language import N_, current, for_tag, speaking, t
 from .voice.order import Order, chosen
 from .voice.phrases import Kind, parse
 from .voice.questions import Draft
@@ -136,16 +135,17 @@ class DatawatchMode:
         self._focus = focus
         self._active: set[str] = set()
 
-    async def async_entry_phrase(self, satellite_id: str | None) -> str:
-        """An entry phrase was heard. An empty reply means nothing is spoken here."""
-        with speaking(self._language()):
-            return self._entered(satellite_id)
+    async def async_entry_phrase(self, satellite_id: str | None, heard_in: str | None) -> str:
+        """An entry phrase was heard. An empty reply means nothing is spoken here.
 
-    def _language(self) -> Language:
-        """The voice language: Home Assistant's, or English where voice does not have it."""
-        return for_tag(self._hass.config.language)
+        heard_in is the voice assistant's language. The whole visit uses it, or English
+        where voice does not have it.
+        """
+        tag = heard_in or self._hass.config.language
+        with speaking(for_tag(tag)):
+            return current().tidy(self._entered(satellite_id, tag))
 
-    def _entered(self, satellite_id: str | None) -> str:
+    def _entered(self, satellite_id: str | None, tag: str) -> str:
         if satellite_id is None:
             return t("Datawatch mode works from a voice device.")
         state = self._hass.states.get(satellite_id)
@@ -156,18 +156,18 @@ class DatawatchMode:
             self._active.add(satellite_id)
             # Not started eagerly: this request has to finish before the mode speaks.
             self._entry.async_create_background_task(
-                self._hass, self._visit(satellite_id), f"{DOMAIN} voice", eager_start=False
+                self._hass, self._visit(satellite_id, tag), f"{DOMAIN} voice", eager_start=False
             )
         return ""
 
-    async def _visit(self, satellite_id: str) -> None:
-        with speaking(self._language()):
-            await self._visit_in_language(satellite_id)
+    async def _visit(self, satellite_id: str, tag: str) -> None:
+        with speaking(for_tag(tag)):
+            await self._visit_in_language(satellite_id, tag)
 
-    async def _visit_in_language(self, satellite_id: str) -> None:
+    async def _visit_in_language(self, satellite_id: str, tag: str) -> None:
         try:
             await self._wait_until_idle(satellite_id)
-            await self._converse(satellite_id)
+            await self._converse(satellite_id, tag)
         except HomeAssistantError, TimeoutError:
             _LOGGER.warning("The voice device could not continue datawatch mode", exc_info=True)
             await self._announce(satellite_id, t(_CLOSING))
@@ -198,7 +198,7 @@ class DatawatchMode:
         finally:
             stop()
 
-    async def _converse(self, satellite_id: str) -> None:
+    async def _converse(self, satellite_id: str, tag: str) -> None:
         assistant = self._entry.options.get(CONF_ASSISTANT)
         conversation = Conversation(
             self._focus.project,
@@ -227,7 +227,7 @@ class DatawatchMode:
                 elif reply.act is not None:
                     reply = await self._act(conversation, reply.act)
                 elif reply.forward is not None and assistant:
-                    text, chat = await self._talk(assistant, reply.forward, chat)
+                    text, chat = await self._talk(assistant, reply.forward, chat, tag)
                     reply = conversation.said(text)
         finally:
             self._hass.data[DISCUSSING] = None
@@ -241,6 +241,7 @@ class DatawatchMode:
 
     async def _ask(self, satellite_id: str, text: str) -> str | None:
         """Say text and listen. None means nothing was heard."""
+        text = current().tidy(text)
         try:
             async with asyncio.timeout(_turn_limit(text)):
                 response = await self._hass.services.async_call(
@@ -391,16 +392,21 @@ class DatawatchMode:
             return Reply(t(_REFUSED), ends=True)
         return conversation.sent(outcome)
 
-    async def _talk(self, assistant: str, words: str, chat: str | None) -> tuple[str, str | None]:
+    async def _talk(
+        self, assistant: str, words: str, chat: str | None, tag: str
+    ) -> tuple[str, str | None]:
         """Pass talk that is not a command to the AI assistant. Returns its reply."""
-        data = {"agent_id": assistant, "text": words, "language": self._hass.config.language}
+        data = {"agent_id": assistant, "text": words, "language": tag}
         if chat is not None:
             data["conversation_id"] = chat
         try:
-            async with asyncio.timeout(ASSISTANT_LIMIT):
-                result = await self._hass.services.async_call(
-                    "conversation", "process", data, blocking=True, return_response=True
-                )
+            # The assistant's tools would otherwise inherit the voice language: what they
+            # give an AI is always in English.
+            with speaking(for_tag("en")):
+                async with asyncio.timeout(ASSISTANT_LIMIT):
+                    result = await self._hass.services.async_call(
+                        "conversation", "process", data, blocking=True, return_response=True
+                    )
             response: Any = (result or {})["response"]
             if response.get("response_type") == "error":
                 _LOGGER.warning("The AI assistant reported an error: %s", response)
@@ -414,6 +420,7 @@ class DatawatchMode:
 
     async def _announce(self, satellite_id: str, text: str) -> None:
         """Say text without listening. A device that cannot is only logged."""
+        text = current().tidy(text)
         try:
             async with asyncio.timeout(_turn_limit(text)):
                 await self._hass.services.async_call(

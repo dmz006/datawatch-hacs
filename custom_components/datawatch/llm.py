@@ -402,6 +402,13 @@ _TOOLS: tuple[type[_DatawatchTool], ...] = (
 )
 
 
+_OTHER_LANGUAGES = (
+    "Those are the English words. Datawatch mode listens in the language of the voice "
+    "assistant: in German, Spanish, French or Japanese the words are that language's. Tell "
+    "such a user to open datawatch and ask for help in their language. "
+)
+
+
 def _actions(session_send: bool) -> str:
     """What only the user can do, and how, so the assistant can say so."""
     told = (
@@ -412,6 +419,7 @@ def _actions(session_send: bool) -> str:
         '"add automation" and what it should do, then "confirm automation". To report a '
         'bug: set a project, say "add bug" and describe it, then "confirm bug". '
     )
+    told += _OTHER_LANGUAGES
     if session_send:
         return told + (
             'To send to a session: choose a session, say "send to session" and the words, '

@@ -44,7 +44,7 @@ from .const import (
     SUBENTRY_REPORT,
 )
 from .voice.custom import ITEMS, spoken_form
-from .voice.language import current, for_tag, speaking
+from .voice.language import LANGUAGES, speaking
 from .voice.order import Order
 from .voice.phrases import Kind, parse
 
@@ -211,9 +211,7 @@ class ReportSubentryFlow(ConfigSubentryFlow):
         if user_input is not None:
             name = " ".join(str(user_input["name"]).split())
             items = [item for item in ITEMS if item in user_input[CONF_ITEMS]]
-            # Checked against the words voice will listen for here.
-            with speaking(for_tag(self.hass.config.language)):
-                error = self._name_problem(name, current.subentry_id if current else None)
+            error = self._name_problem(name, current.subentry_id if current else None)
             if error:
                 errors["name"] = error
             elif not items:
@@ -247,15 +245,26 @@ class ReportSubentryFlow(ConfigSubentryFlow):
         )
 
     def _name_problem(self, name: str, own_id: str | None) -> str | None:
-        """A name must be something you can say that means nothing else."""
-        spoken = spoken_form(name)
-        if not spoken:
-            return "no_name"
-        if any(parse(said).kind is not Kind.UNKNOWN for said in (name, spoken)):
-            return "name_is_a_command"
-        if spoken in current().grammar.entry_names:
-            return "name_is_a_command"
-        for subentry in self._get_entry().subentries.values():
-            if subentry.subentry_id != own_id and spoken_form(subentry.title) == spoken:
-                return "name_taken"
-        return None
+        """A name must be something you can say that means nothing else.
+
+        Voice follows the language of whichever assistant hears you, so every language
+        is checked.
+        """
+        others = [
+            subentry.title
+            for subentry in self._get_entry().subentries.values()
+            if subentry.subentry_id != own_id
+        ]
+        taken = False
+        for language in LANGUAGES.values():
+            with speaking(language):
+                spoken = spoken_form(name)
+                if not spoken:
+                    return "no_name"
+                if any(parse(said).kind is not Kind.UNKNOWN for said in (name, spoken)):
+                    return "name_is_a_command"
+                grammar = language.grammar
+                if spoken in {grammar.clean(opening) for opening in grammar.entry_names}:
+                    return "name_is_a_command"
+                taken = taken or any(spoken_form(title) == spoken for title in others)
+        return "name_taken" if taken else None

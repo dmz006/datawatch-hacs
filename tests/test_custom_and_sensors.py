@@ -106,6 +106,10 @@ def test_adding_and_changing_a_report(certificate: Certificate, tmp_path: Path) 
         ("My status report", ["status"], "name", "name_is_a_command"),
         ("Confirm answer", ["status"], "name", "name_is_a_command"),
         ("Datawatch", ["status"], "name", "name_is_a_command"),
+        # Voice follows each assistant's language, so no language's command can be a name.
+        ("Hilfe", ["status"], "name", "name_is_a_command"),
+        ("ヘルプ", ["status"], "name", "name_is_a_command"),
+        ("Ouvre datawatch", ["status"], "name", "name_is_a_command"),
         ("daily", ["status"], "name", "name_taken"),
         ("Evening", [], "items", "no_items"),
     ],

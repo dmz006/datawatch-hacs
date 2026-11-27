@@ -15,17 +15,23 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from .voice.language import LANGUAGES
 
 # Every language's ways of opening datawatch mode, so that any of them works.
-SENTENCES = [sentence for found in LANGUAGES.values() for sentence in found.grammar.entry_sentences]
+SENTENCES = list(
+    dict.fromkeys(
+        sentence for found in LANGUAGES.values() for sentence in found.grammar.entry_sentences
+    )
+)
 
 
 def async_listen(
-    hass: HomeAssistant, heard: Callable[[str | None], Awaitable[str]]
+    hass: HomeAssistant, heard: Callable[[str | None, str | None], Awaitable[str]]
 ) -> CALLBACK_TYPE:
-    """Call heard(voice device entity id, or None) when an entry phrase is said."""
+    """Call heard(voice device entity id or None, the language it was heard in) when an
+    entry phrase is said.
+    """
     # Imported here so that a change in Home Assistant is a caught error, not a failed load.
     from homeassistant.components.conversation.agent_manager import get_agent_manager
 
     async def on_match(user_input: Any, result: Any) -> str:
-        return await heard(user_input.satellite_id)
+        return await heard(user_input.satellite_id, user_input.language)
 
     return get_agent_manager(hass).register_trigger(SENTENCES, on_match)
