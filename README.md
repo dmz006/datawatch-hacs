@@ -8,7 +8,7 @@ datawatch is a program you run yourself. It starts AI coding assistants, watches
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.7.0).** It can change datawatch in three ways: **answer a question**,
+> **Early release (0.8.0).** It can change datawatch in three ways: **answer a question**,
 > **add a draft automaton** and **report a bug**. Each is sent only after you confirm it
 > aloud. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI

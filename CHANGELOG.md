@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 (2026-11-26)
 
 - **Add an automaton by voice:** "add automation", your words, then "confirm automation". It
   is added to the focused project as a draft, named from your first sentence.
