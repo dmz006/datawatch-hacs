@@ -249,6 +249,7 @@ GRAMMAR = Grammar(
     ),
     # Speech-to-text may write the name as two words.
     entry_sentences=("(open|use) (datawatch|data watch)", "(datawatch|data watch)"),
+    entry_examples=("open datawatch", "use datawatch", "datawatch"),
     entry_names=("datawatch", "data watch", "open datawatch", "use datawatch"),
 )
 

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from functools import cache
 
-from .grammar import Grammar, normalise
+from .grammar import Grammar
 from .language import current
 
 
@@ -89,12 +89,14 @@ class Command:
 
 @cache
 def _lookup(code: str, phrases: tuple[tuple[str, str], ...]) -> dict[str, Kind]:
-    return {normalise(phrase): Kind[name] for phrase, name in phrases}
+    return {phrase: Kind[name] for phrase, name in phrases}
 
 
 def _fixed(grammar: Grammar, code: str) -> dict[str, Kind]:
-    """Each fixed phrase, as it will have been normalised, and the command it gives."""
-    pairs = tuple((said, name) for name, group in grammar.phrases.items() for said in group)
+    """Each fixed phrase, cleaned as what is heard will be, and the command it gives."""
+    pairs = tuple(
+        (grammar.clean(said), name) for name, group in grammar.phrases.items() for said in group
+    )
     return _lookup(code, pairs)
 
 
@@ -137,7 +139,7 @@ def parse(heard: str) -> Command:
     """Return the command for heard, or UNKNOWN. Never guesses."""
     language = current()
     grammar = language.grammar
-    text = grammar.polite.sub("", normalise(heard, grammar.apostrophes))
+    text = grammar.polite.sub("", grammar.clean(heard))
     fixed = _fixed(grammar, language.code)
     if text in fixed:
         return Command(fixed[text])

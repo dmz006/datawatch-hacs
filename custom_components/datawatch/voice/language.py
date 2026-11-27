@@ -1,7 +1,7 @@
 """Which language datawatch mode listens for and speaks.
 
-A language is data in voice/lang/: nothing else changes to add one. English is the only
-one so far, and is used wherever a language has no voice.
+A language is data in voice/lang/: nothing else changes to add one. English is used
+wherever a language has no voice.
 """
 
 from __future__ import annotations
@@ -11,9 +11,11 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from .grammar import Language
-from .lang import en
+from .lang import de, en, es, fr, ja
 
-LANGUAGES: dict[str, Language] = {found.code: found for found in (en.LANGUAGE,)}
+LANGUAGES: dict[str, Language] = {
+    found.code: found for found in (en.LANGUAGE, de.LANGUAGE, es.LANGUAGE, fr.LANGUAGE, ja.LANGUAGE)
+}
 # Each visit to datawatch mode runs in its own task, so choosing a language in one never
 # changes another.
 _current: ContextVar[Language] = ContextVar("datawatch_voice_language", default=en.LANGUAGE)
@@ -26,7 +28,7 @@ def current() -> Language:
 
 def for_tag(tag: str | None) -> Language:
     """The language for a tag such as "de-CH": English where there is no voice for it."""
-    return LANGUAGES.get((tag or "").split("-")[0].lower(), en.LANGUAGE)
+    return LANGUAGES.get((tag or "").replace("_", "-").split("-")[0].lower(), en.LANGUAGE)
 
 
 @contextmanager

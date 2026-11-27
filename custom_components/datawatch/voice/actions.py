@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -110,9 +111,9 @@ def not_sent(act: Act) -> str:
 def title_of(words: str) -> str:
     """A short name: the first sentence of the words, cut at a word if still long."""
     text = " ".join(words.split())
-    for mark in (". ", "? ", "! "):
-        text = text.split(mark, 1)[0]
-    text = text.rstrip(".?! ")
+    # Japanese ends a sentence with its own marks, and puts no space after them.
+    text = re.split(r"[.?!] |[。？！]", text, maxsplit=1)[0]
+    text = text.rstrip(".?! 、")
     if len(text) > TITLE_LIMIT:
         text = text[:TITLE_LIMIT].rsplit(" ", 1)[0].rstrip(",;: ")
     return text[:1].upper() + text[1:]

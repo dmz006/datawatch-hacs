@@ -47,8 +47,17 @@ class Grammar:
     report_filler: tuple[re.Pattern[str], ...]
     # Home Assistant sentences that open datawatch mode.
     entry_sentences: tuple[str, ...]
+    # What a person says to open it, for screens and documents.
+    entry_examples: tuple[str, ...]
     # Names a report must not take, because they open datawatch mode.
     entry_names: tuple[str, ...]
+    # False for a writing system without spaces between words: they are then ignored.
+    spaced: bool = True
+
+    def clean(self, heard: str) -> str:
+        """heard as the patterns and fixed phrases match it."""
+        text = normalise(heard, self.apostrophes)
+        return text if self.spaced else text.replace(" ", "")
 
 
 @dataclass(frozen=True)
@@ -61,6 +70,8 @@ class Language:
     texts: Mapping[str, str] = field(default_factory=dict)
     # Whether a number takes the singular.
     singular: Callable[[int], bool] = lambda number: number == 1
+    # The last touch on a whole reply before it is spoken, such as its punctuation.
+    tidy: Callable[[str], str] = lambda reply: reply
 
 
 def normalise(heard: str, apostrophes: str = "'\N{RIGHT SINGLE QUOTATION MARK}") -> str:

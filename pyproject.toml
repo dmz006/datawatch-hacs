@@ -37,8 +37,12 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+# Japanese punctuation, which voice listens for and says.
+allowed-confusables = ["？", "！", "，", "："]
 
 [tool.mypy]
 python_version = "3.14"
 files = ["custom_components/datawatch", "scripts"]
+# So that a script importing the integration finds the same modules mypy checks.
+explicit_package_bases = true
 strict = true
