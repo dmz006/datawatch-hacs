@@ -42,6 +42,16 @@ DEFAULT_TIMEOUT = 10.0
 # For a list datawatch is known to take several seconds over.
 SLOW_TIMEOUT = 30.0
 _SESSION_STATES = ("waiting_input", "running", "failed")
+# datawatch's smaller dashboard data sets: quick to read, and numbers, times and titles
+# only. Its work map and timeline are far larger and are not here.
+DASHBOARDS = {
+    "console": "dashboard/console",
+    "lane_pulse": "dashboard/lane-pulse",
+    "lane_use": "dashboard/series/lane-utilization",
+    "defects_per_day": "dashboard/series/defects-per-day",
+    "review_backlog": "dashboard/series/review-backlog",
+    "throughput_forecast": "dashboard/series/throughput-forecast",
+}
 
 
 class DatawatchError(Exception):
@@ -712,6 +722,13 @@ class DatawatchClient:
             if row.get("read") is not True
         ]
         return rows, _number(reply.get("unread_count"))
+
+    async def dashboard(self, name: str) -> dict[str, Any]:
+        """One of datawatch's dashboard data sets, as datawatch gives it."""
+        path = DASHBOARDS.get(name)
+        if path is None:
+            raise DatawatchError("unknown dashboard data set")
+        return _table(await self._get(path))
 
     async def delivery(self, automaton_id: str) -> Delivery | None:
         """datawatch's record of what an automaton changed, or None if it has none."""

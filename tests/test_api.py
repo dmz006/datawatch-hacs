@@ -17,6 +17,7 @@ from aiohttp import web
 from fake_datawatch import Fake, made_up_attention, serve
 
 from custom_components.datawatch.api import (
+    DASHBOARDS,
     DatawatchAuthError,
     DatawatchCertificateError,
     DatawatchClient,
@@ -382,3 +383,32 @@ def test_a_record_with_no_title_does_not_break_a_read(certificate: tuple[Path, P
     fake.automata["n1"] = {"id": "n1", "status": "draft", "stories": [{"tasks": [{}]}]}
     fake.plans["oak"] = [{"state": "planned"}]
     serve(certificate, body, fake)
+
+
+@pytest.mark.parametrize("name", list(DASHBOARDS))
+def test_each_dashboard_data_set_is_read_from_its_own_address(
+    certificate: tuple[Path, Path, str], name: str
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        path = f"/api/{DASHBOARDS[name]}"
+        fake.override[path] = lambda: web.json_response({"made_up": name})
+        client = DatawatchClient(session, url, certificate[2])
+        assert await client.dashboard(name) == {"made_up": name}
+        assert [(method, asked) for method, asked, *_ in fake.seen] == [("GET", path)]
+
+    serve(certificate, body)
+
+
+def test_an_unknown_or_unreadable_dashboard_data_set_raises(
+    certificate: tuple[Path, Path, str],
+) -> None:
+    async def body(url: str, session: aiohttp.ClientSession, fake: Fake) -> None:
+        client = DatawatchClient(session, url, certificate[2])
+        with pytest.raises(DatawatchError, match="unknown"):
+            await client.dashboard("../secrets")
+        assert fake.seen == []
+        fake.override["/api/dashboard/console"] = lambda: web.json_response([1, 2])
+        with pytest.raises(DatawatchError):
+            await client.dashboard("console")
+
+    serve(certificate, body)
