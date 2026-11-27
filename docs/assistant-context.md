@@ -27,6 +27,7 @@ paragraph: it says the assistant cannot read datawatch.
 | "What needs my attention?", "How many plans do we have?", "What's next?", "What's on hold?" | work |
 | "Why is the release job blocked?" | automaton |
 | "Which sessions are waiting?", "What finished?", "What did that deliver?" | work, automaton |
+| "Any new alerts?" (titles only) | work |
 | "Give me my daily report." | report |
 | "What does 'held' mean in datawatch?" | documentation search and reading |
 

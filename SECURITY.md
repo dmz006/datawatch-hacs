@@ -20,6 +20,8 @@ Only the newest release, on Home Assistant 2026.11 or later.
 - AI assistants get tools that only read. None can make a change.
 - Session terminal output, last responses and prompts are never requested, so they are
   neither spoken nor given to an AI model. Session names, questions, reasons and titles are.
+  datawatch sends the text of alerts together with their list; it can be terminal text, so
+  it is dropped as the reply is read. Only alert titles are spoken or given to an AI model.
 - It accepts only the certificate you approved, and sends nothing before you approve it.
 - It does not follow redirects, so a token is not forwarded elsewhere.
 - A saved token is never sent to a different address.

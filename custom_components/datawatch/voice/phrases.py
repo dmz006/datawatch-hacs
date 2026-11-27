@@ -59,6 +59,7 @@ class Kind(Enum):
     CONFIRM_AUTOMATON = auto()
     CONFIRM_BUG = auto()
     CONFIRM_SEND = auto()
+    ALERTS = auto()
     UNKNOWN = auto()
 
 
@@ -187,6 +188,14 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
     ),
     Kind.HISTORY: ("history", "what happened", "show history", "decisions"),
     Kind.AUTOMATA: ("automata", "list automata", "its automata", "show automata"),
+    Kind.ALERTS: (
+        "alerts",
+        "list alerts",
+        "any alerts",
+        "my alerts",
+        "unread alerts",
+        "what are my alerts",
+    ),
 }
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 

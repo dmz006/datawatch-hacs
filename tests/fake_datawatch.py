@@ -65,6 +65,23 @@ def made_up_automation(name: str, status: str, members: int = 1) -> dict[str, An
     return {"name": name, "status": status, "members": [{}] * members}
 
 
+RAW_BODY = "made-up raw terminal text that must never be spoken"
+
+
+def made_up_alert(
+    ident: str, title: str, *, level: str = "info", session: str = "", read: bool = False
+) -> dict[str, Any]:
+    return {
+        "id": ident,
+        "title": title,
+        "level": level,
+        "session_id": session,
+        "read": read,
+        "body": RAW_BODY,
+        "created_at": "2020-01-01T00:00:00+00:00",
+    }
+
+
 def made_up_attention(ident: str, title: str, status: str, **more: Any) -> dict[str, Any]:
     return {"id": ident, "title": title, "status": status, **more}
 
@@ -114,6 +131,12 @@ class Fake:
         self.bug_status = 200
         self.bug_route = "new_batch"
         self.input_status = 200
+        # Alerts, newest first. A body can be raw terminal text and must never be heard.
+        self.alerts: list[dict[str, Any]] = [
+            made_up_alert("n1", "Made-up build finished", session="host-1111"),
+            made_up_alert("n2", "Made-up disk is nearly full", level="warn"),
+            made_up_alert("n3", "Already seen", read=True),
+        ]
         # Whether to receive a change and then drop the connection without replying.
         self.drop_changes = False
         self.closed: set[str] = set()
@@ -267,6 +290,9 @@ class Fake:
         if request.method == "POST" and request.path == "/api/sessions/send":
             self.changes.append(("POST", request.path, await request.json()))
             return web.json_response({"ok": self.input_status == 200}, status=self.input_status)
+        if request.path == "/api/alerts":
+            unread = sum(not row.get("read") for row in self.alerts)
+            return web.json_response({"alerts": self.alerts, "unread_count": unread})
         if request.path == "/api/projects":
             return web.json_response([{"name": "oak", "dir": "x"}, {"name": "elm"}])
         if request.path == "/api/pause":

@@ -44,7 +44,7 @@ _HELP = (
     "reports or a report's name, "
     "list projects, more, set and a number or name, set it, its questions, all questions, "
     "automata, history, add automation, add bug, send to session, go back, where am I, "
-    "unset, repeat, or stop."
+    "alerts, unset, repeat, or stop."
 )
 _NO_AUTOMATON = "Say attention, running or held items, then a number."
 _ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS, Kind.RESULTS)
@@ -88,9 +88,11 @@ class Topic(Enum):
     RUNNING_SESSIONS = auto()
     FAILED_SESSIONS = auto()
     FINISHED = auto()
+    ALERTS = auto()
 
 
 _TOPICS = {
+    Kind.ALERTS: Topic.ALERTS,
     Kind.ATTENTION: Topic.ATTENTION,
     Kind.PLANS: Topic.PLANS,
     Kind.OVERVIEW: Topic.OVERVIEW,
@@ -303,6 +305,14 @@ class Conversation:
     def session_scope(self) -> Item | None:
         """The focused automaton or automation that sessions are limited to, if any."""
         return next((i for i in reversed(self.path) if i.kind in ("automaton", "automation")), None)
+
+    def report_scope(self, topic: Topic) -> Item | None:
+        """The focused item a report is limited to, beyond the project."""
+        if topic is Topic.ALERTS:
+            # datawatch links an alert only to a session.
+            last = self.path[-1] if self.path else None
+            return last if last is not None and last.kind == "session" else None
+        return self.session_scope
 
     def _line(self, number: int) -> Item | None:
         """The item behind a numbered line the user has heard."""

@@ -25,7 +25,7 @@ from .voice.items import Decision
 from .voice.model import Snapshot, Tally
 from .voice.questions import Option, Question
 from .voice.reports import Attention, Automation, Child, Held, Listed, Overview, Plan
-from .voice.work import Delivery, Finished, Session
+from .voice.work import Alert, Delivery, Finished, Session
 
 QUESTION_LIMIT = 1000
 # The most plans datawatch returns in one page.
@@ -696,6 +696,22 @@ class DatawatchClient:
                 )
             )
         return rows, _number(reply.get("total"))
+
+    async def alerts(self) -> tuple[list[Alert], int]:
+        """Unread alerts in datawatch's order, and how many are unread. Never their bodies."""
+        reply = _table(await self._get("alerts"))
+        rows = [
+            Alert(
+                row["id"],
+                _title(row),
+                _text(row, "level"),
+                _text(row, "session_id"),
+                _text(row, "created_at"),
+            )
+            for row in _rows(reply.get("alerts"), "id")
+            if row.get("read") is not True
+        ]
+        return rows, _number(reply.get("unread_count"))
 
     async def delivery(self, automaton_id: str) -> Delivery | None:
         """datawatch's record of what an automaton changed, or None if it has none."""

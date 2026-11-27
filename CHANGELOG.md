@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Alerts by voice:** "alerts" counts the unread ones and reads their titles, newest first.
+  With a session focused, only its alerts. An alert's text is never read or given to an AI
+  assistant, and hearing an alert does not mark it read.
+- Your AI assistant can list unread alert titles.
+- Fixed: with a project focus, your AI assistant was told that the attention and on-hold
+  lists covered only that project. They cover all projects, and it is now told so.
+
 ## 0.8.0 (2026-11-26)
 
 - **Add an automaton by voice:** "add automation", your words, then "confirm automation". It

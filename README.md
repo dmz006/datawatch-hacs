@@ -187,6 +187,20 @@ in datawatch to read it. "What finished" lists the **most recently updated** fir
 datawatch orders it that way. That may not be the order things finished. It can take several
 seconds on a large datawatch.
 
+### Alerts
+
+| In datawatch mode, say | What you hear |
+|---|---|
+| "alerts" or "any alerts" | How many are unread, how many of those listed are warnings or errors, then their titles, newest first |
+| "two" | That alert's title, whether it is a warning, and how long ago |
+| "alerts" with a **session** focused | Only the alerts datawatch links to that session |
+
+**Only titles are read.** The text of an alert can be raw terminal screen text, which can
+hold secrets, so it is never read out or given to an AI assistant. Open datawatch to read
+it. Hearing an alert does not mark it read. A project, plan or automaton focus does not
+narrow alerts, because datawatch links an alert only to a session. datawatch sends its
+newest alerts only, so a long backlog is not all listed.
+
 ### Status and projects
 
 | In datawatch mode, say | What you hear |
@@ -366,7 +380,8 @@ short introduction and these tools while it is on:
 - what needs attention, what is running or on hold, plans and plan counts, what is next,
   and automations. When it answers for your focused project only, it is told to say so
 - one automaton: progress, why it is stuck, its tasks and what it delivered
-- sessions and their states (**never what they said**), and completed work
+- sessions and their states (**never what they said**), completed work, and unread alert
+  titles (never an alert's text)
 - your own reports
 - searching and reading datawatch's own documentation and how-tos
 

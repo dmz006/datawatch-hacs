@@ -290,7 +290,7 @@ class DatawatchMode:
                         )
                 if report is None:
                     report = await build(
-                        client, topic, conversation.focus, conversation.session_scope
+                        client, topic, conversation.focus, conversation.report_scope(topic)
                     )
         except DatawatchCertificateError:
             return Reply(_CERTIFICATE, ends=True)

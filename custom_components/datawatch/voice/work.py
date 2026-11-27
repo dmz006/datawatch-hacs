@@ -30,6 +30,55 @@ class Session:
 
 
 @dataclass(frozen=True)
+class Alert:
+    """An unread alert. Its body is never read: it can be raw terminal text."""
+
+    id: str
+    title: str
+    level: str = ""
+    session_id: str = ""
+    at: str = ""
+
+
+_LEVELS = {"warn": "warning", "warning": "warning", "error": "error"}
+
+
+def alerts(rows: Sequence[Alert], unread: int, session: Item | None, now: datetime) -> Report:
+    """Unread alerts, newest first as datawatch gives them. session limits them to one."""
+    total = count(unread, "unread alert", "unread alerts")
+    if session is not None:
+        rows = [row for row in rows if row.session_id == session.id]
+        if not rows:
+            return Report(
+                f"datawatch links no unread alerts to the {session.spoken()}. There "
+                f"{'is' if unread == 1 else 'are'} {total} in all. Say unset, then alerts."
+            )
+        mine = count(len(rows), "unread alert", "unread alerts")
+        summary = f"For the {session.spoken()}: {mine}, newest first."
+    elif not unread:
+        return Report("There are no unread alerts.")
+    else:
+        summary = f"{total}, across all projects, newest first."
+        serious = sum(row.level in _LEVELS for row in rows)
+        if serious:
+            among = f" among the newest {len(rows)}" if unread > len(rows) else ""
+            warnings = count(serious, "warning or error", "warnings or errors")
+            summary += f" {warnings}{among}."
+    lines, details = [], []
+    for number, row in enumerate(rows, start=1):
+        title = _name(row.title)
+        level = _LEVELS.get(row.level, "")
+        when = age(row.at, now)
+        lead = f"{level}: " if level else ""
+        lines.append(f"{number}, {lead}{title}{f', {when}' if when else ''}.")
+        kind = {"warning": "A warning", "error": "An error"}.get(level, "An alert")
+        details.append(
+            f"{title}. {kind}{f' from {when}' if when else ''}. To read the rest, open datawatch."
+        )
+    return Report(summary, tuple(lines), details=tuple(details))
+
+
+@dataclass(frozen=True)
 class Finished:
     """A completed automaton. shipped is None when datawatch does not say."""
 

@@ -199,7 +199,14 @@ _REPORT_TOPICS = {
     "running_sessions": Topic.RUNNING_SESSIONS,
     "failed_sessions": Topic.FAILED_SESSIONS,
     "finished": Topic.FINISHED,
+    "alerts": Topic.ALERTS,
 }
+# datawatch cannot filter these by project, so they always cover every project.
+_ALL_PROJECTS = ("attention", "held", "alerts")
+_TITLES_ONLY = (
+    "These lines are alert titles only. You do not have the text of any alert. If the user "
+    "asks what an alert says, tell them to open it in datawatch."
+)
 _SESSION_TOPICS = ("sessions", "waiting_sessions", "running_sessions", "failed_sessions")
 _NOT_SAID = (
     "These lines hold each session's name and state only. You do not have anything a session "
@@ -220,7 +227,8 @@ class WorkTool(_DatawatchTool):
         "user), plans (how many, and which), overview (one project's progress), next (what is "
         "next), automations, running (automata running now), held (what is on hold and why), "
         "sessions, waiting_sessions, running_sessions, failed_sessions, finished (recently "
-        "updated completed work and its release; not ordered by finish date). Session terminal "
+        "updated completed work and its release; not ordered by finish date), alerts (unread "
+        "ones, titles only). Session terminal "
         "output is not "
         "available. "
         "project is optional; without it the user's focus is used, and 'all' means every "
@@ -229,7 +237,7 @@ class WorkTool(_DatawatchTool):
     feature = (
         "Work: what needs attention, what is running or on hold and why, sessions and their "
         "state (not what they said), completed work and its release, plans and plan "
-        "counts, what is next, automations."
+        "counts, what is next, automations, unread alerts (titles only)."
     )
     parameters = probatio.Schema(
         {
@@ -259,7 +267,14 @@ class WorkTool(_DatawatchTool):
         }
         if args["topic"] in _SESSION_TOPICS:
             result["what_is_not_here"] = _NOT_SAID
-        if wanted is not None and named is None:
+        if args["topic"] == "alerts":
+            result["what_is_not_here"] = _TITLES_ONLY
+        if args["topic"] in _ALL_PROJECTS:
+            if wanted is not None:
+                result["tell_the_user"] = (
+                    "This covers every project: datawatch cannot limit this list to one."
+                )
+        elif wanted is not None and named is None:
             result["limited_to_project"] = wanted
             result["tell_the_user"] = (
                 f"This is only project {wanted}, because their focus is set to it. Say that in "

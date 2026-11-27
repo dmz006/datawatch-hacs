@@ -49,9 +49,13 @@ async def build(
 ) -> Report:
     """A report on topic, for one project or for all. project must be a registered one.
 
-    inside: a focused automaton or automation, which only sessions can be filtered to.
+    inside: a focused automaton or automation, which only sessions can be filtered to, or
+    for alerts a focused session.
     """
     match topic:
+        case Topic.ALERTS:
+            found, unread = await client.alerts()
+            return work.alerts(found, unread, inside, dt_util.now())
         case Topic.ATTENTION:
             return reports.attention(await client.attention())
         case Topic.RUNNING:

@@ -222,6 +222,7 @@ only what its parts need.
 | `POST /api/autonomous/defects/intake` | **Change:** a confirmed bug: a new id, a short title, your words and the project |
 | `POST /api/sessions/send` | **Change, switched off:** confirmed words to a session |
 | `GET /api/sessions?view=summary&status=…` | Counts of waiting, running and failed sessions; filtered by project when you have a focus |
+| `GET /api/alerts` | Unread alerts. Only titles, levels, times and session links are kept |
 | `GET /api/autonomous/held` | Items on hold |
 | `GET /api/autonomous/triage` | Failed and blocked automata |
 | `GET /api/autonomous/attention` | What needs you. Chosen as datawatch's web app chooses: an attention status, or a task held for review |
@@ -243,6 +244,9 @@ only what its parts need.
 For the commands, only the focused project's name, the ids of items you ask about and
 what you confirm are sent. A search by name is matched inside Home Assistant. An AI
 assistant's documentation search sends its search words to datawatch.
+
+datawatch sends an alert's text with the list. The integration does not keep it, say it or
+pass it on.
 
 Session lists use the session summaries only. The integration **never requests** a
 session's terminal output, last response or prompt.
