@@ -1,7 +1,8 @@
 """Datawatch mode: what is said back, and what is remembered between turns.
 
 Nothing here reads or changes datawatch. An answer leaves as Reply.send, and only after the
-user, heard directly, says "confirm answer".
+user, heard directly, says "confirm answer". Any other action leaves as Reply.act, only
+after its own confirming words.
 
 The focus is a project and then a path of items. Commands about "it" apply to the item the
 user last chose, or else to the end of that path.
@@ -12,7 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from . import automata, custom, items, speech
+from . import actions, automata, custom, items, speech
+from .actions import Act, Action, Target
 from .automata import Automaton
 from .custom import CustomReport
 from .items import GONE, KINDS, Card, Item
@@ -41,7 +43,8 @@ _HELP = (
     "running sessions, failed sessions, plans, overview, what's next, automations, "
     "reports or a report's name, "
     "list projects, more, set and a number or name, set it, its questions, all questions, "
-    "automata, history, go back, where am I, unset, repeat, or stop."
+    "automata, history, add automation, add bug, send to session, go back, where am I, "
+    "unset, repeat, or stop."
 )
 _NO_AUTOMATON = "Say attention, running or held items, then a number."
 _ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS, Kind.RESULTS)
@@ -56,6 +59,17 @@ _NOTHING_BEHIND = "There is nothing to go back to."
 _HOLDERS = ("plan", "automation")
 # How many steps "go back" remembers.
 _TRAIL = 50
+_ACT_OF = {
+    Kind.ADD_AUTOMATON: Act.AUTOMATON,
+    Kind.ADD_BUG: Act.BUG,
+    Kind.SEND_SESSION: Act.SESSION,
+}
+_CONFIRMS = {
+    Kind.CONFIRM_AUTOMATON: Act.AUTOMATON,
+    Kind.CONFIRM_BUG: Act.BUG,
+    Kind.CONFIRM_SEND: Act.SESSION,
+}
+_NOTHING_WAITING = "There is nothing waiting to be sent."
 _QUESTION_WORDS = (Kind.QUESTIONS, Kind.ALL_QUESTIONS, Kind.ITS_QUESTIONS)
 
 
@@ -101,14 +115,15 @@ def topic_of(words: str) -> Topic | None:
 class Reply:
     """What to say, and whether datawatch mode ends.
 
-    send is a confirmed answer to send. forward is talk for the AI assistant. The caller
-    does either, then reports what happened with sent() or said().
+    send is a confirmed answer to send, act a confirmed action, and forward is talk for the
+    AI assistant. The caller does it, then reports what happened with sent() or said().
     """
 
     text: str
     ends: bool = False
     send: Draft | None = None
     forward: str | None = None
+    act: Action | None = None
 
 
 class Needs(Enum):
@@ -179,6 +194,7 @@ class Conversation:
         assistant: bool = False,
         reports: tuple[CustomReport, ...] = (),
         path: tuple[Item, ...] = (),
+        session_send: bool = False,
     ) -> None:
         """silences_before_closing=None keeps the mode open until the user leaves.
 
@@ -189,6 +205,7 @@ class Conversation:
         self._silence_limit = silences_before_closing
         self._assistant = assistant
         self._reports = reports
+        self._session_send = session_send
         self._reset()
 
     def _reset(self) -> None:
@@ -205,6 +222,9 @@ class Conversation:
         self._reading_questions = False
         self._draft: Draft | None = None
         self._dictating = False
+        # An action whose words are awaited, and one waiting to be confirmed.
+        self._wording: Target | None = None
+        self._pending: Action | None = None
         # A report's lines, and how many have been read.
         self._lines: tuple[str, ...] | None = None
         self._lines_read = 0
@@ -229,7 +249,7 @@ class Conversation:
 
         For questions about a plan or an automation, wanted_card() is needed as well.
         """
-        if self._dictating or self._draft is not None:
+        if self._holding:
             return Needs.NOTHING
         command = parse(words)
         kind = command.kind
@@ -257,6 +277,16 @@ class Conversation:
         if kind is Kind.DETAIL and self.current_question is not None:
             return Needs.NOTHING
         return Needs.SNAPSHOT if kind in _NEEDS_DATA else Needs.NOTHING
+
+    @property
+    def _holding(self) -> bool:
+        """Whether something is being dictated or waits to be confirmed."""
+        return (
+            self._dictating
+            or self._draft is not None
+            or self._wording is not None
+            or self._pending is not None
+        )
 
     def wanted_report(self, words: str) -> CustomReport | None:
         """The user's own report that words name, if any."""
@@ -360,7 +390,7 @@ class Conversation:
 
     def wanted_card(self, words: str) -> Item | None:
         """The item to read before replying to words, if one is meant."""
-        if self._dictating or self._draft is not None:
+        if self._holding:
             return None
         command = parse(words)
         found = self._to_set(command)
@@ -441,7 +471,8 @@ class Conversation:
                 self._here = reply.text
             elif command.kind is Kind.MORE:
                 self._here = reply.text
-        if reply.text.endswith((_NOT_UNDERSTOOD, _WAITING)) and command.kind is not Kind.REPEAT:
+        unmoved = (_NOT_UNDERSTOOD, _WAITING, *(actions.waiting(act) for act in Act))
+        if reply.text.endswith(unmoved) and command.kind is not Kind.REPEAT:
             self._misses += 1
             if self._misses >= MISSES_BEFORE_CLOSING:
                 return self._close(_GAVE_UP)
@@ -460,8 +491,12 @@ class Conversation:
         composed: str | None,
         card: Card | None,
     ) -> Reply:
-        if self._draft is not None or self._dictating:
+        if self._holding:
             return self._reply_to(command, words, snapshot, questions, report)
+        if command.kind in _ACT_OF:
+            return self._say(self._begin(_ACT_OF[command.kind], command.text))
+        if command.kind in _CONFIRMS:
+            return self._say(_NOTHING_WAITING)
         if command.kind is Kind.GO_BACK:
             return self._back()
         if command.kind in _QUESTION_WORDS:
@@ -678,6 +713,10 @@ class Conversation:
         if self._draft is not None:
             self._draft = None
             text = f"{_NOT_SENT} {text}"
+        if self._pending is not None:
+            text = f"{actions.not_sent(self._pending.target.act)} {text}"
+            self._pending = None
+        self._wording = None
         return Reply(text, ends=True)
 
     def _reply_to(
@@ -696,6 +735,10 @@ class Conversation:
             return self._dictated(command, words)
         if self._draft is not None:
             return self._confirming(self._draft, command)
+        if self._wording is not None:
+            return self._worded(self._wording, command, words)
+        if self._pending is not None:
+            return self._confirming_action(self._pending, command)
         if command.kind is Kind.REPORTS:
             return self._say(custom.listing(self._reports))
         if command.kind is Kind.UNKNOWN and self._assistant:
@@ -729,7 +772,7 @@ class Conversation:
 
     def _runs_report(self, command: Command, words: str) -> bool:
         """Whether words name one of the user's reports. Never while an answer waits."""
-        if self._draft is not None or self._dictating or command.kind is not Kind.UNKNOWN:
+        if self._holding or command.kind is not Kind.UNKNOWN:
             return False
         return self.wanted_report(words) is not None
 
@@ -873,6 +916,56 @@ class Conversation:
                 return self._say(self._drafted(Draft(draft.question, draft.option, command.text)))
             case _:
                 return Reply(_WAITING)
+
+    def _begin(self, act: Act, words: str | None) -> str:
+        """Start an action. Where it goes is settled before any words are asked for."""
+        session = self.target if self.target and self.target.kind == "session" else None
+        problem = None
+        if act is Act.SESSION and not self._session_send:
+            problem = actions.SESSION_SEND_OFF
+        elif act is Act.SESSION and session is None:
+            problem = actions.NEEDS_SESSION
+        elif act is not Act.SESSION and self.focus is None:
+            problem = actions.NEEDS_PROJECT
+        if problem is not None:
+            return f"{problem} I did not keep your words." if words else problem
+        target = (
+            Target(act, session=session)
+            if act is Act.SESSION
+            else Target(act, project=self.focus or "")
+        )
+        if words is None:
+            self._wording = target
+            return actions.ask(act)
+        return self._pend(Action(target, words))
+
+    def _pend(self, action: Action) -> str:
+        self._wording, self._pending = None, action
+        return actions.read_back(action)
+
+    def _worded(self, target: Target, command: Command, words: str) -> Reply:
+        """The whole turn is the words for the action, unless it cancels."""
+        if command.kind in (Kind.CANCEL, Kind.GO_BACK):
+            self._wording = None
+            return self._say(actions.CANCELLED)
+        return self._say(self._pend(Action(target, words.strip())))
+
+    def _confirming_action(self, action: Action, command: Command) -> Reply:
+        """An action is waiting: only its own confirming words send it."""
+        act = action.target.act
+        if _CONFIRMS.get(command.kind) is act:
+            self._pending = None
+            return Reply("", act=action)
+        if command.kind in (Kind.CANCEL, Kind.GO_BACK):
+            self._pending = None
+            return self._say(actions.CANCELLED)
+        if _ACT_OF.get(command.kind) is act:
+            # Saying it again replaces the words, for the same place.
+            if command.text is None:
+                self._pending, self._wording = None, action.target
+                return self._say(actions.ask(act))
+            return self._say(self._pend(Action(action.target, command.text)))
+        return Reply(actions.waiting(act))
 
     def _answer(self, command: Command, snapshot: Snapshot) -> str:
         match command.kind:

@@ -23,3 +23,6 @@ COUNTS: HassKey[CountsCoordinator] = HassKey(f"{DOMAIN}_counts")
 # Reports the user defines: the kind of config subentry, and its list of contents.
 SUBENTRY_REPORT = "report"
 CONF_ITEMS = "items"
+# Sending input to a session by voice is built but off until datawatch has the access
+# controls for it.
+SESSION_SEND = False

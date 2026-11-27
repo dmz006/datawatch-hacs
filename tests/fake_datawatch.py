@@ -107,6 +107,13 @@ class Fake:
         # The JSON bodies of answers received, as (question id, body).
         self.answers: list[tuple[str, dict[str, Any]]] = []
         self.answer_status = 201
+        # Other changes received, as (method, path, JSON body), and how to reply to each.
+        self.changes: list[tuple[str, str, dict[str, Any]]] = []
+        self.create_status = 200
+        self.name_status = 200
+        self.bug_status = 200
+        self.bug_route = "new_batch"
+        self.input_status = 200
         self.closed: set[str] = set()
         self.sessions: dict[str, list[dict[str, Any]]] = {
             "waiting_input": [
@@ -240,6 +247,19 @@ class Fake:
         if request.path in self.override:
             answer = self.override[request.path]
             return answer() if callable(answer) else answer
+        if request.method == "POST" and request.path == "/api/autonomous/prds":
+            self.changes.append(("POST", request.path, await request.json()))
+            return web.json_response({"id": "made1", "status": "draft"}, status=self.create_status)
+        if request.method == "PATCH" and request.path.startswith("/api/autonomous/prds/"):
+            self.changes.append(("PATCH", request.path, await request.json()))
+            return web.json_response({}, status=self.name_status)
+        if request.method == "POST" and request.path == "/api/autonomous/defects/intake":
+            self.changes.append(("POST", request.path, await request.json()))
+            reply = {"route": self.bug_route, "batch_id": "b1", "reason": "made up"}
+            return web.json_response(reply, status=self.bug_status)
+        if request.method == "POST" and request.path == "/api/sessions/send":
+            self.changes.append(("POST", request.path, await request.json()))
+            return web.json_response({"ok": self.input_status == 200}, status=self.input_status)
         if request.path == "/api/projects":
             return web.json_response([{"name": "oak", "dir": "x"}, {"name": "elm"}])
         if request.path == "/api/pause":

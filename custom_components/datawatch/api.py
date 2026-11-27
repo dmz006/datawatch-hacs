@@ -1,4 +1,7 @@
-"""A client for datawatch's REST API. It reads, and sends only answers to questions.
+"""A client for datawatch's REST API.
+
+It reads. The only changes it can make are the ones a user has confirmed: answering a
+question, adding a draft automaton, reporting a bug, and sending input to a session.
 
 The server, its certificate fingerprint and any token are all settings: nothing about a
 particular installation is built in. The certificate is pinned: a connection is made only
@@ -66,7 +69,11 @@ class DatawatchSecretError(DatawatchError):
 
 
 class DatawatchRefusedError(DatawatchError):
-    """datawatch refused an answer. Nothing was stored."""
+    """datawatch refused a change. Nothing was stored."""
+
+
+class DatawatchBugsOffError(DatawatchRefusedError):
+    """datawatch's bug intake is turned off for the project."""
 
 
 def _question_path(question_id: str) -> str:
@@ -234,7 +241,7 @@ async def fetch_fingerprint(url: str, timeout: float = DEFAULT_TIMEOUT) -> str:
 
 
 class DatawatchClient:
-    """Reads with GET. The one thing it can change is answering a question."""
+    """Reads with GET. Each change is one request, tried once."""
 
     def __init__(
         self,
@@ -289,35 +296,47 @@ class DatawatchClient:
             raise DatawatchError("unexpected question")
         return bool(record["state"] == "open")
 
-    async def answer(self, question_id: str, option_id: str | None, words: str | None) -> None:
-        """Record the user's confirmed answer. Never replaces an earlier answer.
+    async def _write(self, method: str, path: str, body: Mapping[str, str]) -> tuple[int, Any]:
+        """Send one change, once. Returns the status and any JSON reply.
 
-        Tried once. If the connection fails, whether it was stored is not known.
+        If the connection fails, or datawatch reports its own fault, whether the change was
+        made is not known: that is a plain DatawatchError.
         """
-        body = {"surface": ANSWER_SURFACE}
-        if option_id is not None:
-            body["chosen_option_id"] = option_id
-        if words is not None:
-            body["quote"] = words
-        address = f"{self._url}/api/{_question_path(question_id)}/answer"
         try:
-            async with self._session.post(
-                address,
-                json=body,
+            async with self._session.request(
+                method,
+                f"{self._url}/api/{path}",
+                json=dict(body),
                 headers=self._headers,
                 ssl=self._pin,
                 timeout=self._timeout,
                 allow_redirects=False,
             ) as response:
                 status = response.status
+                try:
+                    reply = await response.json(content_type=None)
+                except ValueError:
+                    reply = None
         except aiohttp.ServerFingerprintMismatch as error:
             raise DatawatchCertificateError("the server certificate has changed") from error
         except (aiohttp.ClientError, TimeoutError) as error:
-            raise DatawatchError("the answer may not have been sent") from error
-        if status == 201:
-            return
+            raise DatawatchError("the change may not have been sent") from error
         if status in (401, 403):
             raise DatawatchAuthError(f"datawatch refused access ({status})")
+        if status >= 500 or 300 <= status < 400:
+            raise DatawatchError(f"datawatch answered {status}")
+        return status, reply
+
+    async def answer(self, question_id: str, option_id: str | None, words: str | None) -> None:
+        """Record the user's confirmed answer. Never replaces an earlier answer."""
+        body = {"surface": ANSWER_SURFACE}
+        if option_id is not None:
+            body["chosen_option_id"] = option_id
+        if words is not None:
+            body["quote"] = words
+        status, _ = await self._write("POST", f"{_question_path(question_id)}/answer", body)
+        if status == 201:
+            return
         if status == 409:
             raise DatawatchClosedError("the question is not open")
         if status == 422:
@@ -325,6 +344,59 @@ class DatawatchClient:
         if 400 <= status < 500:
             raise DatawatchRefusedError(f"datawatch refused the answer ({status})")
         raise DatawatchError(f"datawatch answered {status}")
+
+    async def create_automaton(self, spec: str, directory: str) -> str:
+        """Add a draft automaton described by spec. Returns its id."""
+        status, reply = await self._write(
+            "POST", "autonomous/prds", {"spec": spec, "project_dir": directory}
+        )
+        if 400 <= status < 500:
+            raise DatawatchRefusedError(f"datawatch refused the automaton ({status})")
+        made = reply.get("id") if isinstance(reply, dict) else None
+        if status not in (200, 201) or not isinstance(made, str):
+            raise DatawatchError(f"unexpected reply to a new automaton ({status})")
+        return made
+
+    async def name_automaton(self, automaton_id: str, title: str) -> None:
+        """Set an automaton's title. Its description is left as it is."""
+        status, _ = await self._write(
+            "PATCH",
+            f"autonomous/prds/{_checked(automaton_id)}",
+            {"title": title, "actor": ANSWER_SURFACE},
+        )
+        if status != 200:
+            raise DatawatchError(f"datawatch answered {status}")
+
+    async def report_bug(self, ident: str, title: str, description: str, project: str) -> str:
+        """Hand a bug to datawatch's intake. Returns the route datawatch chose."""
+        body = {"id": ident, "title": title, "description": description, "project": project}
+        status, reply = await self._write("POST", "autonomous/defects/intake", body)
+        if status == 409:
+            raise DatawatchBugsOffError("bug intake is off for the project")
+        if 400 <= status < 500:
+            raise DatawatchRefusedError(f"datawatch refused the bug ({status})")
+        if status != 200:
+            raise DatawatchError(f"datawatch answered {status}")
+        route = reply.get("route") if isinstance(reply, dict) else None
+        return route if isinstance(route, str) else ""
+
+    async def send_to_session(self, session_id: str, text: str) -> None:
+        """Type confirmed words into a session, marked as coming from voice."""
+        body = {"session_id": _checked(session_id), "text": text, "source": ANSWER_SURFACE}
+        status, reply = await self._write("POST", "sessions/send", body)
+        if 400 <= status < 500:
+            raise DatawatchRefusedError(f"datawatch refused the input ({status})")
+        if status != 200 or not (isinstance(reply, dict) and reply.get("ok") is True):
+            raise DatawatchError(f"unexpected reply to session input ({status})")
+
+    async def project_directories(self) -> dict[str, str]:
+        """The registered projects and the folder datawatch gives for each."""
+        rows = await self._get("projects")
+        if not isinstance(rows, list) or not all(
+            isinstance(row, dict) and isinstance(row.get("name"), str) for row in rows
+        ):
+            raise DatawatchError("unexpected project list")
+        return {row["name"]: _text(row, "dir") for row in rows}
 
     async def search_docs(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Search datawatch's own documentation and how-tos."""

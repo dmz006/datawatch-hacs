@@ -31,8 +31,17 @@ from .api import (
     DatawatchSecretError,
 )
 from .cards import read_card, read_children, search_items
-from .const import CONF_ASSISTANT, CONF_ITEMS, DISCUSSING, DOMAIN, SUBENTRY_REPORT
+from .const import (
+    CONF_ASSISTANT,
+    CONF_ITEMS,
+    DISCUSSING,
+    DOMAIN,
+    SESSION_SEND,
+    SUBENTRY_REPORT,
+)
+from .doing import perform
 from .reporting import build, find, read_automaton, run
+from .voice.actions import Action
 from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.custom import CustomReport
 from .voice.items import GONE, Card, Item, restored, stored
@@ -176,6 +185,7 @@ class DatawatchMode:
             assistant=bool(assistant),
             reports=custom_reports(self._entry),
             path=self._focus.path,
+            session_send=SESSION_SEND,
         )
         chat: str | None = None
         reply = conversation.enter()
@@ -191,6 +201,8 @@ class DatawatchMode:
                     reply = await self._answer(conversation, heard)
                 if reply.send is not None:
                     reply = await self._send(conversation, reply.send)
+                elif reply.act is not None:
+                    reply = await self._act(conversation, reply.act)
                 elif reply.forward is not None and assistant:
                     text, chat = await self._talk(assistant, reply.forward, chat)
                     reply = conversation.said(text)
@@ -330,6 +342,16 @@ class DatawatchMode:
             _LOGGER.warning("An answer may not have reached datawatch", exc_info=True)
             return conversation.sent(_UNSURE)
         return conversation.sent(_SENT)
+
+    async def _act(self, conversation: Conversation, action: Action) -> Reply:
+        """Carry out an action the user has just confirmed, and say what happened."""
+        try:
+            outcome = await perform(self._entry.runtime_data, action, SESSION_SEND)
+        except DatawatchCertificateError:
+            return Reply(_CERTIFICATE, ends=True)
+        except DatawatchAuthError:
+            return Reply(_REFUSED, ends=True)
+        return conversation.sent(outcome)
 
     async def _talk(self, assistant: str, words: str, chat: str | None) -> tuple[str, str | None]:
         """Pass talk that is not a command to the AI assistant. Returns its reply."""

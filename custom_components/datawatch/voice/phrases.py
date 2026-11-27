@@ -53,6 +53,12 @@ class Kind(Enum):
     ITS_QUESTIONS = auto()
     HISTORY = auto()
     AUTOMATA = auto()
+    ADD_AUTOMATON = auto()
+    ADD_BUG = auto()
+    SEND_SESSION = auto()
+    CONFIRM_AUTOMATON = auto()
+    CONFIRM_BUG = auto()
+    CONFIRM_SEND = auto()
     UNKNOWN = auto()
 
 
@@ -97,6 +103,10 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
     Kind.OWN_WORDS: ("my answer", "answer in my own words"),
     # Only these send an answer, so there is no shorter form such as "yes".
     Kind.CONFIRM: ("confirm answer", "confirm the answer", "confirm my answer"),
+    # Like "confirm answer", each of these sends one kind of thing and nothing else.
+    Kind.CONFIRM_AUTOMATON: ("confirm automation", "confirm automaton"),
+    Kind.CONFIRM_BUG: ("confirm bug",),
+    Kind.CONFIRM_SEND: ("confirm send",),
     Kind.CANCEL: ("cancel", "cancel answer", "cancel the answer", "cancel my answer"),
     Kind.ATTENTION: (
         "attention",
@@ -271,6 +281,25 @@ _ABOUT = re.compile(r"(?:tell me )?about (?:number )?(.+)")
 _OWN_WORDS = re.compile(r"^\W*(?:please\W+)?my\W+answer\W+is\b[\s,:.\-]*", re.IGNORECASE)
 
 
+def _starting(opening: str) -> re.Pattern[str]:
+    """Words that open an action, matched on what speech-to-text wrote."""
+    return re.compile(rf"^\W*(?:please\W+)?(?:{opening})\b[\s,:.\-]*", re.IGNORECASE)
+
+
+# Each may be said alone, or with the words for it in the same breath.
+_ACTIONS: tuple[tuple[Kind, re.Pattern[str]], ...] = (
+    (
+        Kind.ADD_AUTOMATON,
+        _starting(r"(?:add|new)\W+(?:(?:a|an|new)\W+){0,2}(?:automation|automaton)"),
+    ),
+    (Kind.ADD_BUG, _starting(r"(?:add|new|report)\W+(?:(?:a|an|new)\W+){0,2}bug")),
+    (
+        Kind.SEND_SESSION,
+        _starting(r"send\W+to\W+(?:the\W+)?session|send\W+(?:a\W+)?command|tell\W+the\W+session"),
+    ),
+)
+
+
 def parse(heard: str) -> Command:
     """Return the command for heard, or UNKNOWN. Never guesses."""
     text = _normalise(heard)
@@ -281,6 +310,11 @@ def parse(heard: str) -> Command:
         # The user's words exactly as speech-to-text wrote them.
         words = heard[own.end() :].strip()
         return Command(Kind.OWN_WORDS, text=words or None)
+    for kind, pattern in _ACTIONS:
+        opening = pattern.match(heard)
+        if opening is not None:
+            words = heard[opening.end() :].strip()
+            return Command(kind, text=words if words.strip(" .,!?") else None)
     for kind, pattern in _ABOUT_ONE:
         found = pattern.fullmatch(text)
         if found is not None:
