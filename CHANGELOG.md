@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 (2026-11-26)
 
 - **A project Gantt:** "datawatch Gantt (project)" shows one project's automations and
   their automata over time, with done and state counts. Choose the project and 7, 30, 90 days
