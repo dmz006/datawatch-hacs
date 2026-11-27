@@ -10,7 +10,7 @@ datawatch is a program you run yourself. It starts AI coding assistants, watches
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.12.0).** It can change datawatch in three ways: **answer a question**,
+> **Early release (0.13.0).** It can change datawatch in three ways: **answer a question**,
 > **add a draft automaton** and **report a bug**. 
 
 **Trying it out?** The [voice testing guide](docs/testing.md) is a checklist of every
@@ -80,9 +80,16 @@ The counts and the question are made up.
 |---|---|
 | Setup and settings screens, report choices and sensor names | English, German, Spanish, French and Japanese, following Home Assistant's language |
 | Dashboard cards and their names in **Add card** | The same five, following your own Home Assistant language |
-| Voice commands and spoken replies | English only |
+| Voice commands and spoken replies | The same five, following the language of the voice assistant that hears you |
 
 These are the languages datawatch has.
+
+**Voice in your language:** set your voice assistant to it, with speech-to-text and
+text-to-speech in that language. Datawatch mode then listens and speaks in it; with any
+other language it uses English. [Voice commands in each language](docs/voice-languages.md)
+lists what to say. Names and text from datawatch are read as datawatch wrote them. The AI
+tools work in English. Corrections to any language are welcome, as an
+[issue](https://github.com/dmz006/datawatch-hacs/issues) or a pull request.
 
 ## Install
 
@@ -120,6 +127,9 @@ To change the address or token, or to approve a replaced certificate, choose
 
 To start: your wake word, then **"open datawatch"**, **"use datawatch"** or just
 **"datawatch"**.
+
+The words in this README are the English ones. For German, Spanish, French and Japanese, see
+[Voice commands in each language](docs/voice-languages.md).
 
 ### Questions and answers
 
@@ -364,7 +374,7 @@ Make a spoken report of just what you care about.
 Each part is a sentence or two, mostly counts, in the order the screen lists them, so it
 stays short. To hear a list afterwards, say the command for it, such as "attention". With a
 focus, parts that can cover one project do. Change or delete a report on the same page. A
-name cannot be words datawatch mode already uses, such as "status".
+name cannot be words datawatch mode already uses in any of its languages, such as "status".
 
 ## Dashboard sensors
 

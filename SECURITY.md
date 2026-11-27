@@ -16,6 +16,8 @@ Only the newest release, on Home Assistant 2026.11 or later.
   and hearing that kind's own confirming words: answer a question, add a draft automaton
   (then set its title), and report a bug. It never retries a change or asks to replace an
   answer.
+- Voice works in five languages. In each, only a fixed list of whole confirming phrases
+  sends anything: a bare "yes" or "confirm", or a sentence saying not to, does not.
 - Sending input to a session is in the code but switched off, and is checked in two places.
 - AI assistants get tools that only read. None can make a change.
 - The dashboard cards are a script this integration serves to your Home Assistant pages. It

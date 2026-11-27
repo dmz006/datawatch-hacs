@@ -13,6 +13,14 @@
 - Another automation using the same sentence can answer instead.
 - If speech-to-text wrote something else in place of "datawatch", see the next section.
 
+## It answers in the wrong language, or does not understand yours
+
+Datawatch mode uses the language of the voice assistant that heard you. In **Settings →
+Voice assistants**, check that assistant's language, and that its speech-to-text and
+text-to-speech are set to the same one. Voice has English, German, Spanish, French and
+Japanese; any other language gets English. The words to say are in
+[Voice commands in each language](voice-languages.md).
+
 ## Speech-to-text does not understand "datawatch"
 
 "datawatch" is not an everyday word, so speech-to-text may write something like "did watch"

@@ -19,7 +19,8 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 | Path | Contents |
 |---|---|
 | `custom_components/datawatch/voice/` | The conversation, with no Home Assistant code: phrases, names, wording, questions, reports, automata, sessions, your own reports and the confirm step |
-| `custom_components/datawatch/voice/language.py`, `grammar.py`, `lang/` | Which language voice uses, and each language's data. `lang/en.py` holds every word listened for. What is said goes through `t()` and `tn()` in `language.py`, keyed by the English sentence |
+| `custom_components/datawatch/voice/language.py`, `grammar.py`, `lang/` | Which language voice uses, and each language's data: `lang/<code>.py` holds what is listened for, `lang/<code>_texts.py` what is said. What is said goes through `t()` and `tn()` in `language.py`, keyed by the English sentence |
+| `scripts/voice_examples.py` | Examples per language that the tests check, and the source of `docs/voice-languages.md` |
 | `custom_components/datawatch/api.py` | Client with certificate pinning; reads, and sends confirmed changes |
 | `custom_components/datawatch/dashboard.py` | Optional dashboard data sensors: what each reads and when it is unknown |
 | `custom_components/datawatch/charts.py`, `chart_api.py`, `frontend.py`, `frontend/` | The two dashboard cards: their data, the read-only commands they use, how they are offered, and the card script. Names and titles are only ever set as text, never as markup |
@@ -71,24 +72,25 @@ lists three at a time, "repeat" and "help", and faults said out loud.
 - A new feature gets a command, and an AI tool in `llm.py` whose `feature` line adds it to
   the assistant's introduction.
 - One datawatch server for now.
-- Screens and cards are in datawatch's languages (en, de, es, fr, ja). Voice is English
-  only for now; a language is added when someone can test it aloud.
+- Screens, cards and voice are in datawatch's languages (en, de, es, fr, ja). The
+  maintainer chose to ship Claude's translations without waiting for voice tests; users
+  send corrections.
+- Voice follows the language of the voice assistant that heard the opening phrase, not Home
+  Assistant's own language. The AI tools stay in English.
 
 ## Adding a voice language
 
-Not done yet for any language but English.
-
 1. Add `voice/lang/<code>.py` with a `Language`: its `Grammar` (what can be said), `texts`
-   (a translation of every sentence) and `singular` (which numbers take the singular).
-2. List it in `LANGUAGES` in `voice/language.py`. It is then used where Home Assistant's
-   language matches.
-3. `tests/test_languages.py` checks that every command can be said, that no phrase means two
-   things and that every sentence is translated with the same `{names}`.
-4. Test it aloud, above all each confirming phrase: these control what is sent.
-
-Still shaped for English, to check for the new language: sentences are joined with spaces
-and end with ".", list lines use "," and ":", and an automaton's title is cut from dictated
-words at ". ", "? " or "! ". Japanese will need these changed. The AI tools stay in English.
+   (from `<code>_texts.py`, a translation of every sentence) and `singular` (which numbers
+   take the singular). For writing without spaces set `spaced=False`; `tidy` fixes up the
+   punctuation of a whole reply.
+2. List it in `LANGUAGES` in `voice/language.py`, and add its examples and sentences that
+   must not confirm to `scripts/voice_examples.py`.
+3. `tests/test_languages.py` checks that every phrase gives its own command, that replies
+   only quote words that are understood, and that every sentence is translated with the
+   same `{names}`.
+4. Take care with each confirming phrase: these control what is sent. Only whole fixed
+   phrases confirm.
 
 ## Known limits
 

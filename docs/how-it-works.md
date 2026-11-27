@@ -66,6 +66,12 @@ sequenceDiagram
     I-->>You: "Answer sent."
 ```
 
+Datawatch mode listens and speaks in the language of the voice assistant that heard the
+opening phrase, for the whole visit: English, German, Spanish, French or Japanese, otherwise
+English. The examples here are in English; see
+[Voice commands in each language](voice-languages.md). Talk passed to an AI assistant is
+sent as that language, while the tools it calls work in English.
+
 While an answer waits, only "confirm answer" sends it. "cancel" drops it, "repeat" reads it
 back, and choosing again or "my answer" changes it. Anything else gets "Not sent yet" and is
 **not** passed to an AI assistant. The confirmation has to be the speech Home Assistant

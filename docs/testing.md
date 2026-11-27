@@ -4,6 +4,9 @@ A checklist for trying **every feature** of datawatch for Home Assistant, with e
 start from. Work from top to bottom the first time. Copy the tables, or print them, and mark
 each row **pass** or **fail**.
 
+The tables are in English. To try another language, set your voice assistant to it and use
+its words from [Voice commands in each language](voice-languages.md).
+
 The examples use **made-up** names: a project called `oak`, and made-up work inside it. Use
 your own names. Your counts and wording will differ, so check that each reply has the right
 **shape** and matches what datawatch itself shows.
@@ -280,7 +283,7 @@ Not voice, but part of a full test. See
 | 14.8 | Wait 5 minutes | The "up to" time moves on | ☐ |
 | 14.9 | Enable a number sensor and wait | It has a value, or **unknown**, and builds history | ☐ |
 | 14.10 | Set your Home Assistant profile language to German, Spanish, French or Japanese, then open a dashboard with the cards | Card text, dates and the names in **Add card** are in that language; datawatch's own names are unchanged | ☐ |
-| 14.11 | With that language, open the datawatch setup and settings screens | Their text is in that language; the spoken commands they quote stay in English | ☐ |
+| 14.11 | With that language, open the datawatch setup and settings screens | Their text is in that language, including the spoken commands they quote | ☐ |
 | 14.12 | Set the language back to English | Everything is in English again | ☐ |
 
 ## 15. Not available yet

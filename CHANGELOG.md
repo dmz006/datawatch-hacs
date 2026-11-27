@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.0 (2026-11-27)
+
+- **Voice in datawatch's languages:** datawatch mode now listens and speaks in German,
+  Spanish, French and Japanese as well as English. See
+  [Voice commands in each language](docs/voice-languages.md).
+- **It follows your voice assistant:** the language is that of the assistant that hears you,
+  for the whole visit. With any other language it uses English. Before, voice was always
+  English.
+- Each language has its own opening and confirming phrases. A bare "yes" or "confirm" sends
+  nothing in any of them.
+- **Changed:** setup and settings screens now quote the commands in their own language.
+- **Changed:** a new or renamed report cannot be named after a command in any of the five
+  languages. If an existing name is a command in your voice language, you get the command:
+  rename the report.
+- An AI assistant is now sent your talk as the voice assistant's language.
+- English commands and replies are unchanged. Corrections to the other languages are
+  welcome.
+
 ## 0.12.0 (2026-11-27)
 
 - **Screens in datawatch's languages:** setup, settings, report and sensor names are now in
