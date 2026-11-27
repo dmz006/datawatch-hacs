@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: going back to no focus after "unset" said so twice.
+
 ## 0.11.0 (2026-11-26)
 
 - **A project Gantt:** "datawatch Gantt (project)" shows one project's automations and

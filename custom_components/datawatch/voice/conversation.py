@@ -58,6 +58,7 @@ _NO_QUESTION_TARGET = "Choose something first, then say its questions. Or say qu
 _NO_PARENT = "Say plans or automations, choose one, then say automata."
 _NO_TASKS = "Tasks are listed for a plan or an automaton."
 _NOTHING_BEHIND = "There is nothing to go back to."
+_CLEARED = "Focus cleared. Now showing everything."
 # Things that hold automata.
 _HOLDERS = ("plan", "automation")
 # How many steps "go back" remembers.
@@ -590,6 +591,8 @@ class Conversation:
             state, said = self._trail.pop()
             self._restore(state)
             self._here = said
+            # "Focus cleared" is news only when it happens; the focus is said instead.
+            said = "" if said == _CLEARED else said
             parts = ["Back."]
             if (self.focus, self.path) != focused and not said.startswith(self._where()):
                 parts.append(self._where())
@@ -1011,7 +1014,7 @@ class Conversation:
             case Kind.UNSET:
                 self.focus, self.path, self._selected = None, (), None
                 self._choosing = False
-                return "Focus cleared. Now showing everything."
+                return _CLEARED
             case Kind.HELP:
                 return _HELP
             case _:

@@ -337,3 +337,11 @@ def test_each_visit_starts_a_new_count() -> None:
     say(conversation, "banana")
     conversation.enter()
     assert not say(conversation, "banana").ends
+
+
+def test_going_back_to_a_cleared_focus_says_the_focus_once() -> None:
+    conversation = Conversation(focus="oak")
+    conversation.enter()
+    say(conversation, "unset")
+    conversation.hear("set project elm", Snapshot(projects=("elm", "oak")))
+    assert say(conversation, "go back").text == "Back. No focus. Showing everything."
