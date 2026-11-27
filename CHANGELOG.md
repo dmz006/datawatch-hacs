@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (2026-11-26)
 
 - **Focus on anything:** a plan, automation, automaton, task or session, not only a project.
   "set two", "set it" or "set plan *name*". "status", "more detail", "why", "tasks",

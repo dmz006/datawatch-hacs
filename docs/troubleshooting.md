@@ -91,6 +91,11 @@ With a plan, automation, automaton, task or session focused, "questions" reads o
 ones datawatch links to it. A question that names no automaton does not show under a plan,
 an automation or an automaton. Say "all questions", or "unset".
 
+## Something is called "untitled"
+
+datawatch gave no title for it. In a long list from a plan, only the first 20 missing titles
+are looked up.
+
 ## "I couldn't find ... among the automata"
 
 Finding by name searches only automata that need attention, are running, are on hold or

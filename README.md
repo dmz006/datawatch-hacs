@@ -8,11 +8,13 @@ datawatch is a program you run yourself. It starts AI coding assistants, watches
 bigger jobs, and tells you when they need you. This integration lets you check on it from a
 Home Assistant voice device.
 
-> **Early release (0.6.1).** The only thing it can change in datawatch is **answering a
+> **Early release (0.7.0).** The only thing it can change in datawatch is **answering a
 > question**, and only after you say **"confirm answer"**. Opening datawatch mode has been
 > tried on a real Voice PE. The AI tools have been tried with typed requests to a real AI
 > assistant. Reading and answering questions and the AI conversation have **not yet been
 > tried by voice**. Sending an answer has been tested only against a pretend datawatch.
+> Focus and "go back" have been tried against a real datawatch with a pretend voice device,
+> **not yet by voice**.
 
 ## How it works
 
@@ -219,6 +221,20 @@ session** inside it. After that you do not have to name it again.
 | "where am I" | The whole focus, for example "project oak, plan Roots, task Paint it" |
 | "unset" | Clear the whole focus |
 
+For example (the names, counts and question are made up):
+
+> **You:** "Set project oak." **It:** "Focus: project oak."
+> **You:** "Plans." **It:** "Project oak has 2 current plans. Also 3 archived. Plan 1,
+> Roots: in progress, 2 of 5 automata done. Plan 2, Leaves: planned. That is all."
+> **You:** "Set one." **It:** "Focus: project oak, plan Roots."
+> **You:** "Status." **It:** "Plan Roots: in progress. 2 of 5 automata done. Say more detail
+> for more."
+> **You:** "Questions." **It:** "For the plan Roots. Question 1 of 1, from datawatch. May the
+> fence be painted? Option 1: Yes, do it. Option 2: No, leave it. The asker recommends
+> option 2. Say option and a number, my answer, more detail, or next question."
+> **You:** "Go back." **It:** "Back. Focus: project oak, plan Roots."
+> **You:** "Unset." **It:** "Focus cleared. Now showing everything."
+
 All your voice devices share the focus, and it stays until you change it, even after you
 leave. "Go back" remembers the steps of the visit you are in. It never undoes an answer you
 sent, and it drops one that is still waiting for "confirm answer".
@@ -233,7 +249,8 @@ What a focus can and cannot narrow:
   projects". With a project focus, session counts are given for that project and for
   everything else.
 - **Sessions** are narrowed to a focused automation or automaton.
-- Inside a large plan, you can hear its first 50 automata or tasks.
+- Inside a large plan, you can hear its first 50 automata or tasks, in datawatch's order.
+  That can start with finished ones.
 - datawatch gives **no history** for a plan or a single task, and history for a session is
   not read.
 

@@ -184,7 +184,7 @@ only what its parts need.
 | `GET /api/projects/{name}/plans` | A focused project's plans, up to 500. Also to read one focused plan |
 | `GET /api/plans/{id}/automata`, `…/tasks` | What is inside a plan, 50 at most |
 | `GET /api/automations/{id}` | One automation: its members and history |
-| `GET /api/autonomous/prds/{id}?detail=summary` | An automaton's title and status, for an automation's members (50 at most) and a plan's next one |
+| `GET /api/autonomous/prds/{id}?detail=summary` | An automaton's title and status, for an automation's members (50 at most), a plan's next one, and titles a plan's list leaves empty (20 at most) |
 | `GET /api/sessions?view=summary&q={id}` | One focused session |
 | `GET /api/sessions?view=summary&automaton=…` or `automation=…` | Sessions inside a focused automaton or automation |
 | `GET /api/automations` | Automations; with a focus, datawatch's `project=` filter |

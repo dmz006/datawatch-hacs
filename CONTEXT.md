@@ -81,7 +81,8 @@ Home Assistant.
 
 ## Later ideas
 
-Confirmed changes beyond answering: saving a bug or idea without starting work, sending a
-message to a session, pause and resume, approve and reject. The maintainer's plan puts these
-after datawatch has its own access controls. Also: session replies once datawatch can give a
-clean one, and "artifacts" once it is agreed what that means here.
+Next, each confirmed by voice before anything is sent: adding a draft automaton,
+reporting a bug through datawatch's bug intake, and sending a command to a session. Sending
+to a session stays switched off until datawatch has the controls for it. Access controls are
+to be tightened rigorously as datawatch gains them. Later: pause and resume, approve and
+reject, and session replies once datawatch can give a clean one.
