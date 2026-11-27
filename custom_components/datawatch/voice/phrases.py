@@ -60,6 +60,9 @@ class Kind(Enum):
     CONFIRM_BUG = auto()
     CONFIRM_SEND = auto()
     ALERTS = auto()
+    ORDER = auto()
+    ORDER_NAME = auto()
+    ORDER_RECENT = auto()
     UNKNOWN = auto()
 
 
@@ -197,6 +200,28 @@ _PHRASES: dict[Kind, tuple[str, ...]] = {
         "what are my alerts",
     ),
 }
+_PHRASES[Kind.ORDER] = (
+    "list order",
+    "what order",
+    "sort order",
+    "what is the list order",
+    "whats the list order",
+)
+_PHRASES[Kind.ORDER_NAME] = (
+    "sort by name",
+    "order by name",
+    "alphabetical",
+    "alphabetical order",
+    "sort alphabetically",
+)
+_PHRASES[Kind.ORDER_RECENT] = (
+    "most recent first",
+    "newest first",
+    "recent first",
+    "sort by recent",
+    "sort by most recent",
+    "order by recent",
+)
 _LOOKUP = {phrase: kind for kind, phrases in _PHRASES.items() for phrase in phrases}
 
 _UNITS = [

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Choose the order of lists:** sessions, automations and running work are listed by name,
+  or most recent first. Say "most recent first" or "sort by name", ask "list order", or
+  change it in the integration's settings. Your AI assistant's lists follow it.
+- **Changed:** by name is the default, so automations are no longer grouped by status, and
+  sessions and running work are no longer in datawatch's order. Plans, tasks and what is
+  inside a plan or an automation are unchanged.
+
 ## 0.10.0 (2026-11-26)
 
 - **A Gantt card for your dashboard:** "datawatch Gantt (live work)" in **Add card**. It

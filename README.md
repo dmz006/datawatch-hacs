@@ -150,7 +150,7 @@ marks these answers as coming from voice. To correct a sent answer, use datawatc
 | "how many plans do we have" or "plans" | Current plans per project. With a focus, that project's plans in datawatch's order, with progress |
 | "overview" | With a focus: that project's plans, progress and what is next |
 | "what's next" | What datawatch marks as next, for your focus or for every project |
-| "automations" | Counts by status, then the unfinished ones, in datawatch's order. With a focus, only that project's |
+| "automations" | Counts by status, then the unfinished ones, in [your order](#list-order). With a focus, only that project's |
 
 Long lists are read **three at a time**: say "more". "What needs my attention" always covers
 all projects, because datawatch cannot filter that list by project. Like datawatch's own web
@@ -175,12 +175,37 @@ It is never guessed; if there is none, you hear that. Finding by name searches o
 that need attention, are running or are on hold, then recently updated completed ones: datawatch has no title search, and listing
 every automaton is too slow for voice.
 
+### List order
+
+Sessions, automations and running work can be listed **by name** (A to Z, the default) or
+**most recent first**.
+
+| In datawatch mode, say | What happens |
+|---|---|
+| "most recent first" or "newest first" | Changes to most recent first |
+| "sort by name" or "alphabetical" | Changes back to by name |
+| "list order" | Says which one is on |
+
+You can also change it in **Settings → Devices & services → datawatch → Configure**. Both
+change the same saved setting, which all voice devices share and which your AI assistant's
+lists follow. A list you are already hearing keeps its numbers: say the list again to hear it
+in the new order. No confirmation is needed, because nothing in datawatch changes.
+
+- **Most recent** means a session's last activity, or when an automation or running automaton
+  was last updated. One without a time comes last.
+- **Projects** are always by name.
+- **Plans, tasks and what is inside a plan or an automation** stay in datawatch's order,
+  which can be the order the work runs in.
+- Attention, items on hold, questions, finished work and alerts keep their own orders.
+- The integration reads at most 50 sessions in a state and 200 running automata. Where there
+  are more, the order covers the ones read.
+
 ### Sessions and finished work
 
 | In datawatch mode, say | What you hear |
 |---|---|
-| "sessions" | How many are waiting for input, running and failed, then the waiting ones, numbered |
-| "waiting sessions", "running sessions", "failed sessions" | Those sessions, numbered. With a focus, only that project's |
+| "sessions" | How many are waiting for input, running and failed, then the waiting ones, numbered, in [your order](#list-order) |
+| "waiting sessions", "running sessions", "failed sessions" | Those sessions, numbered, in your order. With a focus, only that project's |
 | "two" after a session list | That session: state, project, AI backend and when it was last active |
 | "what finished" | Completed automata with the release each shipped in, if datawatch recorded one |
 | "results" or "results for two" | What a chosen automaton delivered: tasks completed, and counts of changed files, packages and added tests if datawatch has a change record |
@@ -468,7 +493,8 @@ are not included.
 ## Use your AI assistant (optional)
 
 This is **off** until you turn it on. Go to **Settings → Devices & services → datawatch →
-Configure** and choose an **AI assistant**. Leave it empty to turn it off again. Your
+Configure** and choose an **AI assistant**. Leave it empty to turn it off again. The same
+screen has the [list order](#list-order). Your
 assistant's own instructions, personality and settings are not edited. datawatch only adds a
 short introduction and these tools while it is on:
 

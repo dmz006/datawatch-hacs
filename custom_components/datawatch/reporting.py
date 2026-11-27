@@ -14,6 +14,7 @@ from .voice.conversation import Topic
 from .voice.custom import CustomReport
 from .voice.items import Item
 from .voice.names import match_names
+from .voice.order import Order
 from .voice.reports import Overview, Report
 
 
@@ -32,7 +33,11 @@ _ONE_STATE = {
 
 
 async def _sessions(
-    client: DatawatchClient, topic: Topic, project: str | None, inside: Item | None
+    client: DatawatchClient,
+    topic: Topic,
+    project: str | None,
+    inside: Item | None,
+    order: Order,
 ) -> Report:
     """One state's sessions, or counts of all states and then the waiting ones."""
     states = (_ONE_STATE[topic],) if topic in _ONE_STATE else _STATES
@@ -41,16 +46,20 @@ async def _sessions(
         *(client.sessions(state, None if inside else project, within) for state in states)
     )
     totals = [(state, total) for state, (_, total) in zip(states, found, strict=True)]
-    return work.sessions(totals, found[0][0], project, dt_util.now(), inside)
+    return work.sessions(totals, found[0][0], project, dt_util.now(), inside, order)
 
 
 async def build(
-    client: DatawatchClient, topic: Topic, project: str | None, inside: Item | None = None
+    client: DatawatchClient,
+    topic: Topic,
+    project: str | None,
+    inside: Item | None = None,
+    order: Order = Order.NAME,
 ) -> Report:
     """A report on topic, for one project or for all. project must be a registered one.
 
     inside: a focused automaton or automation, which only sessions can be filtered to, or
-    for alerts a focused session.
+    for alerts a focused session. order: how sessions, automations and running work are listed.
     """
     match topic:
         case Topic.ALERTS:
@@ -60,9 +69,9 @@ async def build(
             return reports.attention(await client.attention())
         case Topic.RUNNING:
             rows, total = await client.running(project)
-            return reports.running(rows, total, project)
+            return reports.running(rows, total, project, order)
         case Topic.SESSIONS | Topic.WAITING | Topic.RUNNING_SESSIONS | Topic.FAILED_SESSIONS:
-            return await _sessions(client, topic, project, inside)
+            return await _sessions(client, topic, project, inside, order)
         case Topic.FINISHED:
             done, how_many = await client.finished(project)
             return work.finished(done, how_many, project)
@@ -70,7 +79,7 @@ async def build(
             held, total = await client.held_items()
             return reports.held(held, total)
         case Topic.AUTOMATIONS:
-            return reports.automations(await client.automations(project), project)
+            return reports.automations(await client.automations(project), project, order)
         case Topic.PLANS if project is not None:
             overview, plans = await asyncio.gather(client.overview(project), client.plans(project))
             return reports.plans_of(project, plans, overview.plans, overview.archived)

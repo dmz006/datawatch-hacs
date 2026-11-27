@@ -35,8 +35,16 @@ from .api import (
     fetch_fingerprint,
     parse_server_url,
 )
-from .const import CONF_ASSISTANT, CONF_FINGERPRINT, CONF_ITEMS, DOMAIN, SUBENTRY_REPORT
+from .const import (
+    CONF_ASSISTANT,
+    CONF_FINGERPRINT,
+    CONF_ITEMS,
+    CONF_ORDER,
+    DOMAIN,
+    SUBENTRY_REPORT,
+)
 from .voice.custom import ITEMS, spoken_form
+from .voice.order import Order
 from .voice.phrases import Kind, parse
 
 _SERVER_SCHEMA = probatio.Schema(
@@ -61,7 +69,7 @@ class DatawatchConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     @override
     def async_get_options_flow(config_entry: ConfigEntry) -> DatawatchOptionsFlow:
-        """The AI assistant setting."""
+        """The settings."""
         return DatawatchOptionsFlow()
 
     @classmethod
@@ -156,13 +164,29 @@ class DatawatchConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class DatawatchOptionsFlow(OptionsFlow):
-    """Choose the AI assistant that may use datawatch. None chosen means AI is off."""
+    """The AI assistant that may use datawatch (none means AI is off), and the list order."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            chosen = user_input.get(CONF_ASSISTANT)
-            return self.async_create_entry(data={CONF_ASSISTANT: chosen} if chosen else {})
-        schema = probatio.Schema({probatio.Optional(CONF_ASSISTANT): ConversationAgentSelector()})
+            options: dict[str, str] = {}
+            if assistant := user_input.get(CONF_ASSISTANT):
+                options[CONF_ASSISTANT] = assistant
+            # The default is not stored.
+            if user_input.get(CONF_ORDER) == Order.RECENT:
+                options[CONF_ORDER] = Order.RECENT.value
+            return self.async_create_entry(data=options)
+        schema = probatio.Schema(
+            {
+                probatio.Optional(CONF_ASSISTANT): ConversationAgentSelector(),
+                probatio.Required(CONF_ORDER, default=Order.NAME.value): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[order.value for order in Order],
+                        mode=SelectSelectorMode.LIST,
+                        translation_key=CONF_ORDER,
+                    )
+                ),
+            }
+        )
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),

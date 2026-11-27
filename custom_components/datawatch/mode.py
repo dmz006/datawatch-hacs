@@ -34,6 +34,7 @@ from .cards import read_card, read_children, search_items
 from .const import (
     CONF_ASSISTANT,
     CONF_ITEMS,
+    CONF_ORDER,
     DISCUSSING,
     DOMAIN,
     SESSION_SEND,
@@ -45,6 +46,7 @@ from .voice.actions import Action
 from .voice.conversation import Conversation, Needs, Reply, topic_of
 from .voice.custom import CustomReport
 from .voice.items import GONE, Card, Item, restored, stored
+from .voice.order import Order, chosen
 from .voice.phrases import Kind, parse
 from .voice.questions import Draft
 from .voice.reports import Report
@@ -186,6 +188,7 @@ class DatawatchMode:
             reports=custom_reports(self._entry),
             path=self._focus.path,
             session_send=SESSION_SEND,
+            order=chosen(self._entry.options.get(CONF_ORDER)),
         )
         chat: str | None = None
         reply = conversation.enter()
@@ -199,6 +202,8 @@ class DatawatchMode:
                     reply = conversation.silence()
                 else:
                     reply = await self._answer(conversation, heard)
+                if reply.order is not None:
+                    self._save_order(reply.order)
                 if reply.send is not None:
                     reply = await self._send(conversation, reply.send)
                 elif reply.act is not None:
@@ -209,6 +214,12 @@ class DatawatchMode:
         finally:
             self._hass.data[DISCUSSING] = None
         await self._announce(satellite_id, reply.text)
+
+    @callback
+    def _save_order(self, order: Order) -> None:
+        """A spoken choice changes the same setting as the settings screen."""
+        options = {**self._entry.options, CONF_ORDER: order.value}
+        self._hass.config_entries.async_update_entry(self._entry, options=options)
 
     async def _ask(self, satellite_id: str, text: str) -> str | None:
         """Say text and listen. None means nothing was heard."""
@@ -282,7 +293,7 @@ class DatawatchMode:
                         gone = conversation.focus
                         conversation.focus, conversation.path = None, ()
                         await self._focus.async_set(None)
-                        report = await build(client, topic, None)
+                        report = await build(client, topic, None, order=conversation.order)
                         report = Report(
                             f"Project {gone} no longer exists, so the focus is cleared. "
                             f"{report.summary}",
@@ -290,7 +301,11 @@ class DatawatchMode:
                         )
                 if report is None:
                     report = await build(
-                        client, topic, conversation.focus, conversation.report_scope(topic)
+                        client,
+                        topic,
+                        conversation.focus,
+                        conversation.report_scope(topic),
+                        conversation.order,
                     )
         except DatawatchCertificateError:
             return Reply(_CERTIFICATE, ends=True)

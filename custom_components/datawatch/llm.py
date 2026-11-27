@@ -18,11 +18,19 @@ from homeassistant.helpers import llm
 from homeassistant.helpers.llm import LLMContext, ToolAnnotations, ToolInput, ToolResult
 
 from .api import DatawatchClient, DatawatchError
-from .const import CONF_ASSISTANT, DISCUSSING, DOMAIN, FOCUS, SESSION_SEND
+from .const import (
+    CONF_ASSISTANT,
+    CONF_ORDER,
+    DISCUSSING,
+    DOMAIN,
+    FOCUS,
+    SESSION_SEND,
+)
 from .mode import custom_reports
 from .reporting import build, find, run
 from .voice import automata, custom, items
 from .voice.conversation import Topic
+from .voice.order import Order, chosen
 from .voice.questions import Question, ordered
 
 _LOGGER = logging.getLogger(__name__)
@@ -58,8 +66,9 @@ class _DatawatchTool(llm.Tool):
     )
     integration = DOMAIN
 
-    def __init__(self, client: DatawatchClient) -> None:
+    def __init__(self, client: DatawatchClient, order: Order = Order.NAME) -> None:
         self._client = client
+        self._order = order
 
     @override
     async def async_call(
@@ -257,7 +266,8 @@ class WorkTool(_DatawatchTool):
             if match is None and wanted.casefold() not in _EVERY:
                 return {"note": f"There is no project named {wanted}.", "projects": list(names)}
             wanted = match
-        report = await build(self._client, _REPORT_TOPICS[args["topic"]], wanted)
+        topic = _REPORT_TOPICS[args["topic"]]
+        report = await build(self._client, topic, wanted, order=self._order)
         start = args.get("start", 0)
         lines = list(report.items[start : start + REPORT_LINES])
         result: dict[str, Any] = {
@@ -436,7 +446,8 @@ def async_get_tools(hass: HomeAssistant, llm_context: LLMContext, api_id: str) -
         return None
     for entry in hass.config_entries.async_loaded_entries(DOMAIN):
         if entry.options.get(CONF_ASSISTANT):
-            tools = [tool(entry.runtime_data) for tool in _TOOLS]
+            order = chosen(entry.options.get(CONF_ORDER))
+            tools = [tool(entry.runtime_data, order) for tool in _TOOLS]
             return LLMTools(
                 tools=list(tools), prompt=introduction([tool.feature for tool in tools])
             )

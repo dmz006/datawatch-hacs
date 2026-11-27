@@ -125,6 +125,7 @@ def _automation(row: Mapping[str, Any]) -> Automation:
         _text(row, "description"),
         tuple(m["prd_id"] for m in members if isinstance(m, dict) and _text(m, "prd_id")),
         _decisions(row.get("decisions")),
+        _text(row, "updated_at"),
     )
 
 
@@ -466,6 +467,7 @@ class DatawatchClient:
                     str(row.get("project") or ""),
                     done if isinstance(done, int) else 0,
                     _number(row.get("task_count") or 0),
+                    _text(row, "updated_at"),
                 )
             )
         return rows, _number(reply.get("total"))

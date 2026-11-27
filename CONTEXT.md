@@ -59,6 +59,9 @@ lists three at a time, "repeat" and "help", and faults said out loud.
   has the controls for it. Any other change needs the maintainer's approval.
 - "Add automation" makes one draft automaton, not datawatch's Automation (a chain).
   "Add bug" uses datawatch's bug intake.
+- List order (`voice/order.py`): sessions, automations and running work are by name (the
+  default) or most recent first, by voice or in settings. Projects are by name. Plans, tasks
+  and members keep datawatch's order. A "needs me first" order is planned for later.
 - Build order: conversation and questions; projects, plans and automations; automata and
   tasks; sessions and results; reports and cards; later, other confirmed changes.
 - Not for voice: secrets, settings, managing models, servers or plugins, deleting,
@@ -95,6 +98,9 @@ The usual Home Assistant test add-on did not support 2026.11 when this was built
 Home Assistant.
 
 ## Later ideas
+
+A third list order, **needs me first** (waiting, blocked and failed before the rest), for the
+lists that have a choice of order.
 
 Access controls are to be tightened rigorously as datawatch gains them. Later: pause and
 resume, approve and reject, and session replies once datawatch can give a clean one.

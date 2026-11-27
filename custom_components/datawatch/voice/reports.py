@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .items import Decision, Item
+from .order import Order, arrange
 from .speech import count, join
 
 
@@ -46,6 +47,7 @@ class Listed:
     project: str = ""
     done: int = 0
     tasks: int = 0
+    updated: str = ""
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,7 @@ class Automation:
     description: str = ""
     member_ids: tuple[str, ...] = ()
     decisions: tuple[Decision, ...] = ()
+    updated: str = ""
 
 
 # The order datawatch's attention statuses are read in.
@@ -145,8 +148,11 @@ def attention(rows: Sequence[Attention]) -> Report:
     return Report(summary, tuple(items), refs)
 
 
-def running(rows: Sequence[Listed], total: int, project: str | None) -> Report:
-    """The automata running now."""
+def running(
+    rows: Sequence[Listed], total: int, project: str | None, order: Order = Order.NAME
+) -> Report:
+    """The automata running now, in the user's order."""
+    rows = arrange(rows, order, lambda row: row.title, lambda row: row.updated)
     where = f"in project {project}" if project else "across all projects"
     if not total:
         return Report(f"No automata are running {where}.")
@@ -267,18 +273,22 @@ def next_in(data: Overview) -> Report:
     return Report(f"Project {data.project}. {_next(data)}")
 
 
-def automations(rows: Sequence[Automation], project: str | None) -> Report:
-    """Counts by status, then the unfinished ones in datawatch's order."""
+def automations(
+    rows: Sequence[Automation], project: str | None, order: Order = Order.NAME
+) -> Report:
+    """Counts by status, then the unfinished ones in the user's order."""
     where = f"Project {project}" if project else "All projects"
     if not rows:
         return Report(f"{where}: no automations.")
     counts = Counter(row.status for row in rows)
-    order = sorted(counts, key=lambda status: _rank(_AUTOMATION_ORDER, status))
-    parts = join([f"{counts[status]} {words(status)}" for status in order])
+    statuses = sorted(counts, key=lambda status: _rank(_AUTOMATION_ORDER, status))
+    parts = join([f"{counts[status]} {words(status)}" for status in statuses])
     summary = f"{where}: {count(len(rows), 'automation', 'automations')}, {parts}."
-    unfinished = sorted(
+    unfinished = arrange(
         (row for row in rows if row.status not in _FINISHED),
-        key=lambda row: (_rank(_AUTOMATION_ORDER, row.status), row.name.casefold()),
+        order,
+        lambda row: row.name,
+        lambda row: row.updated,
     )
     lines = [
         f"{_title(row.name)}: {words(row.status)}, {count(row.members, 'member', 'members')}."

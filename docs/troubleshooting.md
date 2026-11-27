@@ -153,6 +153,13 @@ minute, and the dashboard data every 5 minutes.
 - **The time looks old:** the card shows the time its data goes up to. It updates every 5
   minutes.
 
+## A list is not in the order I chose
+
+- The order applies to **sessions, automations and running work** only. See
+  [List order](../README.md#list-order).
+- **Say the list again.** A list already being read keeps its order and numbers.
+- Say "list order" to hear which one is on.
+
 ## My report is not recognised
 
 Say "reports" to hear the exact names. Speech-to-text has to write the name as you typed it,

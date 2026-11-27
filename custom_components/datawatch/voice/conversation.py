@@ -10,16 +10,18 @@ user last chose, or else to the end of that path.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum, auto
 
 from . import actions, automata, custom, items, speech
+from . import order as order_words
 from .actions import Act, Action, Target
 from .automata import Automaton
 from .custom import CustomReport
 from .items import GONE, KINDS, Card, Item
 from .model import Snapshot
 from .names import match_names
+from .order import Order
 from .phrases import Command, Kind, parse
 from .questions import Draft, Question, explained, ordered, read_back, spoken
 from .reports import Report
@@ -44,8 +46,9 @@ _HELP = (
     "reports or a report's name, "
     "list projects, more, set and a number or name, set it, its questions, all questions, "
     "automata, history, add automation, add bug, send to session, go back, where am I, "
-    "alerts, unset, repeat, or stop."
+    "alerts, list order, sort by name, most recent first, unset, repeat, or stop."
 )
+_ORDERS = {Kind.ORDER_NAME: Order.NAME, Kind.ORDER_RECENT: Order.RECENT}
 _NO_AUTOMATON = "Say attention, running or held items, then a number."
 _ABOUT_AUTOMATON = (Kind.WHY, Kind.TASKS, Kind.PROGRESS, Kind.RESULTS)
 _SESSIONS_ONLY = "That is a session. I can only say what is in the list and its details."
@@ -126,6 +129,8 @@ class Reply:
     send: Draft | None = None
     forward: str | None = None
     act: Action | None = None
+    # A list order the user has just chosen, to be saved.
+    order: Order | None = None
 
 
 class Needs(Enum):
@@ -197,6 +202,7 @@ class Conversation:
         reports: tuple[CustomReport, ...] = (),
         path: tuple[Item, ...] = (),
         session_send: bool = False,
+        order: Order = Order.NAME,
     ) -> None:
         """silences_before_closing=None keeps the mode open until the user leaves.
 
@@ -208,6 +214,7 @@ class Conversation:
         self._assistant = assistant
         self._reports = reports
         self._session_send = session_send
+        self.order = order
         self._reset()
 
     def _reset(self) -> None:
@@ -752,6 +759,11 @@ class Conversation:
             return self._confirming_action(self._pending, command)
         if command.kind is Kind.REPORTS:
             return self._say(custom.listing(self._reports))
+        if command.kind is Kind.ORDER:
+            return self._say(order_words.current(self.order))
+        if command.kind in _ORDERS:
+            self.order = _ORDERS[command.kind]
+            return replace(self._say(order_words.changed(self.order)), order=self.order)
         if command.kind is Kind.UNKNOWN and self._assistant:
             return Reply("", forward=words)
         if command.kind in _TOPICS:

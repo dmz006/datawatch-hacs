@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .items import Item
+from .order import Order, arrange
 from .reports import Report
 from .speech import count, join
 
@@ -136,11 +137,14 @@ def sessions(
     project: str | None,
     now: datetime,
     inside: Item | None = None,
+    order: Order = Order.NAME,
 ) -> Report:
-    """Counts by state, then the sessions, which can be chosen by number.
+    """Counts by state, then the sessions in the user's order, to be chosen by number.
 
     inside: the focused automaton or automation the sessions were filtered to.
     """
+    # By the name that is said, so one without a name sorts as "unnamed".
+    rows = arrange(rows, order, lambda row: _name(row.name), lambda row: row.last_activity)
     where = f"Project {project}" if project else "All projects"
     if inside is not None:
         where = f"The {inside.spoken()}"

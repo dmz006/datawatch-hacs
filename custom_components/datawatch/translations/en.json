@@ -50,10 +50,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "AI assistant",
-        "description": "Choose an AI assistant to use with datawatch. Leave it empty to keep AI off.\n\nWhile one is chosen:\n- Every assistant with device control can read datawatch status, projects, open questions and documentation. Their own instructions are not changed.\n- In datawatch mode, talk that is not a command goes to the chosen assistant, which keeps its control of your home.\n- datawatch text is sent to your AI model. It is written by other people and programs and could try to mislead it, so check that your assistants cannot control anything sensitive.\n\nNo assistant can answer a question, add an automation, report a bug or send to a session. Those always need your own spoken confirmation.",
+        "title": "datawatch settings",
+        "description": "AI assistant: choose one to use with datawatch, or leave it empty to keep AI off.\n\nWhile one is chosen:\n- Every assistant with device control can read datawatch status, projects, open questions and documentation. Their own instructions are not changed.\n- In datawatch mode, talk that is not a command goes to the chosen assistant, which keeps its control of your home.\n- datawatch text is sent to your AI model. It is written by other people and programs and could try to mislead it, so check that your assistants cannot control anything sensitive.\n\nNo assistant can answer a question, add an automation, report a bug or send to a session. Those always need your own spoken confirmation.",
         "data": {
-          "assistant": "AI assistant"
+          "assistant": "AI assistant",
+          "list_order": "Order of sessions, automations and running work"
+        },
+        "data_description": {
+          "list_order": "You can also say \"sort by name\" or \"most recent first\" in datawatch mode. Projects are always by name; plans, tasks and what is inside a plan or an automation stay in datawatch's order."
         }
       }
     }
@@ -113,6 +117,12 @@
         "held": "How much is on hold",
         "sessions": "Session counts",
         "automations": "Automation counts"
+      }
+    },
+    "list_order": {
+      "options": {
+        "name": "By name (A to Z)",
+        "recent": "Most recent first"
       }
     }
   },

@@ -15,6 +15,8 @@ DOMAIN = "datawatch"
 CONF_FINGERPRINT = "fingerprint"
 # The AI assistant that may use datawatch. Not set means AI is off.
 CONF_ASSISTANT = "assistant"
+# How sessions, automations and running work are listed: a voice.order.Order value.
+CONF_ORDER = "list_order"
 # The id of the question being discussed in datawatch mode, if any.
 DISCUSSING: HassKey[str | None] = HassKey(f"{DOMAIN}_discussing")
 # The project focus, shared by voice devices and the AI tools.
